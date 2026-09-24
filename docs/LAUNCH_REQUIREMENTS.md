@@ -297,7 +297,7 @@ For the stable public backend:
 ```text
 1. Generate/install the matching RSA pair.
 2. Redirect the retired PH hostnames to localhost.
-3. Start server/assaultfire_server_v94.py.
+3. Start server/assaultfire_server_v143b.py.
 4. Start client.exe / TCLS normally.
 5. Log in and reach the normal START stage.
 6. Choose ONE launch compatibility path:

@@ -57,7 +57,7 @@ body:
       label: Reproduction steps
       description: Tell us exactly what you launched/clicked and when the error appeared.
       placeholder: |
-        1. Started server/assaultfire_server_v94.py
+        1. Started server/assaultfire_server_v143b.py
         2. Started client.exe / TCLS
         3. Entered credentials and clicked Login
         4. Popup appeared after VERSION response

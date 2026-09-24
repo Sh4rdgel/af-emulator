@@ -149,7 +149,7 @@ def main() -> None:
     print()
     print("Next:")
     print("  1. Make sure the client uses the matching APClient.dat public PEM.")
-    print("  2. Start: python .\\server\\assaultfire_server_v94.py")
+    print("  2. Start: python .\\server\\assaultfire_server_v143b.py")
     print("  3. Look for: [BOOT] Loaded RSA private key from ...")
 
 
