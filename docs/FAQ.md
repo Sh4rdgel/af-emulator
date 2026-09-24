@@ -186,19 +186,19 @@ Ports 65008 and 7777 are only needed for the bridge/AFDEV PvE research setup.
 
 ---
 
-## Does The Altar work?
+## Does PvE map selection work?
 
 **Yes for the local v143b dedicated-server/gameplay handoff integrated on `main`.**
 
-The current path reserves DS capacity at room creation, arms the bridge at match start, lazily starts the v48 AFDEV loader on the first valid DS UDP packet, verifies the runtime/zero DS key, and releases the latched UE3 handshake through the v9 multi-peer bridge.
+The current path reserves DS capacity at room creation, carries the stock room's selected `MapString`/settings into the reservation, lets A11E replace them before start, arms the bridge at match start, lazily starts the v48 AFDEV loader on the first valid DS UDP packet, verifies the runtime/zero DS key, and releases the latched UE3 handshake through the v9 multi-peer bridge.
 
-The older Issue #1 sample is retained as historical evidence of the pre-fix state. Match-history/reward work and the PH-client Hard/Normal HUD text mismatch are separate follow-up areas.
+The Altar is the validated reference map rather than a hard-coded requirement. The selected map must exist in the local cooked map tree and be compatible with the PvE game class. Match-history/reward work and the PH-client Hard/Normal HUD text mismatch are separate follow-up areas.
 
 ## Do I need the bridge and AFDEV spawner for normal login testing?
 
 No.
 
-VERSION/AUTH/DIR/basic existing-profile testing uses the main v143b emulator and does not need a DS instance. For The Altar, v143b launches/manages the bridge and AFDEV loader lazily as part of the match path.
+VERSION/AUTH/DIR/basic existing-profile testing uses the main v143b emulator and does not need a DS instance. For PvE, v143b launches/manages the bridge and AFDEV loader lazily as part of the match path.
 
 See [PvE Bridge and Spawner](PVE_BRIDGE_AND_SPAWNER.md).
 
@@ -252,7 +252,7 @@ For a basic local test:
 3. Assault Fire PH client
 ```
 
-For The Altar, set `AF_GAME_DIR` and enable the DS spawner, then run the same v143b server. Do not manually pre-start AFDEV for every lobby; the current path starts it lazily after the client sends the first valid DS UDP packet.
+For PvE, set `AF_GAME_DIR` and enable the DS spawner, then run the same v143b server. The stock room's selected map is used by default. Do not manually pre-start AFDEV for every lobby; the current path starts it lazily after the client sends the first valid DS UDP packet.
 
 See the [Easy Getting Started Guide](GETTING_STARTED.md) for copy/paste commands.
 

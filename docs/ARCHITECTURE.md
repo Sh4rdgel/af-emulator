@@ -79,7 +79,7 @@ The patch is runtime-only and verifies the known function signature before chang
 
 Tracking: [Issue #3](https://github.com/armangido/af-emulator/issues/3).
 
-## The Altar dedicated-server path
+## PvE dedicated-server path
 
 The v143b server owns the room-to-DS lifecycle:
 
@@ -100,7 +100,7 @@ v9 multi-peer latch bridge :65008 + slot
       v
 v48 AFDEV loader
       |
-      | SV-Maya_3_Main / PVEGame.TGSVGame
+      | room-selected installed map / PVEGame.TGSVGame
       | native movement + zero-DSKey verification
       v
 AFDEV / UE3 :7777 + slot

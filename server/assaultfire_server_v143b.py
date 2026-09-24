@@ -453,7 +453,7 @@ def _v143b_reserve_room_ds(role_state, create_req):
         return None
 
     owner_uin = int(role_state.get("uin") or 10001)
-    use_client_map = os.environ.get("AF_DS_USE_CLIENT_MAP", "0").strip().lower() in (
+    use_client_map = os.environ.get("AF_DS_USE_CLIENT_MAP", "1").strip().lower() in (
         "1", "true", "yes", "on"
     )
     client_map = str(create_req.get("map_string") or "").strip()
@@ -468,6 +468,10 @@ def _v143b_reserve_room_ds(role_state, create_req):
         owner_id=owner_uin,
         map_name=map_name,
         max_players=max_players,
+        mode_id=int(create_req.get("mode_id", 0x00002001)),
+        map_id=int(create_req.get("map_id", 0x002F)),
+        sub_mode_id=int(create_req.get("sub_mode_id", 0x00001001)),
+        room_flags=int(create_req.get("flags", 0x00003008)),
     )
     # r8: reservation is bookkeeping only. Do NOT start the bridge or AFDEV
     # during A10A. The bridge is armed only when match handoff is requested.
@@ -7927,6 +7931,7 @@ def handle_placeholder(conn, addr, label):
                                                         room_id,
                                                         mode_id=settings["mode_id"],
                                                         map_id=settings["map_id"],
+                                                        map_name=settings.get("map_string") or None,
                                                         sub_mode_id=settings["sub_mode_id"],
                                                         room_flags=settings["flags"],
                                                     )
@@ -9383,7 +9388,7 @@ def listen_on_port(port, label):
 # Startup
 # ---------------------------------------------------------------------------
 
-print("[BOOT] BUILD=v143b-STABLE + DS SPAWNER r11 + v48 LAZY/LATCH + v72 ZERO-DSKEY + SHARED ROOM JOIN + MAYA A11E DIFFICULTY (NO NEW-ACCOUNT BRANCH)")
+print("[BOOT] BUILD=v143b-STABLE + DS SPAWNER r11 + v48 LAZY/LATCH + v72 ZERO-DSKEY + SHARED ROOM JOIN + PVE CLIENT-MAP/A11E SETTINGS (NO NEW-ACCOUNT BRANCH)")
 _v139_protocol_boot_report()
 print("[BOOT] Default character: Sofia item=100600 + components 300121/300122/100602; primary=QBS09 item=100497 role_gid=0x%016X" % V109_ROLE_GID)
 print(

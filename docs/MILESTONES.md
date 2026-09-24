@@ -71,37 +71,25 @@ Tasks:
 
 **Exit condition:** two local clients can use the normal stock lobby/social/clan flows without experimental account creation.
 
-## Milestone 3 — The Altar playable end-to-end 🎯
+## Milestone 3 — PvE dedicated-server handoff and map selection ✅
 
-**Status: current major research target**
+**Status: integrated on `main`**
 
-Goal: turn the current "map loads and player spawns" state into a functioning PvE/Survival round.
+The stable v143b path now carries the stock room's PvE selection into the lazy dedicated-server lifecycle instead of forcing every room to The Altar.
 
-Already proven:
+Completed:
 
-- [x] PvE room path can reach The Altar
-- [x] AFDEV PvE map loads
-- [x] UE3 client/server traffic reaches the bridge
-- [x] Client enters the map
-- [x] Player spawns
-- [x] HUD / weapon / movement are available
+- [x] A10A reserves DS capacity without starting AFDEV
+- [x] A10A seeds ModeId / MapId / SubModeId / flags into the reservation
+- [x] stock `MapString` is used by default for the room's AFDEV map
+- [x] A11E can replace the reserved map/settings before A113
+- [x] v9 bridge latches the first DS UDP packet and starts v48 lazily
+- [x] v48 resolves the selected installed `.udk` map and opens it with `PVEGame.TGSVGame`
+- [x] zero-DSKey/runtime verification gates `SESSION_READY`
+- [x] player-scoped shared-DS cleanup/rejoin behavior is retained
+- [x] The Altar / Maya path remains the validated reference case
 
-Still required:
-
-- [ ] Identify the exact post-load handoff missing from the current run
-- [ ] Verify loading-complete state on client and server
-- [ ] Verify GameInfo / GameReplicationInfo / PlayerReplicationInfo state
-- [ ] Trigger the stock authoritative round-start path naturally
-- [ ] Verify AI/enemy wave initialization
-- [ ] Verify objectives and round state progression
-- [ ] Verify death/respawn behavior
-- [ ] Verify round completion
-- [ ] Verify result/reward handoff without faking client state
-- [ ] Remove any temporary research-only patches no longer needed
-
-See [The Altar non-working sample — Issue #1](https://github.com/armangido/af-emulator/issues/1).
-
-**Exit condition:** The Altar starts a real stock PvE round, enemies/waves progress, and the round can finish normally.
+The broader enemy/objective/round-completion/result/reward lifecycle remains separate follow-up work under the full match lifecycle milestone.
 
 ## Milestone 4 — Dedicated server and full match lifecycle 🔴
 
@@ -148,9 +136,11 @@ The experimental first-time account/nickname work remains intentionally outside 
 
 It should not become a milestone until the stock PH client flow is reproducibly understood and can be implemented without destabilizing the existing working profile/login path.
 
-## Altar runtime integration
+## PvE runtime integration
 
-- [x] Solved lazy Altar DS handoff
+- [x] Solved lazy PvE DS handoff
+- [x] Stock room MapString reaches the DS allocation
+- [x] A11E map/difficulty settings update before lazy spawn
 - [x] v48 native movement/correction loader
 - [x] zero-DSKey verification before SESSION_READY
 - [x] v9 multi-peer first-packet latch bridge

@@ -330,12 +330,12 @@ class DedicatedServerSpawner:
 
     def update_lobby_settings(
         self, room_id: int, *, mode_id: int, map_id: int,
-        sub_mode_id: int, room_flags: int,
+        sub_mode_id: int, room_flags: int, map_name: Optional[str] = None,
     ) -> DSAllocation:
         """Update settings for a reserved logical room before AFDEV starts.
 
         The retail PH client creates the room with A10A, then can change its
-        selected PVE difficulty with A11E before A113 StartMatch.  The latest
+        selected PVE map/settings with A11E before A113 StartMatch. The latest
         A11E settings must therefore replace the A10A snapshot that will be
         passed to the lazy AFDEV loader.
         """
@@ -348,6 +348,9 @@ class DedicatedServerSpawner:
                 raise SpawnerError(
                     f"cannot change room {room_id} settings while state={allocation.state}"
                 )
+            desired_map = str(map_name or "").strip()
+            if desired_map:
+                allocation.map_name = desired_map
             allocation.mode_id = int(mode_id) & 0xFFFFFFFF
             allocation.map_id = int(map_id) & 0xFFFF
             allocation.sub_mode_id = int(sub_mode_id) & 0xFFFFFFFF
@@ -355,6 +358,7 @@ class DedicatedServerSpawner:
             self._write_snapshot_locked()
             self._log(
                 f"settings updated room={room_id} state={allocation.state} "
+                f"map_name={allocation.map_name!r} "
                 f"mode=0x{allocation.mode_id:08x} map_id=0x{allocation.map_id:04x} "
                 f"submode=0x{allocation.sub_mode_id:08x} flags=0x{allocation.room_flags:08x}"
             )

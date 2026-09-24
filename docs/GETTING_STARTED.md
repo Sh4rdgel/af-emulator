@@ -24,7 +24,7 @@ You will do the basic backend setup, then verify the client launch handoff:
 
 Before your first test, also read **[Vital Launch Requirements](LAUNCH_REQUIREMENTS.md)**. It explains the TCLS → TGame shared-memory handoff and the build-specific launch patch that is easy to miss.
 
-For The Altar, v143b manages the lazy DS lifecycle: room creation reserves capacity, match start arms the bridge, and the first valid DS UDP packet starts the v48 AFDEV loader.
+For PvE, v143b manages the lazy DS lifecycle: room creation reserves capacity, the stock room's selected map/settings are carried into that reservation, match start arms the bridge, and the first valid DS UDP packet starts the v48 AFDEV loader.
 
 ---
 
@@ -420,15 +420,15 @@ For the public **v94** baseline, test an existing/local profile path. Do not use
 | Existing local profile reaches zone/login path | ✅ baseline target |
 | Basic profile/property state | ✅ baseline target |
 | First-ever account creation | ❌ not supported in public v143b |
-| The Altar dedicated-server/gameplay handoff | ✅ integrated on main |
+| PvE dedicated-server/gameplay handoff + room-selected map | ✅ integrated on main |
 
 See [STATUS.md](STATUS.md) for the detailed working/partial/broken matrix.
 
 ---
 
-## 9. The Altar / PvE setup
+## 9. PvE map setup
 
-You do **not** need the DS components just to test VERSION/AUTH/DIR/login. For The Altar, the current v143b server manages them as part of the match lifecycle.
+You do **not** need the DS components just to test VERSION/AUTH/DIR/login. For PvE, the current v143b server manages them as part of the match lifecycle.
 
 Current files:
 
@@ -446,9 +446,11 @@ $env:AF_DS_SPAWNER_ENABLED = "1"
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
-The lifecycle is lazy: A10A reserves capacity only; A3A0/A113 arms the bridge; the first valid DS UDP packet starts AFDEV; verified `SESSION_READY` releases the latched packet and the UE3 session goes live.
+The lifecycle is lazy: A10A reserves capacity only and seeds the stock room's map/settings; A11E can update them before start; A3A0/A113 arms the bridge; the first valid DS UDP packet starts AFDEV; verified `SESSION_READY` releases the latched packet and the UE3 session goes live.
 
-See **[Stable PvE / The Altar bridge + server spawner guide](PVE_BRIDGE_AND_SPAWNER.md)** and **[The Altar runtime](ALTAR_RUNTIME.md)**.
+By default `AF_DS_USE_CLIENT_MAP=1`, so the selected stock-client `MapString` is used. Set it to `0` only if you intentionally want to force `AF_DS_DEFAULT_MAP`.
+
+See **[Stable PvE bridge + server spawner guide](PVE_BRIDGE_AND_SPAWNER.md)** and **[PvE runtime / The Altar reference](ALTAR_RUNTIME.md)**.
 
 The older Issue #1 sample documents the pre-fix state.
 

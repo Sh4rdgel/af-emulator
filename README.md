@@ -17,7 +17,7 @@ The current public baseline is **v143b**.
 
 - VERSION / AUTH / DIR / ROLE / ZONE local backend flow
 - existing/local profile login path
-- dynamic room and dedicated-server lifecycle used by The Altar
+- dynamic PvE room and dedicated-server lifecycle with stock-client map selection
 - lazy AFDEV startup instead of spawning a server when a lobby is merely created
 - v48 AFDEV loader + v9 multi-peer UDP bridge
 - zero-DSKey readiness gate before the UE3 session is released
@@ -78,7 +78,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\setup\setup_assaultfire_hosts.p
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
-For **The Altar / PvE**, also point the DS spawner at your local AFDEV game directory before starting the server:
+For **PvE maps**, also point the DS spawner at your local AFDEV game directory before starting the server:
 
 ```powershell
 $env:AF_GAME_DIR = "D:\YourAssaultFireFolder\Binaries\Win32"
@@ -111,9 +111,9 @@ The suspended-launch helper already applies the datetime compatibility patch, so
 
 For the full walkthrough, use **[Getting Started](docs/GETTING_STARTED.md)**.
 
-## The Altar
+## PvE maps
 
-The stable Altar path is integrated on `main`.
+The stable PvE dedicated-server path is integrated on `main`. The Altar remains the validated reference map, but the runtime is no longer hard-coded to Maya: by default the A10A/A11E `MapString` selected by the stock room UI is carried into the lazy AFDEV spawn.
 
 ```text
 Create room
@@ -141,7 +141,9 @@ Room settings sent through A11E are applied before the lazy AFDEV spawn, so the 
 
 A PH-client HUD label can still display the wrong text in some cases; that is tracked separately from the authoritative server/AFDEV difficulty state.
 
-See **[The Altar Runtime](docs/ALTAR_RUNTIME.md)** for implementation details.
+If you need the old fixed-map behavior, set `AF_DS_USE_CLIENT_MAP=0` and optionally override `AF_DS_DEFAULT_MAP`.
+
+See **[PvE Runtime / The Altar Reference](docs/ALTAR_RUNTIME.md)** for implementation details.
 
 ## If something fails
 
@@ -163,7 +165,7 @@ You do not need to read everything before trying the project.
 | --- | --- |
 | [Getting Started](docs/GETTING_STARTED.md) | first setup and local launch |
 | [Project Status](docs/STATUS.md) | what works, what is partial, what is still planned |
-| [The Altar Runtime](docs/ALTAR_RUNTIME.md) | current v143b / v48 / v9 PvE path |
+| [PvE Runtime / The Altar Reference](docs/ALTAR_RUNTIME.md) | current v143b / v48 / v9 PvE path and map selection |
 | [Launch Requirements](docs/LAUNCH_REQUIREMENTS.md) | TCLS → TGame handoff and compatibility |
 | [Launcher Errors](docs/LAUNCHER_ERRORS.md) | known launcher/AP/TGame messages |
 | [Architecture](docs/ARCHITECTURE.md) | ports, components, and data flow |
@@ -180,7 +182,7 @@ tests/       reproducible regression tests
 .github/     issue and contribution templates
 ```
 
-Legacy files such as the older v94 server, v26 loader, and v5 bridge are kept for rollback/history. They are **not** the recommended Altar path.
+Legacy files such as the older v94 server, v26 loader, and v5 bridge are kept for rollback/history. They are **not** the recommended PvE path.
 
 ## Project scope
 

@@ -55,7 +55,7 @@ Later experimental branches are intentionally excluded from `main` until they ar
 | Real multi-account login lifecycle | 🔴 | Later experimental branches added this, but it is not part of stable v143b. |
 | Real two-client friends/private chat | 🔴 | Not included in v143b; later work still needs proper stock-client validation before promotion. |
 | Full clan UI/detail/member rendering | 🔴 | Nested ClanDetailedInfo/MemberInfo wire layouts are not fully verified. |
-| PvE / The Altar dedicated-server/gameplay handoff | ✅ | v143b integrates the lazy v48 AFDEV + v9 bridge path, zero-DSKey readiness gate, Maya settings handoff, and player-scoped DS cleanup. |
+| PvE dedicated-server/gameplay handoff + map selection | ✅ | v143b integrates the lazy v48 AFDEV + v9 bridge path, zero-DSKey readiness gate, stock A10A/A11E map/settings propagation, and player-scoped DS cleanup. The Altar is the validated reference map. |
 | Survival enemy/round backend lifecycle | 🔴 | Not implemented as a complete public stable backend. |
 | Dedicated-server allocation and UE3 handoff | ✅ | A10A is reserve-only; A3A0/A113 arm the DS path; A11A assigns the endpoint; AFDEV starts lazily on first valid DS UDP. |
 | Full match start → gameplay → result lifecycle | 🔴 | Not complete in v143b. |
@@ -76,7 +76,7 @@ These are good contribution targets:
 4. **Two-client social verification** — implement and verify friends, presence, friend requests, private chat, and reconnect behavior without depending on the broken first-login work.
 5. **Clan completion** — recover and verify the nested clan detail/member structures used by the stock PH client.
 6. **Existing-account persistence cleanup** — make stable existing-profile persistence easier to configure and test.
-7. **PvE research** — document the exact loading → replication → round-start handoff for Survival/The Altar.
+7. **PvE lifecycle follow-up** — keep expanding verified round completion, results/rewards, and additional-map validation now that the DS handoff and room-selected map path are integrated.
 8. **Dedicated-server lifecycle** — document and implement the stock client allocation/handoff path once verified.
 9. **Match lifecycle** — room start, loading, gameplay session, match completion, rewards/results, and clean teardown.
 10. **Developer tooling** — packet decoders, protocol inspectors, sanitized logging, automated smoke tests, and reproducible test harnesses.
@@ -89,12 +89,12 @@ Before promotion to `main`, we want evidence that:
 
 - the expected stock Assault Fire PH client request is observed;
 - the response schema is based on verified protocol evidence rather than guessed nested structures;
-- the feature does not regress the existing v143b login/profile path or solved Altar runtime;
+- the feature does not regress the existing v143b login/profile path or solved PvE runtime;
 - secrets, copyrighted assets, and personal data are not included;
 - reproduction steps are documented.
 
 If you are researching an incomplete feature, opening an issue with logs, packet IDs, sanitized hex, or static-analysis findings is already a useful contribution.
 
-## Solved Altar runtime
+## Solved PvE handoff and map selection
 
-The v143b server, lazy DS spawner, v48 AFDEV loader and v9 multi-peer latch bridge are integrated. A10A is reserve-only; A3A0/A113 arm the match path; AFDEV starts on the first valid DS UDP packet; SESSION_READY is gated by the verified runtime state. See [ALTAR_RUNTIME.md](ALTAR_RUNTIME.md).
+The v143b server, lazy DS spawner, v48 AFDEV loader and v9 multi-peer latch bridge are integrated. A10A is reserve-only and seeds the selected room map/settings; A11E can replace them before start; A3A0/A113 arm the match path; AFDEV starts on the first valid DS UDP packet; SESSION_READY is gated by the verified runtime state. See [ALTAR_RUNTIME.md](ALTAR_RUNTIME.md).

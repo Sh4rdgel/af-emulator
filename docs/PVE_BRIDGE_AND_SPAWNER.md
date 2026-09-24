@@ -1,6 +1,6 @@
-# Stable PvE / The Altar Bridge and Server Spawner
+# Stable PvE Bridge and Server Spawner
 
-The current `main` branch carries the solved local The Altar handoff used by the stable **v143b** server.
+The current `main` branch carries the solved local PvE handoff used by the stable **v143b** server. The Altar is the validated reference, while compatible installed PvE maps selected in the stock room UI now flow through the same lazy DS path.
 
 ## Current components
 
@@ -32,9 +32,9 @@ first valid client DS UDP
   -> start the room's v48 AFDEV loader
 
 AFDEV ready
-  -> load SV-Maya_3_Main with PVEGame.TGSVGame
+  -> load the room-selected map with PVEGame.TGSVGame
   -> enable the validated native movement/correction path
-  -> apply the room Maya settings
+  -> apply the room map/settings
   -> verify the live zero DS key
   -> write SESSION_READY.json
 
@@ -58,9 +58,9 @@ The DS spawner tracks room membership separately from active match membership.
 - The final room member releases the DS slot.
 - A ZONE disconnect is handled per player instead of tearing down another player's session.
 
-## Maya difficulty/settings
+## Room map and difficulty/settings
 
-`A11E` is the authoritative room-settings update used by the lazy spawn. The selected `SubModeId`/difficulty is carried into AFDEV. A PH-client Hard/Normal HUD label mismatch is tracked separately from the working authoritative room/AFDEV state.
+`A10A` seeds the reserved DS allocation from the stock room selection. `A11E` is the authoritative pre-start settings update: its `MapString`, `MapId`, `SubModeId`/difficulty and flags replace the reservation snapshot before A113 starts the match. The loader resolves the selected map under the local cooked map tree. A PH-client Hard/Normal HUD label mismatch is tracked separately from the working authoritative room/AFDEV state.
 
 ## Configuration
 
@@ -77,7 +77,7 @@ The default local slot layout uses public bridge ports beginning at UDP 65008 an
 
 ## Validation
 
-The repository includes `tests/test_altar_ds_lifecycle.py` for lifecycle/integration invariants. Live Windows validation still depends on a lawfully supplied PH client and AFDEV executable.
+The repository includes lifecycle/difficulty tests plus `tests/test_pve_map_selection.py` for stock-client map propagation invariants. Live Windows validation still depends on a lawfully supplied PH client and AFDEV executable.
 
 ## Legacy rollback files
 
@@ -89,6 +89,6 @@ tools/bridge/af_ds_udp_bridge_v5_actor_dump.py
 tools/server_spawner/AFDevLoader_v26_pve_natural_loading_completion.py
 ```
 
-They are no longer the default The Altar path.
+They are no longer the default PvE path.
 
-See [The Altar runtime](ALTAR_RUNTIME.md), [Project Status](STATUS.md), and [Architecture](ARCHITECTURE.md).
+See [PvE runtime / The Altar reference](ALTAR_RUNTIME.md), [Project Status](STATUS.md), and [Architecture](ARCHITECTURE.md).
