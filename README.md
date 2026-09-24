@@ -17,7 +17,7 @@ The current public baseline is **v143b**.
 
 - VERSION / AUTH / DIR / ROLE / ZONE local backend flow
 - existing/local profile login path
-- dynamic room and dedicated-server lifecycle used by The Altar
+- dynamic PvE room and dedicated-server lifecycle with stock-selected map support
 - lazy AFDEV startup instead of spawning a server when a lobby is merely created
 - v48 AFDEV loader + v9 multi-peer UDP bridge
 - zero-DSKey readiness gate before the UE3 session is released
