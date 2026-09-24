@@ -149,6 +149,7 @@ Only verified/reproducible behavior should be promoted into the stable public ba
 See:
 
 - [Project Status](STATUS.md)
+- [Research Findings](RESEARCH_FINDINGS.md)
 - [Milestones](MILESTONES.md)
 - [FAQ](FAQ.md)
 - [Getting Started](GETTING_STARTED.md)

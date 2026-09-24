@@ -170,6 +170,7 @@ You do not need to read everything before trying the project.
 | [Launch Requirements](docs/LAUNCH_REQUIREMENTS.md) | TCLS → TGame handoff and compatibility |
 | [Launcher Errors](docs/LAUNCHER_ERRORS.md) | known launcher/AP/TGame messages |
 | [Architecture](docs/ARCHITECTURE.md) | ports, components, and data flow |
+| [Research Findings](docs/RESEARCH_FINDINGS.md) | verified reverse-engineering findings and clearly marked research leads |
 | [FAQ](docs/FAQ.md) | common questions |
 | [Contributing](CONTRIBUTING.md) | submitting fixes, tests, and research |
 
