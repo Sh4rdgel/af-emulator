@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Admin — Assault Fire Emulator{% endblock %}
+{% block card_class %}wide{% endblock %}
+{% block content %}
+<div class="eyebrow">ADMIN</div>
+<h1>Server accounts</h1>
+{% if message %}<div class="notice success">{{ message }}</div>{% endif %}
+{% if error %}<div class="notice error">{{ error }}</div>{% endif %}
+{% if new_invite %}
+  <div class="notice success"><strong>New invite</strong><code>{{ new_invite }}</code><span>Copy it now. Only its SHA-256 hash is stored.</span></div>
+{% endif %}
+<div class="stats">
+  <div><strong>{{ stats.accounts }}</strong><span>Accounts</span></div>
+  <div><strong>{{ stats.banned }}</strong><span>Banned</span></div>
+  <div><strong>{{ stats.active_invites }}</strong><span>Active invites</span></div>
+</div>
+<h2>Create invite</h2>
+<form class="row-form" method="post" action="{{ url_for('admin_invites') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input name="label" placeholder="Label (optional)" maxlength="120">
+  <input name="uses" type="number" min="1" max="1000" value="1" aria-label="Uses">
+  <input name="expires_hours" type="number" min="1" max="8760" placeholder="Hours" aria-label="Expiry hours">
+  <button class="button" type="submit">Create</button>
+</form>
+<h2>Accounts</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>UIN</th><th>Username</th><th>Role</th><th>State</th><th>Last IP</th><th>Action</th></tr></thead>
+  <tbody>
+  {% for account in accounts %}
+    <tr>
+      <td>{{ account.uin }}</td>
+      <td>{{ account.username }}</td>
+      <td>{% if account.is_admin %}Admin{% else %}Player{% endif %}</td>
+      <td>{% if account.is_banned %}<strong>Banned</strong>{% else %}Active{% endif %}</td>
+      <td>{{ account.last_ip or '—' }}</td>
+      <td>
+        {% if account.uin != g.user.uin %}
+          {% if account.is_banned %}
+            <form class="inline" method="post" action="{{ url_for('admin_unban', uin=account.uin) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="small-button" type="submit">Unban</button></form>
+          {% else %}
+            <form class="inline" method="post" action="{{ url_for('admin_ban', uin=account.uin) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input name="reason" placeholder="Reason" maxlength="240"><button class="small-button danger" type="submit">Ban</button></form>
+          {% endif %}
+        {% else %}Current admin{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

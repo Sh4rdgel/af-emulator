@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Account — Assault Fire Emulator{% endblock %}
+{% block content %}
+<div class="eyebrow">ACCOUNT</div>
+<h1>{{ g.user.username }}</h1>
+<div class="kv"><span>UIN</span><strong>{{ g.user.uin }}</strong></div>
+<div class="kv"><span>Status</span><strong>Active</strong></div>
+{% if recovery_codes %}
+  <div class="notice success">
+    <strong>New recovery codes</strong>
+    <span>Save these somewhere private. Each code works once.</span>
+    {% for code in recovery_codes %}<code>{{ code }}</code>{% endfor %}
+  </div>
+{% endif %}
+<form method="post" action="{{ url_for('recovery_codes') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="button secondary" type="submit">Replace my 3 recovery codes</button>
+</form>
+<p class="small">Generating new recovery codes invalidates any unused old codes.</p>
+{% endblock %}
