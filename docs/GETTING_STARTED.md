@@ -441,7 +441,7 @@ tools\bridge\af_ds_udp_bridge_v9_multi_peer_latch.py
 Set your local AFDEV game directory, then start v143b:
 
 ```powershell
-$env:AF_GAME_DIR = "D:\YourAssaultFireFolder\Binaries\Win32"
+$env:AF_GAME_DIR = "D:\AssaultFirePH\Binaries\Win32"
 $env:AF_DS_SPAWNER_ENABLED = "1"
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```

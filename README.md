@@ -105,7 +105,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\setup\setup_assaultfire_hosts.p
 For **The Altar / PvE**, also point the DS spawner at your local AFDEV game directory before starting the server:
 
 ```powershell
-$env:AF_GAME_DIR = "D:\YourAssaultFireFolder\Binaries\Win32"
+$env:AF_GAME_DIR = "D:\AssaultFirePH\Binaries\Win32"
 $env:AF_DS_SPAWNER_ENABLED = "1"
 ```
 

@@ -67,7 +67,7 @@ The DS spawner tracks room membership separately from active match membership.
 Typical local test environment:
 
 ```powershell
-$env:AF_GAME_DIR = "D:\YourAssaultFireFolder\Binaries\Win32"
+$env:AF_GAME_DIR = "D:\AssaultFirePH\Binaries\Win32"
 $env:AF_DS_SPAWNER_ENABLED = "1"
 $env:AF_DS_MAX_INSTANCES = "4"
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
