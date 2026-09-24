@@ -997,6 +997,7 @@ def build_auth_response(request_bytes):
     aes_key = hashlib.md5(
         shared_bytes
     ).digest()
+
     print(
         f"[AUTH] server_pub="
         f"{server_pub_bytes.hex()}",
@@ -1996,7 +1997,8 @@ def _tgame_enable_debug_privilege():
         luid = LUID()
         if not adv.LookupPrivilegeValueW(None, "SeDebugPrivilege", ctypes.byref(luid)):
             return False, f"LookupPrivilegeValueW err={ctypes.get_last_error()}"
-        tp = TOKEN_PRIVILEGES()        tp.PrivilegeCount = 1
+        tp = TOKEN_PRIVILEGES()
+        tp.PrivilegeCount = 1
         tp.Privileges[0].Luid = luid
         tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED
         ctypes.set_last_error(0)
@@ -2995,7 +2997,8 @@ def _v48_parse_geo_req_zonelist(body):
     off = 2
     servers = []
     for _ in range(count):
-        pi, off = _v48_parse_pinginfo(body, off)        servers.append(pi)
+        pi, off = _v48_parse_pinginfo(body, off)
+        servers.append(pi)
     if off + 4 > len(body):
         raise ValueError("ReqZoneList missing MaxDelayInMs")
     max_delay = struct.unpack_from(">I", body, off)[0]
@@ -3994,7 +3997,8 @@ def _v140_plan_purchase(req):
 
         if cid not in V140_SHOP_ITEM_MAP:
             raise _v140_ShopReject(
-                SHOP_ERR_COMMODITY_NOTEXIST,                f"commodity={cid} missing item map",
+                SHOP_ERR_COMMODITY_NOTEXIST,
+                f"commodity={cid} missing item map",
             )
 
         currency, server_price = _v140_price(cid, pidx)
@@ -4993,7 +4997,8 @@ def _v150_build_res_enter_match_room(room):
         + _v48_u8(room["observer_capacity"])
         + _v48_u8(room.get("fighter_count", 0))
         + _v48_u8(room.get("observer_count", 0))
-        + _v48_u8(len(members))        + b"".join(_v150_pack_match_room_player_info(m) for m in members)
+        + _v48_u8(len(members))
+        + b"".join(_v150_pack_match_room_player_info(m) for m in members)
     )
     return _v62_build_server_app(
         TGAME_ZN_MAGIC,
@@ -5992,7 +5997,8 @@ def tgame_read_x32dbg_live_crypto(log_path=None, expected_pid=None, wait_s=3.0, 
             pos, key, mode, desc = records[-1]
             pid_desc = f" pid={log_pid}" if log_pid is not None else ""
             item = (mtime, pos, key, mode, f"{p}{pid_desc} {desc}")
-            if best is None or item[:2] > best[:2]:                best = item
+            if best is None or item[:2] > best[:2]:
+                best = item
 
         if best is not None:
             _, _, key, mode, source = best
@@ -6991,7 +6997,8 @@ def handle_placeholder(conn, addr, label):
                                             )
                                             _v48_send_app(
                                                 conn,
-                                                active_tgame_key,                                                rsp,
+                                                active_tgame_key,
+                                                rsp,
                                                 label,
                                                 "ZN2C_RES_ITEM_OPERATION v140 "
                                                 "cmd=0xA201 result=0x8100",
@@ -7990,7 +7997,8 @@ def handle_placeholder(conn, addr, label):
                                             )
                                             quit_result = _v143b_quit_match_player(
                                                 role_state,
-                                                room,                                                reason=(
+                                                room,
+                                                reason=(
                                                     "A117 QuitMatch "
                                                     + (f"reason_byte=0x{reason_byte:02x}" if reason_byte is not None else "reason_byte=missing")
                                                 ),
@@ -8989,7 +8997,8 @@ def listen_on_udp_port(port, label="DS-UDP"):
                     + cm_desc
                 )
 
-            log(                label,
+            log(
+                label,
                 f"v100 RX #{n} {addr} "
                 f"clear={len(plain)}B packet_id={pkt['packet_id']} "
                 f"ack_records="
