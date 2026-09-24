@@ -28,8 +28,10 @@ Later experimental branches are intentionally excluded from `main` until they ar
 | Shop foundation | ✅ | Stable shop/balance/purchase work from the pre-v95 branch is present. |
 | Clan ID persistence | ✅ | v143b persists clan membership/ClanID and reflects it in PlayerInfo. |
 | Clan name verification/create request shapes | ✅ | Known v143b request/response shapes are implemented for the stable branch. |
-| DS UDP bridge v5 | ✅ | Known-good transparent 65008 ↔ 7777 bridge used during successful PvE map-entry tests. |
-| AFDEV PvE spawner v26 | ✅ | Known-good listen-server launcher used to load SV-Maya_3_Main for PvE research. |
+| DS UDP bridge v9 | ✅ | Multi-peer first-packet latch bridge used by the integrated v143b PvE handoff. |
+| AFDEV PvE loader v48 | ✅ | Lazy multi-instance AFDEV loader started on the first valid DS UDP packet; launches the room-selected installed PvE map with `PVEGame.TGSVGame`. |
+| PvE dedicated-server/gameplay handoff + map selection | ✅ | v143b integrates the lazy v48 AFDEV + v9 bridge path, zero-DSKey readiness gate, stock A10A/A11E map/settings propagation, and player-scoped DS cleanup. |
+| Dedicated-server reservation and UE3 handoff | ✅ | A10A reserves capacity, A3A0/A113 arm the DS path, A11A assigns the endpoint, and AFDEV starts lazily on the first valid DS UDP packet. |
 
 ## Partial or research-grade features
 
@@ -41,7 +43,7 @@ Later experimental branches are intentionally excluded from `main` until they ar
 | Private chat | 🟡 | v143b uses a LocalFriend echo/test path. Real friend-to-friend online/offline delivery is not part of this stable baseline. |
 | Clans | 🟡 | Basic create/name/persistence behavior exists. Large nested clan detail/member responses were deliberately not guessed and still require verification. |
 | Inventory/equipment | 🟡 | The stable profile/property path works, but not every item/equipment/UI edge case is verified. |
-| Match allocation | 🟡 | Research exists, but complete retail-client match allocation and handoff are not in the stable v143b baseline. The stable bridge/spawner are components, not a complete allocation service. |
+| Match allocation / capacity policy | 🟡 | The stock A10A/A11A handoff and lazy per-room DS path are integrated, but production-grade pooling, capacity policy, abuse limits, and large-scale multi-host orchestration still need work. |
 | Legacy kernel security-driver compatibility | 🟡 | The original client security driver can cause startup/crash problems on modern Windows independently of the emulator. Track separately in Issue #4; system-level changes are outside the supported emulator implementation. |
 | TDR/protocol documentation | 🟡 | Many structures/opcodes are known, but documentation and exact field verification are incomplete. |
 
@@ -55,9 +57,7 @@ Later experimental branches are intentionally excluded from `main` until they ar
 | Real multi-account login lifecycle | 🔴 | Later experimental branches added this, but it is not part of stable v143b. |
 | Real two-client friends/private chat | 🔴 | Not included in v143b; later work still needs proper stock-client validation before promotion. |
 | Full clan UI/detail/member rendering | 🔴 | Nested ClanDetailedInfo/MemberInfo wire layouts are not fully verified. |
-| PvE dedicated-server/gameplay handoff + map selection | ✅ | v143b integrates the lazy v48 AFDEV + v9 bridge path, zero-DSKey readiness gate, stock A10A/A11E map/settings propagation, and player-scoped DS cleanup. The Altar is the validated reference map. |
 | Survival enemy/round backend lifecycle | 🔴 | Not implemented as a complete public stable backend. |
-| Dedicated-server allocation and UE3 handoff | ✅ | A10A is reserve-only; A3A0/A113 arm the DS path; A11A assigns the endpoint; AFDEV starts lazily on first valid DS UDP. |
 | Full match start → gameplay → result lifecycle | 🔴 | Not complete in v143b. |
 | Match history / ranking / player-card stock UI | 🔴 | Later backend experiments exist, but exact retail-client wire/UI integration is not part of v143b. |
 | Party/squad/team matchmaking | 🔴 | Not implemented in the stable public baseline. |
@@ -77,7 +77,7 @@ These are good contribution targets:
 5. **Clan completion** — recover and verify the nested clan detail/member structures used by the stock PH client.
 6. **Existing-account persistence cleanup** — make stable existing-profile persistence easier to configure and test.
 7. **PvE lifecycle follow-up** — keep expanding verified round completion, results/rewards, and additional-map validation now that the DS handoff and room-selected map path are integrated.
-8. **Dedicated-server lifecycle** — document and implement the stock client allocation/handoff path once verified.
+8. **Dedicated-server scaling and capacity controls** — harden DS pooling, capacity rejection, one-lobby-per-player rules, rate limits, idempotency, and multi-host orchestration.
 9. **Match lifecycle** — room start, loading, gameplay session, match completion, rewards/results, and clean teardown.
 10. **Developer tooling** — packet decoders, protocol inspectors, sanitized logging, automated smoke tests, and reproducible test harnesses.
 

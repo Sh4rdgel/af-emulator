@@ -179,10 +179,10 @@ ipconfig /flushdns
 | 9010 | DIR | Server/directory discovery |
 | 65005 | ROLE | Stable role/game-side service path |
 | 65006 | ZONE | Stable zone connection |
-| 65008 | PvE bridge | Optional local bridge entry for PvE research |
-| 7777/UDP | AFDEV | Local UE3/AFDEV listen-server endpoint used by the stable PvE research path |
+| 65008 | PvE bridge | Local v9 bridge entry used by the integrated PvE match path |
+| 7777/UDP | AFDEV | Local v48 UE3/AFDEV listen-server endpoint used by the integrated PvE path |
 
-Ports 65008 and 7777 are only needed for the bridge/AFDEV PvE research setup.
+Ports 65008 and 7777 are needed only when running PvE dedicated-server sessions; normal VERSION/AUTH/DIR/login testing does not use them.
 
 ---
 
@@ -192,7 +192,7 @@ Ports 65008 and 7777 are only needed for the bridge/AFDEV PvE research setup.
 
 The current path reserves DS capacity at room creation, carries the stock room's selected `MapString`/settings into the reservation, lets A11E replace them before start, arms the bridge at match start, lazily starts the v48 AFDEV loader on the first valid DS UDP packet, verifies the runtime/zero DS key, and releases the latched UE3 handshake through the v9 multi-peer bridge.
 
-The Altar is the validated reference map rather than a hard-coded requirement. The selected map must exist in the local cooked map tree and be compatible with the PvE game class. Match-history/reward work and the PH-client Hard/Normal HUD text mismatch are separate follow-up areas.
+The Altar is a validated reference map rather than a hard-coded requirement. The selected map must exist in the local cooked map tree and be compatible with the PvE game class. Match-history/reward work and the PH-client Hard/Normal HUD text mismatch are separate follow-up areas.
 
 ## Do I need the bridge and AFDEV spawner for normal login testing?
 

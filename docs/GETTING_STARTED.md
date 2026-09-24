@@ -408,7 +408,7 @@ Start the client using the same local client setup you normally use.
 
 The hosts entries send VERSION/AUTH/DIR traffic to the emulator on your PC.
 
-For the public **v94** baseline, test an existing/local profile path. Do not use the unfinished new-account/nickname flow as your first test.
+For the public **v143b** baseline, test an existing/local profile path. Do not use the unfinished new-account/nickname flow as your first test.
 
 ### First things to check
 
@@ -450,7 +450,7 @@ The lifecycle is lazy: A10A reserves capacity only and seeds the stock room's ma
 
 By default `AF_DS_USE_CLIENT_MAP=1`, so the selected stock-client `MapString` is used. Set it to `0` only if you intentionally want to force `AF_DS_DEFAULT_MAP`.
 
-See **[Stable PvE bridge + server spawner guide](PVE_BRIDGE_AND_SPAWNER.md)** and **[PvE runtime / The Altar reference](ALTAR_RUNTIME.md)**.
+See **[Stable PvE bridge + server spawner guide](PVE_BRIDGE_AND_SPAWNER.md)** and **[PvE runtime and map selection](ALTAR_RUNTIME.md)**.
 
 The older Issue #1 sample documents the pre-fix state.
 

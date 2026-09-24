@@ -87,4 +87,4 @@ The Flask route tests require dependencies from `requirements.txt`.
 
 The website safely creates and manages local SQLite accounts, but it does **not** claim that the stock PH launcher username/password packet is fully wired to this database yet. The known-good TCLS/game login path remains separate until the exact AP cmd-3 credential fields are validated and connected without destabilizing the stable client handoff.
 
-This separation is intentional: website/account work must not break VERSION/AUTH/DIR/ROLE/ZONE or the solved Altar runtime.
+This separation is intentional: website/account work must not break VERSION/AUTH/DIR/ROLE/ZONE or the integrated v143b PvE/DS runtime.

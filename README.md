@@ -21,7 +21,8 @@ The current public baseline is **v143b**.
 - lazy AFDEV startup instead of spawning a server when a lobby is merely created
 - v48 AFDEV loader + v9 multi-peer UDP bridge
 - zero-DSKey readiness gate before the UE3 session is released
-- The Altar / Maya difficulty selection:
+- stock-selected PvE maps propagated into the lazy AFDEV launch
+- room difficulty/settings propagation (validated on The Altar):
   - Easy — `0x00001001`
   - Normal — `0x00001002`
   - Hard — `0x00001003`
@@ -113,7 +114,7 @@ For the full walkthrough, use **[Getting Started](docs/GETTING_STARTED.md)**.
 
 ## PvE maps
 
-The stable PvE dedicated-server path is integrated on `main`. The Altar remains the validated reference map, but the runtime is no longer hard-coded to Maya: by default the A10A/A11E `MapString` selected by the stock room UI is carried into the lazy AFDEV spawn.
+The stable PvE dedicated-server path is integrated on `main`. Stock-room `MapString` and A11E settings are carried into the lazy AFDEV spawn, so compatible installed PvE maps are no longer forced to a single hard-coded map. The Altar remains a validated reference case.
 
 ```text
 Create room
@@ -143,7 +144,7 @@ A PH-client HUD label can still display the wrong text in some cases; that is tr
 
 If you need the old fixed-map behavior, set `AF_DS_USE_CLIENT_MAP=0` and optionally override `AF_DS_DEFAULT_MAP`.
 
-See **[PvE Runtime / The Altar Reference](docs/ALTAR_RUNTIME.md)** for implementation details.
+See **[PvE Runtime and Map Selection](docs/ALTAR_RUNTIME.md)** for implementation details.
 
 ## If something fails
 
@@ -165,7 +166,7 @@ You do not need to read everything before trying the project.
 | --- | --- |
 | [Getting Started](docs/GETTING_STARTED.md) | first setup and local launch |
 | [Project Status](docs/STATUS.md) | what works, what is partial, what is still planned |
-| [PvE Runtime / The Altar Reference](docs/ALTAR_RUNTIME.md) | current v143b / v48 / v9 PvE path and map selection |
+| [PvE Runtime and Map Selection](docs/ALTAR_RUNTIME.md) | current v143b / v48 / v9 PvE path and stock-selected maps |
 | [Launch Requirements](docs/LAUNCH_REQUIREMENTS.md) | TCLS → TGame handoff and compatibility |
 | [Launcher Errors](docs/LAUNCHER_ERRORS.md) | known launcher/AP/TGame messages |
 | [Architecture](docs/ARCHITECTURE.md) | ports, components, and data flow |

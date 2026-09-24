@@ -1,6 +1,6 @@
 # Stable PvE Bridge and Server Spawner
 
-The current `main` branch carries the solved local PvE handoff used by the stable **v143b** server. The Altar is the validated reference, while compatible installed PvE maps selected in the stock room UI now flow through the same lazy DS path.
+The current `main` branch carries the integrated local PvE handoff used by the stable **v143b** server. Compatible installed PvE maps selected in the stock room UI flow through the same lazy DS path; The Altar is retained as a validated reference case.
 
 ## Current components
 
@@ -91,4 +91,4 @@ tools/server_spawner/AFDevLoader_v26_pve_natural_loading_completion.py
 
 They are no longer the default PvE path.
 
-See [PvE runtime / The Altar reference](ALTAR_RUNTIME.md), [Project Status](STATUS.md), and [Architecture](ARCHITECTURE.md).
+See [PvE runtime and map selection](ALTAR_RUNTIME.md), [Project Status](STATUS.md), and [Architecture](ARCHITECTURE.md).

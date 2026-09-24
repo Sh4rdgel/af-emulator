@@ -126,8 +126,8 @@ The older v5/v26 pair is retained as a historical rollback path.
 | 9010 | TCP | DIR | Stable |
 | 65005 | TCP | ROLE | Stable baseline path |
 | 65006 | TCP | ZONE | Stable baseline path |
-| 65008 | UDP | PvE bridge | Optional PvE research |
-| 7777 | UDP | AFDEV/UE3 | Optional PvE research |
+| 65008 | UDP | PvE bridge | v9 per-room bridge entry used by the integrated PvE path |
+| 7777 | UDP | AFDEV/UE3 | v48 AFDEV listen endpoint; additional slots increment per DS allocation |
 
 ## Source-of-truth rule
 

@@ -14,22 +14,22 @@ Goal: publish a clean, reproducible starting point without the broken new-accoun
 
 Completed:
 
-- [x] Stable v94 backend published
+- [x] Stable v143b backend published
 - [x] VERSION service
 - [x] AUTH handshake
 - [x] DIR/server discovery
 - [x] Existing local profile/login path
 - [x] Stable shop/inventory/profile foundation
 - [x] Stable clan persistence foundation
-- [x] Stable DS UDP bridge v5
-- [x] Stable AFDEV PvE spawner v26
+- [x] Stable v9 multi-peer DS UDP bridge
+- [x] Stable v48 lazy multi-instance AFDEV PvE loader
 - [x] Local hosts redirect template/helper
 - [x] RSA-1024 key generation helper
 - [x] Beginner setup tutorial
 - [x] TGame datetime runtime compatibility patch
 - [x] MIT license
 - [x] Working / partial / broken status documentation
-- [x] The Altar non-working sample documented
+- [x] Historical pre-fix Altar sample retained for regression/reference
 
 ## Milestone 1 — Reproducible local setup 🟡
 
@@ -87,28 +87,30 @@ Completed:
 - [x] v48 resolves the selected installed `.udk` map and opens it with `PVEGame.TGSVGame`
 - [x] zero-DSKey/runtime verification gates `SESSION_READY`
 - [x] player-scoped shared-DS cleanup/rejoin behavior is retained
-- [x] The Altar / Maya path remains the validated reference case
+- [x] The Altar remains a validated reference case while stock-selected compatible PvE maps use the same generic path
 
 The broader enemy/objective/round-completion/result/reward lifecycle remains separate follow-up work under the full match lifecycle milestone.
 
-## Milestone 4 — Dedicated server and full match lifecycle 🔴
+## Milestone 4 — Dedicated-server scaling and full match lifecycle 🟡
 
-**Status: planned/research**
+**Status: partial**
 
-Goal: recover and implement the stock PH dedicated-server allocation/handoff lifecycle.
+Goal: build on the now-integrated stock PvE reservation/handoff path and finish production-style capacity controls plus the full gameplay → result → lobby lifecycle.
 
 Tasks:
 
-- [ ] Verify the stock allocation request/response family
-- [ ] Verify the exact client DS handoff message
-- [ ] Implement stable DS registration/allocation
-- [ ] Implement session-ready/start gating
-- [ ] Verify player admission
-- [ ] Verify disconnect/reconnect cleanup
-- [ ] Verify match end and server/session teardown
-- [ ] Add multi-client regression tests
+- [x] Verify the stock A10A reservation / A11A assignment path used by the current client
+- [x] Integrate lazy per-room v9 bridge + v48 AFDEV startup
+- [x] Gate client release on verified `SESSION_READY`
+- [x] Preserve player-scoped cleanup for shared PvE sessions
+- [ ] Enforce and regression-test DS-pool capacity rejection
+- [ ] Enforce one active owned lobby per player plus account/IP cooldowns and idempotent create handling
+- [ ] Complete authoritative round/match completion
+- [ ] Complete results, rewards, EXP/AP and match-history persistence
+- [ ] Verify clean result → lobby return with multiple stock clients
+- [ ] Add multi-client lifecycle/capacity regression tests
 
-**Exit condition:** a stock client can move from lobby → allocated server → gameplay → result → lobby through the normal verified protocol path.
+**Exit condition:** stock clients can move from lobby → reserved DS → gameplay → authoritative result/rewards → lobby with capacity and abuse controls behaving predictably.
 
 ## Milestone 5 — Preservation-quality release 🔴
 

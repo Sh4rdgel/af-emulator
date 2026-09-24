@@ -112,9 +112,9 @@ Recommended:
 - do not use the project against any live game/service;
 - back up files before replacing client configuration.
 
-## 7. PvE/The Altar runtime
+## 7. PvE runtime and map selection
 
-The current Altar path is integrated with v143b and uses:
+The current stock-selected PvE path is integrated with v143b and uses:
 
 ```text
 server/assaultfire_ds_spawner.py
