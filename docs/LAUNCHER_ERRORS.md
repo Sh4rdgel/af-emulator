@@ -89,6 +89,45 @@ last line:  -----END PUBLIC KEY-----
 
 If the launcher still shows **"AP client initialization failed."** and the emulator still receives VERSION but **never receives an AUTH connection**, the problem is client-side AP initialization / loading of `APClient.dat`, not an AUTH response-packet bug.
 
+#### Run the read-only TCLS/APClient diagnostic first
+
+The repository now includes:
+
+~~~text
+tools/patches/diagnose_tcls_apclient.py
+~~~
+
+Run it from the repository root:
+
+~~~powershell
+.\.venv\Scripts\python.exe .\tools\patches\diagnose_tcls_apclient.py --client-root "D:\AssaultFirePH"
+~~~
+
+It checks, without modifying any client file:
+
+- the exact `TCLS.dll` SHA-256;
+- whether `server\PRIVATE.PEM` and `TCLS\config\APClient.dat` contain the same RSA public key;
+- whether `APClient.dat` has the known 272-byte RSA-1024 SPKI PEM form;
+- whether the TCLS hash is the validated RSA/DH build, the known Issue #7 alternate build, or an unknown build.
+
+#### Known Issue #7 alternate TCLS build
+
+The following TCLS SHA-256 is a known alternate build:
+
+~~~text
+13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1
+~~~
+
+This exact build has been observed taking a different authentication path, including a 58-byte `0x8283` TACC packet, instead of the validated 214-byte RSA/DH handshake.
+
+If the diagnostic reports that `PRIVATE.PEM` and `APClient.dat` match, **do not keep regenerating the RSA pair**. A matching key pair does not make this alternate TCLS build use the emulator's validated RSA/DH path.
+
+The supported resolution today is to use the validated PH TCLS/client combination from your own lawful installation or backup. Native support for this alternate build requires its TACC AUTH state machine to be implemented as a separate compatibility path.
+
+Do not copy offsets or patch bytes from another TCLS build. The historical raw-PEM loader change was build-specific, and its exact bytes have not been re-verified for this Issue #7 DLL.
+
+See [Issue #7](https://github.com/armangido/af-emulator/issues/7) for the captured protocol evidence.
+
 #### Important: raw-PEM TCLS compatibility
 
 The project's generated `APClient.dat` is a raw PEM RSA-1024 SubjectPublicKeyInfo public key.
