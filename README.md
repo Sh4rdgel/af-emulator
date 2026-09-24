@@ -28,6 +28,18 @@ The current public baseline is **v143b**.
 
 The first-time nickname/new-account flow and several social/progression features are still separate work. See **[Project Status](docs/STATUS.md)** for the detailed matrix.
 
+## Important: legacy kernel anti-cheat
+
+Before troubleshooting the emulator, make sure the original PH client's **legacy kernel anti-cheat / security driver is not blocking the client from starting correctly**.
+
+This component was built for an older Windows environment and can cause crashes, driver initialization failures, or startup problems on modern systems before the emulator is ever contacted.
+
+This project does **not** provide bypass, disabling, kernel-modification, or security-circumvention instructions.
+
+**Diagnostic hint:** if the client fails before you see normal VERSION / AUTH traffic in the emulator logs, or Windows/client messages point to a driver/security initialization problem, you are still dealing with the **client/OS compatibility layer**, not a server-protocol bug. Resolve that environment compatibility independently in an isolated preservation setup before debugging the emulator.
+
+See **[Vital Setup Notes](docs/VITAL_SETUP_NOTES.md)** and **[Issue #4](https://github.com/armangido/af-emulator/issues/4)** for the known symptoms and project scope.
+
 ## Quick start
 
 ### 1. Clone and install
