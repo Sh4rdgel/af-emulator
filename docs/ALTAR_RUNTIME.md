@@ -13,7 +13,19 @@ The repository now carries the solved local Assault Fire PH Altar runtime used b
 7. The bridge releases the latched first packet and normal UE3 traffic continues.
 8. Match cleanup is player-scoped; a shared DS survives until the last in-match player leaves.
 
-The runtime supports per-room Maya settings passed through the server/spawner path. A client HUD difficulty label mismatch is tracked separately from the working server/gameplay handoff.
+## Difficulty selection
+
+The room owner's live A11E `SetGameSettings` packet is authoritative for the next lazy AFDEV spawn. The server updates both the shared room registry and reserved DS allocation before A113/AFDEV startup.
+
+Validated Maya submodes:
+
+- `0x00001001` — Easy
+- `0x00001002` — Normal
+- `0x00001003` — Hard
+
+The v48 loader receives the selected `SubModeId` and applies it to the live Maya `GameSettings` / PVE difficulty state before `SESSION_READY`.
+
+A client HUD difficulty label mismatch is tracked separately from the authoritative server/AFDEV difficulty state.
 
 ## Runtime files
 
