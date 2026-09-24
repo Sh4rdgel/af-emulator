@@ -1,94 +1,90 @@
-# Registration website + SQLite accounts
+# Registration, login, recovery and admin website
 
-This feature adds a local web registration service backed by SQLite.
+The repository includes a local Flask website backed by the same SQLite account database used by `server/account_db.py`.
 
-## What it does
+## Features
 
-- Creates accounts with unique, case-insensitive usernames.
-- Allocates Assault Fire UINs starting at **10001**.
-- Stores only PBKDF2-HMAC-SHA256 password hashes and random salts.
-- Creates an empty profile row for each account so nickname/profile data can be
-  attached later.
-- Uses SQLite WAL mode so the registration site and emulator can safely open the
-  same database.
-- Provides CSRF protection and basic browser security headers.
-- Does not replace the stable v94 player-state JSON yet.
-
-The database defaults to:
-
-\`\`\`text
-server/assaultfire_accounts.sqlite3
-\`\`\`
-
-Override it with:
-
-\`\`\`text
-AF_ACCOUNT_DB=C:\path\to\assaultfire_accounts.sqlite3
-\`\`\`
+- Case-insensitive usernames with parameterized SQLite queries.
+- PBKDF2-HMAC-SHA256 password hashing with per-account random salts.
+- Invite-gated beta registration by default.
+- High-entropy invite codes; only their SHA-256 hashes are stored.
+- One login URL for normal users and administrators.
+- `/admin` returns **404** unless the logged-in account is an administrator.
+- Administrator invite creation and account ban/unban controls.
+- Banned accounts cannot log in or use recovery.
+- Three one-time recovery codes per issue; only their hashes are stored.
+- Recovery failure lockout after repeated bad codes.
+- CSRF validation on every POST.
+- HTTPOnly / SameSite session cookies and browser security headers.
+- Web access/IP logging using the direct request peer address.
 
 ## Install
 
-From the repository root:
-
-\`\`\`powershell
+```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-\`\`\`
+```
 
-## Run the website
+## Configure an administrator
 
-Local-only default:
+```powershell
+$env:AF_ADMIN_USERNAME = "admin"
+$env:AF_ADMIN_PASSWORD = "use-a-long-unique-password"
+$env:AF_WEB_SECRET = "use-a-long-random-session-secret"
+```
 
-\`\`\`powershell
+If the administrator username already exists, startup refuses to promote it unless the configured password matches that existing account.
+
+## Run
+
+```powershell
 .\.venv\Scripts\python.exe .\web\app.py
-\`\`\`
+```
 
-Then open:
+Default local address: `http://127.0.0.1:8080/login`.
 
-\`\`\`text
-http://127.0.0.1:8080/register
-\`\`\`
+Routes:
 
-Optional settings:
+```text
+/register   beta/invite registration
+/login      shared normal/admin login
+/account    signed-in account page + recovery-code generation
+/recover    one-time recovery-code password reset
+/status     local-service status
+/admin      admin-only; returns 404 for everyone else
+```
 
-\`\`\`powershell
-$env:AF_WEB_HOST = "127.0.0.1"
-$env:AF_WEB_PORT = "8080"
-$env:AF_WEB_SECRET = "replace-with-a-long-random-secret"
-$env:AF_ACCOUNT_DB = "C:\path\to\assaultfire_accounts.sqlite3"
-.\.venv\Scripts\python.exe .\web\app.py
-\`\`\`
+## Environment variables
 
-For local testing, the app generates a temporary web secret when
-\`AF_WEB_SECRET\` is not set. Set a persistent secret before deploying the site
-beyond a local test machine.
+```text
+AF_ACCOUNT_DB           SQLite database path
+AF_WEB_HOST             bind host, default 127.0.0.1
+AF_WEB_PORT             bind port, default 8080
+AF_WEB_SECRET           persistent Flask session secret
+AF_REQUIRE_INVITE       1 by default; set 0 only for open local testing
+AF_ADMIN_USERNAME       optional admin bootstrap username
+AF_ADMIN_PASSWORD       matching admin bootstrap password
+AF_WEB_SECURE_COOKIE    set 1 when serving through HTTPS
+```
 
-## Current v94 integration boundary
+For anything beyond localhost, use a persistent `AF_WEB_SECRET`, HTTPS, and `AF_WEB_SECURE_COOKIE=1`. Do not expose the development server directly to an untrusted public network.
 
-The public stable v94 AUTH handler currently returns a hard-coded successful
-account result with UIN **10001** and ticket \`LOCAL_TICKET_001\`. It does not
-yet decode and validate the launcher AP cmd-3 username/password fields.
+## Recovery behavior
 
-For that reason, this feature intentionally does **not** make the SQLite
-database authoritative for launcher login yet. Doing so before the PH cmd-3
-credential layout is verified would risk breaking the known-good TCLS login
-path.
-
-The intended next integration is:
-
-1. Decode the observed AP cmd-3 credential fields.
-2. Call \`server.account_db.verify_account(...)\`.
-3. Return the registered account's UIN in AP cmd-4.
-4. Generate/store a per-login ticket tied to that UIN.
-5. Carry that UIN through ROLE/ZONE instead of the current single-player
-   constants.
-6. Migrate per-player profile/inventory persistence from one JSON file to
-   SQLite after multi-account login is working.
+A signed-in player can generate three one-time recovery codes. Generating a new set invalidates earlier unused codes. A successful recovery consumes the supplied code. Repeated failed recovery attempts create a temporary durable lockout. Banned accounts are excluded from recovery.
 
 ## Tests
 
-The account layer uses the standard library test runner:
-
-\`\`\`powershell
+```powershell
 .\.venv\Scripts\python.exe -m unittest tests.test_account_db -v
-\`\`\`
+.\.venv\Scripts\python.exe -m unittest tests.test_web_account_service -v
+.\.venv\Scripts\python.exe -m unittest tests.test_web_app -v
+```
+
+The Flask route tests require dependencies from `requirements.txt`.
+
+## Important game-login boundary
+
+The website safely creates and manages local SQLite accounts, but it does **not** claim that the stock PH launcher username/password packet is fully wired to this database yet. The known-good TCLS/game login path remains separate until the exact AP cmd-3 credential fields are validated and connected without destabilizing the stable client handoff.
+
+This separation is intentional: website/account work must not break VERSION/AUTH/DIR/ROLE/ZONE or the solved Altar runtime.

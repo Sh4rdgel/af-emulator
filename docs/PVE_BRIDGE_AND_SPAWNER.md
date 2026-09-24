@@ -1,149 +1,94 @@
-> **Current stable Altar path:** the repository now includes the v143b lazy DS lifecycle, v48 AFDEV spawner loader and v9 multi-peer first-packet latch bridge. The older v5/v26 files remain for historical reference. See [ALTAR_RUNTIME.md](ALTAR_RUNTIME.md).
+# Stable PvE / The Altar Bridge and Server Spawner
 
-# Stable PvE Bridge and Server Spawner
+The current `main` branch carries the solved local The Altar handoff used by the stable **v143b** server.
 
-This repository includes the two known-good local tools used to reach the Assault Fire PH PvE map during preservation testing.
-
-They are published because the components themselves are reproducible and useful to contributors.
-
-> These tools do **not** mean The Altar is fully working. The current failure is later in the post-load PvE round/gameplay lifecycle.
-
-## Included tools
-
-### 1. Stable DS UDP bridge — v5
-
-File:
+## Current components
 
 ```text
-tools/bridge/af_ds_udp_bridge_v5_actor_dump.py
+server/assaultfire_server_v143b.py
+server/assaultfire_ds_spawner.py
+tools/bridge/af_ds_udp_bridge_v9_multi_peer_latch.py
+tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py
 ```
 
-Purpose:
+The repository does **not** redistribute `TGame_AFDEV.exe`, cooked maps, private keys, or runtime player/server state.
+
+## Current lifecycle
 
 ```text
-Assault Fire client
-    UDP :65008
-        |
-        | transparent AF wire packets
-        v
-v5 bridge
-        |
-        | transparent AF wire packets
-        v
-AFDEV / UE3 listen server
-    UDP :7777
+A10A CreateRoom
+  -> reserve DS slot only
+  -> do not start AFDEV
+
+A11E SetGameSettings
+  -> store ModeId / MapId / SubModeId / Flags for the room
+
+A3A0 or A113 Start
+  -> arm lightweight bridge
+  -> return the A11A DS assignment
+
+first valid client DS UDP
+  -> v9 bridge latches the first packet
+  -> start the room's v48 AFDEV loader
+
+AFDEV ready
+  -> load SV-Maya_3_Main with PVEGame.TGSVGame
+  -> enable the validated native movement/correction path
+  -> apply the room Maya settings
+  -> verify the live zero DS key
+  -> write SESSION_READY.json
+
+bridge
+  -> release the latched first packet
+  -> wait for AFDEV's first reply
+  -> normal multi-peer UE3 relay becomes live
 ```
 
-The bridge:
+This prevents the old behavior where merely creating a lobby could start a dedicated server.
 
-- listens on UDP port **65008**;
-- forwards traffic to the local AFDEV/UE3 server on **127.0.0.1:7777**;
-- relays packets byte-for-byte unchanged;
-- has diagnostic decoding for the known local test state;
-- records useful early actor-channel payloads to `af_actor_payloads.log`;
-- includes Windows UDP reset handling used during the known-good tests.
+## Multi-player lifetime
 
-Run it with:
+The DS spawner tracks room membership separately from active match membership.
 
-```powershell
-python .\tools\bridge\af_ds_udp_bridge_v5_actor_dump.py
-```
+- `A117 QuitMatch` removes only the sending player from the active match.
+- A shared AFDEV instance remains alive while other match players remain.
+- The final match player ends the round without destroying the logical room.
+- `A107 LeaveRoom` removes room membership.
+- Room ownership transfers to a remaining player when needed.
+- The final room member releases the DS slot.
+- A ZONE disconnect is handled per player instead of tearing down another player's session.
 
-The bridge currently binds to `0.0.0.0:65008` because that is the configuration used by the known-good test version. Use it only on a trusted/local test network and do not expose it directly to the public internet.
+## Maya difficulty/settings
 
-## 2. Stable AFDEV PvE server spawner — v26
+`A11E` is the authoritative room-settings update used by the lazy spawn. The selected `SubModeId`/difficulty is carried into AFDEV. A PH-client Hard/Normal HUD label mismatch is tracked separately from the working authoritative room/AFDEV state.
 
-File:
+## Configuration
 
-```text
-tools/server_spawner/AFDevLoader_v26_pve_natural_loading_completion.py
-```
-
-This is the known-good AFDEV launcher/spawner used with the v5 bridge.
-
-It starts a locally supplied, validated `TGame_AFDEV.exe`, performs the established offline/local runtime setup, and loads the PvE listen-server map path used during our successful map-entry tests.
-
-The expected clean AFDEV executable SHA-256 is checked by the script:
-
-```text
-b4273f2658ca94eebc559a997fdfcd02d51e77ce75b892250c1db7fb80c70b51
-```
-
-The executable itself is **not distributed by this repository**.
-
-### Configure the game directory
-
-Either set:
+Typical local test environment:
 
 ```powershell
 $env:AF_GAME_DIR = "D:\YourAssaultFireFolder\Binaries\Win32"
+$env:AF_DS_SPAWNER_ENABLED = "1"
+$env:AF_DS_MAX_INSTANCES = "4"
+.\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
-or provide the directory directly:
+The default local slot layout uses public bridge ports beginning at UDP 65008 and AFDEV target ports beginning at UDP 7777. Keep these development listeners on a trusted/local network.
 
-```powershell
-python .\tools\server_spawner\AFDevLoader_v26_pve_natural_loading_completion.py --game-dir "D:\YourAssaultFireFolder\Binaries\Win32"
-```
+## Validation
 
-The default map is:
+The repository includes `tests/test_altar_ds_lifecycle.py` for lifecycle/integration invariants. Live Windows validation still depends on a lawfully supplied PH client and AFDEV executable.
+
+## Legacy rollback files
+
+These remain for historical comparison and rollback:
 
 ```text
-SV-Maya_3_Main
+server/assaultfire_server_v94.py
+tools/bridge/af_ds_udp_bridge_v5_actor_dump.py
+tools/server_spawner/AFDevLoader_v26_pve_natural_loading_completion.py
 ```
 
-You can explicitly select it with:
+They are no longer the default The Altar path.
 
-```powershell
-python .\tools\server_spawner\AFDevLoader_v26_pve_natural_loading_completion.py --game-dir "D:\YourAssaultFireFolder\Binaries\Win32" --map SV-Maya_3_Main
-```
-
-## Recommended local test order
-
-For a PvE research session:
-
-```text
-1. Start the emulator/backend needed for the test.
-2. Start AFDevLoader v26.
-3. Confirm the AFDEV listen server reaches its loaded-map state / UDP 7777.
-4. Start the v5 bridge.
-5. Confirm the bridge is waiting on UDP 65008.
-6. Launch the Assault Fire PH client through your local test setup.
-7. Reproduce The Altar.
-8. Collect the smallest useful bridge/server/backend logs around the failure.
-```
-
-Depending on the backend branch being researched, the client must be handed the bridge endpoint rather than the raw AFDEV port.
-
-## What is proven
-
-The stable bridge/spawner path has demonstrated:
-
-- AFDEV PvE map loading;
-- a functioning local UE3 listen-server endpoint;
-- transparent two-way client/server datagram relay;
-- UE3 Challenge/Netspeed/network progression;
-- client travel into **The Altar**;
-- player spawn into the map with HUD/weapon/movement available.
-
-## What is still broken
-
-The known non-working sample reaches the map, but the expected PvE round lifecycle does not proceed normally.
-
-Current research remains focused on:
-
-- post-load PvE initialization;
-- client loading-complete / authoritative handoff;
-- GameInfo / GameReplicationInfo / PlayerReplicationInfo state;
-- round-start state;
-- AI/enemy wave initialization;
-- objective and completion flow.
-
-See [Project Status](STATUS.md) and [The Altar sample issue](https://github.com/armangido/af-emulator/issues/1).
-
-## Why v5 and v26 are the public versions
-
-Later bridge experiments exist, including versions that changed login/options or tested causal packet modifications. Those are intentionally not being presented as the stable public bridge.
-
-Likewise, later AFDEV server-mode and PvE probes are research experiments rather than replacements for the known-good v26 listen-server launcher.
-
-The rule for `main` remains: publish the smallest reproducible known-good component, and keep experimental variants separate until verified.
+See [The Altar runtime](ALTAR_RUNTIME.md), [Project Status](STATUS.md), and [Architecture](ARCHITECTURE.md).

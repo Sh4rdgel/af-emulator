@@ -4,15 +4,15 @@ Read this page before troubleshooting protocol bugs.
 
 These are the compatibility requirements and known client-side blockers that can make Assault Fire PH fail even when the emulator itself is behaving correctly.
 
-## 1. Use the stable public baseline
+## 1. Use the stable public v143b baseline
 
 Use:
 
 ```text
-server/assaultfire_server_v94.py
+server/assaultfire_server_v143b.py
 ```
 
-The public `main` branch intentionally excludes the unfinished first-login/new-account experiments.
+The public `main` branch uses the stable pre-new-account v143b server and intentionally excludes the unfinished first-login/new-account experiments.
 
 ## 2. The RSA key pair must match
 
@@ -112,18 +112,19 @@ Recommended:
 - do not use the project against any live game/service;
 - back up files before replacing client configuration.
 
-## 7. PvE/The Altar needs extra components
+## 7. PvE/The Altar runtime
 
-Normal login testing does not require the PvE bridge.
-
-The known PvE research path uses:
+The current Altar path is integrated with v143b and uses:
 
 ```text
-tools/bridge/af_ds_udp_bridge_v5_actor_dump.py
-tools/server_spawner/AFDevLoader_v26_pve_natural_loading_completion.py
+server/assaultfire_ds_spawner.py
+tools/bridge/af_ds_udp_bridge_v9_multi_peer_latch.py
+tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py
 ```
 
-The Altar currently reaches map entry/player spawn, but the round/enemy lifecycle is still incomplete.
+The intended flow is reserve-only at A10A, arm the bridge at A3A0/A113, then lazy-start AFDEV on the first valid DS UDP packet. The v5 bridge and v26 loader are retained only as legacy rollback/reference files.
+
+See [ALTAR_RUNTIME.md](ALTAR_RUNTIME.md).
 
 See:
 
