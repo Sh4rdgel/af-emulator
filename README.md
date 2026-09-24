@@ -21,10 +21,6 @@ The current public baseline is **v143b**.
 - lazy AFDEV startup instead of spawning a server when a lobby is merely created
 - v48 AFDEV loader + v9 multi-peer UDP bridge
 - zero-DSKey readiness gate before the UE3 session is released
-- The Altar / Maya difficulty selection:
-  - Easy — `0x00001001`
-  - Normal — `0x00001002`
-  - Hard — `0x00001003`
 
 The first-time nickname/new-account flow and several social/progression features are still separate work. See **[Project Status](docs/STATUS.md)** for the detailed matrix.
 
