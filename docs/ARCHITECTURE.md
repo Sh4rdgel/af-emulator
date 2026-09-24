@@ -34,7 +34,7 @@ This page gives newcomers a quick mental model of the current stable local setup
 +-----------------------------------------------------------+
                           |
                           v
-               server/assaultfire_server_v94.py
+               server/assaultfire_server_v143b.py
 ```
 
 The client-side RSA public key and server-side private key must be a matching pair:
@@ -79,39 +79,43 @@ The patch is runtime-only and verifies the known function signature before chang
 
 Tracking: [Issue #3](https://github.com/armangido/af-emulator/issues/3).
 
-## Optional PvE / The Altar path
+## The Altar dedicated-server path
 
-The current research path adds two more components:
+The v143b server owns the room-to-DS lifecycle:
 
 ```text
-                          +----------------------+
-                          | Assault Fire client  |
-                          +----------+-----------+
-                                     |
-                                     | UDP :65008
-                                     v
-                          +----------------------+
-                          | bridge v5            |
-                          | transparent relay    |
-                          +----------+-----------+
-                                     |
-                                     | UDP :7777
-                                     v
-                          +----------------------+
-                          | AFDEV listen server  |
-                          | spawner v26          |
-                          | SV-Maya_3_Main       |
-                          +----------------------+
+TGame room / ZONE
+      |
+      | A10A reserve only
+      | A11E room settings
+      | A3A0/A113 start
+      v
+server/assaultfire_ds_spawner.py
+      |
+      | starts lightweight per-room bridge
+      v
+v9 multi-peer latch bridge :65008 + slot
+      |
+      | first valid client DS UDP triggers lazy spawn
+      v
+v48 AFDEV loader
+      |
+      | SV-Maya_3_Main / PVEGame.TGSVGame
+      | native movement + zero-DSKey verification
+      v
+AFDEV / UE3 :7777 + slot
+      |
+      +-- SESSION_READY -> release first packet -> live relay
 ```
 
 Files:
 
 ```text
-tools/bridge/af_ds_udp_bridge_v5_actor_dump.py
-tools/server_spawner/AFDevLoader_v26_pve_natural_loading_completion.py
+tools/bridge/af_ds_udp_bridge_v9_multi_peer_latch.py
+tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py
 ```
 
-This path is proven through map entry/player spawn, but the normal PvE round/enemy lifecycle remains incomplete.
+The older v5/v26 pair is retained as a historical rollback path.
 
 ## Port reference
 

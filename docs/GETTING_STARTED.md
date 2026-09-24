@@ -1,6 +1,6 @@
 # Easy Getting Started Guide
 
-This guide is written for people who just want to get the **stable public v94 emulator** running without knowing the Assault Fire protocol first.
+This guide is written for people who just want to get the **stable public v143b emulator** running without knowing the Assault Fire protocol first.
 
 > Current limitation: use an **existing/local test profile path**. The unfinished first-time/new-account creation flow is intentionally not part of the stable public build.
 
@@ -13,7 +13,7 @@ You will do the basic backend setup, then verify the client launch handoff:
 2. Install the Python dependency
 3. Generate a local RSA key pair
 4. Redirect the old Assault Fire PH hostnames to 127.0.0.1
-5. Start the v94 server
+5. Start the v143b server
 6. Launch client.exe / TCLS and log in until START is available
 7. Choose ONE compatibility path:
    - normal launch: patch_tgame_datetime.py
@@ -24,7 +24,7 @@ You will do the basic backend setup, then verify the client launch handoff:
 
 Before your first test, also read **[Vital Launch Requirements](LAUNCH_REQUIREMENTS.md)**. It explains the TCLS → TGame shared-memory handoff and the build-specific launch patch that is easy to miss.
 
-For PvE/The Altar research, the bridge and AFDEV spawner are optional extra steps later.
+For The Altar, v143b manages the lazy DS lifecycle: room creation reserves capacity, match start arms the bridge, and the first valid DS UDP packet starts the v48 AFDEV loader.
 
 ---
 
@@ -223,12 +223,12 @@ ipconfig /flushdns
 
 ---
 
-## 5. Start the stable v94 emulator
+## 5. Start the stable v143b emulator
 
 From the repository folder:
 
 ```powershell
-.\.venv\Scripts\python.exe .\server\assaultfire_server_v94.py
+.\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
 The server now automatically looks for:
@@ -252,7 +252,7 @@ If your private key is stored somewhere else, you can point the server to it:
 
 ```powershell
 $env:AF_PRIVATE_KEY = "D:\MyPrivateFolder\PRIVATE.PEM"
-.\.venv\Scripts\python.exe .\server\assaultfire_server_v94.py
+.\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
 Optional log path:

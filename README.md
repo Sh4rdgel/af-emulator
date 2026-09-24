@@ -9,21 +9,22 @@ An unofficial, community-driven preservation and server-emulation project for **
 
 > This project is not affiliated with, endorsed by, or sponsored by Tencent, Level Up! Games, or any original rights holder.
 
-## Current The Altar state — video preview
+## Current The Altar state
 
-> **The Altar currently loads and the player can spawn, but the normal PvE round/enemy lifecycle does not start correctly.**
+The local **The Altar** dedicated-server/gameplay handoff is integrated on `main`.
 
-<a href="https://github.com/armangido/af-emulator/issues/1">
-  
+```text
+A10A room creation -> reserve capacity only
+A3A0 / A113 start -> arm DS bridge + A11A assignment
+first valid client DS UDP -> lazy-start TGame_AFDEV
+v48 loader -> SV-Maya_3_Main / PVEGame.TGSVGame
+verified zero DS key + native movement -> SESSION_READY
+v9 multi-peer bridge -> release latched first packet -> UE3 session live
+```
 
-  https://github.com/user-attachments/assets/da20eced-5792-47d8-a360-1262e2fe8e8b
+The server also carries the Maya `A11E` room settings into the lazy AFDEV launch. The remaining Hard/Normal HUD text mismatch is tracked separately as a client UI/localization issue rather than a failure of the DS handoff.
 
-
-</a>
-
-**What this sample demonstrates:** room creation → The Altar loading → map entry/player spawn works, while the post-load PvE round progression is still incomplete.
-
-➡️ **[Open the full non-working The Altar sample / investigation — Issue #1](https://github.com/armangido/af-emulator/issues/1)**
+The older Issue #1/video remains useful as historical evidence of the pre-fix state. See **[The Altar runtime](docs/ALTAR_RUNTIME.md)** for the current implementation.
 
 ## Vital launch information
 
@@ -99,7 +100,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\setup\setup_assaultfire_hosts.p
 Start the stable server:
 
 ```powershell
-.\.venv\Scripts\python.exe .\server\assaultfire_server_v94.py
+.\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
 The RSA helper creates `server\PRIVATE.PEM` automatically. **Never upload or commit that file.**
@@ -119,13 +120,13 @@ Do not run both patchers for the same launch. See [Issue #3](https://github.com/
 
 New to the project?
 
-- **[Friendly setup tutorial](docs/GETTING_STARTED.md)** — clone, install, configure the local key, run v94, test the client, and prepare a useful bug report.
+- **[Friendly setup tutorial](docs/GETTING_STARTED.md)** — clone, install, configure the local key, run v143b, test the client, and prepare a useful bug report.
 - **[Working / broken / planned status](docs/STATUS.md)** — shows what currently works, what is only partial, what is broken/unavailable, and what contributors can help implement.
 - **[Project milestones](docs/MILESTONES.md)** — roadmap from the stable v94 baseline through The Altar, dedicated-server lifecycle, and a preservation-quality release.
 - **[Contributing guide](CONTRIBUTING.md)** — rules for safe protocol research, pull requests, sanitized evidence, and client/launcher compatibility fixes.
 - **Client / launcher error reports** — use the GitHub issue template when a popup, TCLS failure, TGame startup problem, or early connection failure is not already covered. Include the exact message and last confirmed stage.
 - **Client / launcher fix PRs** — the repository PR template now asks for before/after evidence, build/signature validation, regression checks, and safe redistribution checks.
-- **[Stable PvE bridge + server spawner](docs/PVE_BRIDGE_AND_SPAWNER.md)** — known-good v5 UDP bridge and v26 AFDEV listen-server launcher used for The Altar research.
+- **[Stable PvE bridge + server spawner](docs/PVE_BRIDGE_AND_SPAWNER.md)** — current v9 multi-peer latch bridge and v48 lazy AFDEV loader used by the solved Altar path.
 - **[Local hosts redirect](config/hosts.txt)** — ready-to-copy mappings for the retired PH service hostnames → `127.0.0.1`.
 - **[FAQ](docs/FAQ.md)** — common crashes, RSA/APClient questions, ports, The Altar status, and troubleshooting.
 - **[Launcher / AP / TGame error reference](docs/LAUNCHER_ERRORS.md)** — known AP/AUTH errors, TCLS launcher logs, TGame popups, security warning codes, crash codes, and what each one usually means.
@@ -136,29 +137,17 @@ New to the project?
 
 ## Current public baseline
 
-The current public baseline is **v94**.
+The current public gameplay baseline is **v143b**, using the stable pre-new-account server plus the solved lazy Altar DS runtime.
 
-This is intentionally the last known stable branch before the experimental first-login / new-account creation work. Those experimental account-creation changes are **not included in this repository at this time**.
+The unfinished first-time nickname/new-account experiments are still intentionally excluded from this baseline. Existing/local profile login remains the conservative default while that separate client flow is validated.
 
-The stable baseline currently contains the project's working/reproducible implementation for:
-
-- VERSION service
-- AUTH handshake
-- DIR/server discovery
-- existing local profile / zone login path
-- player information and inventory/property handling used by the stable branch
-- shop/backend work from the stable branch
-- lobby/room foundation
-- friends/chat foundation
-- clan foundation and persisted ClanID work
-
-The server source is currently kept as a versioned baseline:
+The current server entry point is:
 
 ```text
-server/assaultfire_server_v94.py
+server/assaultfire_server_v143b.py
 ```
 
-Later experimental branches are being kept out of `main` until their behavior is verified.
+The repository keeps `server/assaultfire_server_v94.py`, bridge v5, and loader v26 as rollback/history references. They are not the default Altar path.
 
 ## Goal
 
@@ -166,7 +155,7 @@ The goal is to document and reimplement the network/backend behavior required to
 
 This repository contains **original project code and documentation only**. It must not contain copyrighted game binaries, proprietary game assets, leaked source code, private keys, credentials, or personal player data.
 
-## Running the stable baseline
+## Running the stable baseline (v143b)
 
 Python 3.12 is recommended.
 
@@ -195,7 +184,7 @@ AF_X32DBG_LOG=<optional x32dbg crypto log path>
 Then run:
 
 ```bash
-python server/assaultfire_server_v94.py
+python server/assaultfire_server_v143b.py
 ```
 
 The current baseline is designed around local/isolated preservation testing.
