@@ -5,77 +5,32 @@
 [![Status](https://img.shields.io/badge/status-preservation%20research-orange)](docs/STATUS.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-An unofficial, community-driven preservation and server-emulation project for **Assault Fire PH**.
+An unofficial, community-driven **Assault Fire PH** preservation and server-emulation project.
+
+The goal is simple: make the retired PH client usable in a local/isolated environment for preservation, interoperability, research, and nostalgia.
 
 > This project is not affiliated with, endorsed by, or sponsored by Tencent, Level Up! Games, or any original rights holder.
 
-## Current The Altar state
+## What works today
 
-The local **The Altar** dedicated-server/gameplay handoff is integrated on `main`.
+The current public baseline is **v143b**.
 
-```text
-A10A room creation -> reserve capacity only
-A3A0 / A113 start -> arm DS bridge + A11A assignment
-first valid client DS UDP -> lazy-start TGame_AFDEV
-v48 loader -> SV-Maya_3_Main / PVEGame.TGSVGame
-verified zero DS key + native movement -> SESSION_READY
-v9 multi-peer bridge -> release latched first packet -> UE3 session live
-```
+- VERSION / AUTH / DIR / ROLE / ZONE local backend flow
+- existing/local profile login path
+- dynamic room and dedicated-server lifecycle used by The Altar
+- lazy AFDEV startup instead of spawning a server when a lobby is merely created
+- v48 AFDEV loader + v9 multi-peer UDP bridge
+- zero-DSKey readiness gate before the UE3 session is released
+- The Altar / Maya difficulty selection:
+  - Easy — `0x00001001`
+  - Normal — `0x00001002`
+  - Hard — `0x00001003`
 
-The server also carries the Maya `A11E` room settings into the lazy AFDEV launch. The remaining Hard/Normal HUD text mismatch is tracked separately as a client UI/localization issue rather than a failure of the DS handoff.
+The first-time nickname/new-account flow and several social/progression features are still separate work. See **[Project Status](docs/STATUS.md)** for the detailed matrix.
 
-The older Issue #1/video remains useful as historical evidence of the pre-fix state. See **[The Altar runtime](docs/ALTAR_RUNTIME.md)** for the current implementation.
+## Quick start
 
-## Vital launch information
-
-Getting the emulator listeners online is only half of the launch path. The stock PH launcher still has to hand the authenticated session from **TCLS → TGame.exe** correctly.
-
-The validated launch path includes:
-
-- matching `server\PRIVATE.PEM` + `TCLS\config\APClient.dat`;
-- localhost hosts redirects;
-- normal `client.exe / TCLS` login;
-- TCLS `GetLoginInfo` + selected-server lookup;
-- TCLS creation of `TCLS_SHAREDMEMEMORY<child PID>`;
-- optional **runtime-only TCLS suspended-launch compatibility patch** at `TCLS.dll+0x584E0` after verifying `8B 55 18 52`;
-- required TGame datetime runtime compatibility patch for the validated PH build;
-- successful `TGame.exe` ROLE/ZONE connections.
-
-The known TCLS suspended-launch patch temporarily changes:
-
-```text
-TCLS.dll + 0x584E0
-original: 8B 55 18 52
-runtime : 6A 04 90 90   ; push CREATE_SUSPENDED, nop, nop
-```
-
-It must be restored immediately after the child TGame is created. **Do not patch a different build unless the original signature matches. Do not distribute a modified TCLS.dll.**
-
-The repository now includes a debugger-free helper that automates this safely:
-
-```powershell
-.\.venv\Scripts\python.exe .\tools\patches\patch_tcls_suspended_launch.py
-```
-
-Run it after `client.exe / TCLS` is logged in and sitting at the normal **START** screen. It verifies the TCLS signature, temporarily enables `CREATE_SUSPENDED`, detects the new child `TGame.exe`, restores TCLS immediately, applies the existing TGame datetime patch while the child is suspended, and then resumes TGame.
-
-**When using this combined helper, do not also run `patch_tgame_datetime.py` separately.**
-
-➡️ **[Read the full TCLS → TGame launch and compatibility guide](docs/LAUNCH_REQUIREMENTS.md)**
-
-### Legacy kernel anti-cheat / security-driver compatibility
-
-The original PH client includes an old kernel-level security / anti-cheat component. On modern Windows this legacy component can cause startup failures, crashes, driver initialization errors, or other instability **even when the emulator itself is working correctly**.
-
-For preservation testing, this may require using a local test environment where the obsolete security-driver path is not active or is otherwise avoided. The project does **not** provide instructions or tooling for defeating active anti-cheat/security systems.
-
-Any system, driver, boot-policy, virtualization, or security configuration changes a user independently chooses to make are performed at their own risk. The maintainers/contributors are not responsible for damage, instability, data loss, security problems, driver failures, or other consequences caused by third-party tools, original game drivers, or user-performed system changes.
-
-See **[Issue #4](https://github.com/armangido/af-emulator/issues/4)**, **[Vital Setup Notes](docs/VITAL_SETUP_NOTES.md)**, and **[DISCLAIMER.md](DISCLAIMER.md)**.
-
-## Easy setup
-
-For a first local test:
+### 1. Clone and install
 
 ```powershell
 git clone https://github.com/armangido/af-emulator.git
@@ -85,175 +40,169 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Generate the matching local RSA key pair and install the public key into your Assault Fire `TCLS\config` folder:
+### 2. Generate the local RSA key
+
+Point the helper at your own Assault Fire PH `TCLS\config` directory:
 
 ```powershell
 .\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "D:\YourAssaultFireFolder\TCLS\config"
 ```
 
-Then, from **Administrator PowerShell**, redirect the retired PH services to localhost:
+This creates the local server key and matching `APClient.dat`.
+
+**Never commit or upload `server\PRIVATE.PEM`.**
+
+### 3. Redirect the retired PH services to localhost
+
+Run from **Administrator PowerShell**:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\setup\setup_assaultfire_hosts.ps1
 ```
 
-Start the stable server:
+### 4. Start the emulator
 
 ```powershell
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
-The RSA helper creates `server\PRIVATE.PEM` automatically. **Never upload or commit that file.**
+For **The Altar / PvE**, also point the DS spawner at your local AFDEV game directory before starting the server:
 
-> **Launcher popup: `AP client initialization failed.`?** If the server receives VERSION but never logs `[AUTH] Connected ...`, the failure is still inside TCLS/APClient initialization. Verify the installed `TCLS\config\APClient.dat` is the repository-generated 272-byte raw PEM public key and that you are launching the same client copy you configured. See **[the AP client initialization troubleshooting steps](docs/LAUNCHER_ERRORS.md#ap-client-initialization-failed)**.
+```powershell
+$env:AF_GAME_DIR = "D:\YourAssaultFireFolder\Binaries\Win32"
+$env:AF_DS_SPAWNER_ENABLED = "1"
+```
 
-For the validated PH build, choose **one** client compatibility path:
+The repository does **not** provide `TGame_AFDEV.exe`, maps, packages, or other original game files.
 
-- **Normal TCLS launch:** run `tools\patches\patch_tgame_datetime.py` before clicking START.
-- **Suspended TCLS handoff:** log in to the launcher, stop at START, then run `tools\patches\patch_tcls_suspended_launch.py`. The combined helper includes the datetime patch automatically.
+### 5. Launch the PH client
 
-Do not run both patchers for the same launch. See [Issue #3](https://github.com/armangido/af-emulator/issues/3) and [Vital Launch Requirements](docs/LAUNCH_REQUIREMENTS.md).
+For the validated PH build, use **one** compatibility path:
 
-➡️ **[Read the very easy step-by-step tutorial](docs/GETTING_STARTED.md)**
+**Normal TCLS launch**
 
-## Start here
+```powershell
+.\.venv\Scripts\python.exe .\tools\patches\patch_tgame_datetime.py
+```
 
-New to the project?
+Then launch normally through `client.exe / TCLS`.
 
-- **[Friendly setup tutorial](docs/GETTING_STARTED.md)** — clone, install, configure the local key, run v143b, test the client, and prepare a useful bug report.
-- **[Working / broken / planned status](docs/STATUS.md)** — shows what currently works, what is only partial, what is broken/unavailable, and what contributors can help implement.
-- **[Project milestones](docs/MILESTONES.md)** — roadmap from the stable v94 baseline through The Altar, dedicated-server lifecycle, and a preservation-quality release.
-- **[Contributing guide](CONTRIBUTING.md)** — rules for safe protocol research, pull requests, sanitized evidence, and client/launcher compatibility fixes.
-- **Client / launcher error reports** — use the GitHub issue template when a popup, TCLS failure, TGame startup problem, or early connection failure is not already covered. Include the exact message and last confirmed stage.
-- **Client / launcher fix PRs** — the repository PR template now asks for before/after evidence, build/signature validation, regression checks, and safe redistribution checks.
-- **[Stable PvE bridge + server spawner](docs/PVE_BRIDGE_AND_SPAWNER.md)** — current v9 multi-peer latch bridge and v48 lazy AFDEV loader used by the solved Altar path.
-- **[Local hosts redirect](config/hosts.txt)** — ready-to-copy mappings for the retired PH service hostnames → `127.0.0.1`.
-- **[FAQ](docs/FAQ.md)** — common crashes, RSA/APClient questions, ports, The Altar status, and troubleshooting.
-- **[Launcher / AP / TGame error reference](docs/LAUNCHER_ERRORS.md)** — known AP/AUTH errors, TCLS launcher logs, TGame popups, security warning codes, crash codes, and what each one usually means.
-- **[Architecture + port map](docs/ARCHITECTURE.md)** — quick diagram of how TCLS, TGame, the emulator, bridge, and AFDEV fit together.
-- **[Vital launch requirements](docs/LAUNCH_REQUIREMENTS.md)** — TCLS → TGame handoff, shared memory, validated TCLS runtime patch, TGame compatibility patch, and failure diagnosis.
-- **[Vital setup notes](docs/VITAL_SETUP_NOTES.md)** — key, hosts, datetime, legacy security-driver compatibility, and isolation warnings.
-- **[Disclaimer](DISCLAIMER.md)** — project scope, legacy driver compatibility, and responsibility for user-performed system changes.
+**Suspended TCLS handoff**
 
-## Current public baseline
+Log in through TCLS and stop at the normal **START** screen, then run:
 
-The current public gameplay baseline is **v143b**, using the stable pre-new-account server plus the solved lazy Altar DS runtime.
+```powershell
+.\.venv\Scripts\python.exe .\tools\patches\patch_tcls_suspended_launch.py
+```
 
-The unfinished first-time nickname/new-account experiments are still intentionally excluded from this baseline. Existing/local profile login remains the conservative default while that separate client flow is validated.
+The suspended-launch helper already applies the datetime compatibility patch, so **do not run both helpers for the same launch**.
 
-The current server entry point is:
+For the full walkthrough, use **[Getting Started](docs/GETTING_STARTED.md)**.
+
+## The Altar
+
+The stable Altar path is integrated on `main`.
 
 ```text
-server/assaultfire_server_v143b.py
+Create room
+   ↓
+reserve DS capacity only
+   ↓
+Start Match
+   ↓
+arm per-room bridge + return DS assignment
+   ↓
+first valid client DS UDP packet
+   ↓
+lazy-start v48 AFDEV
+   ↓
+verify world / movement / zero DS key
+   ↓
+SESSION_READY
+   ↓
+release latched packet through v9 bridge
+   ↓
+UE3 gameplay session
 ```
 
-The repository keeps `server/assaultfire_server_v94.py`, bridge v5, and loader v26 as rollback/history references. They are not the default Altar path.
+Room settings sent through A11E are applied before the lazy AFDEV spawn, so the selected Easy / Normal / Hard difficulty reaches the server runtime.
 
-## Goal
+A PH-client HUD label can still display the wrong text in some cases; that is tracked separately from the authoritative server/AFDEV difficulty state.
 
-The goal is to document and reimplement the network/backend behavior required to run the original Assault Fire PH client in an isolated/local environment for preservation, research, and interoperability.
+See **[The Altar Runtime](docs/ALTAR_RUNTIME.md)** for implementation details.
 
-This repository contains **original project code and documentation only**. It must not contain copyrighted game binaries, proprietary game assets, leaked source code, private keys, credentials, or personal player data.
+## If something fails
 
-## Running the stable baseline (v143b)
+Start with the symptom instead of changing random files:
 
-Python 3.12 is recommended.
+- **`AP client initialization failed.`** → [Launcher / AP / TGame errors](docs/LAUNCHER_ERRORS.md)
+- **TCLS launches but TGame does not hand off correctly** → [Vital Launch Requirements](docs/LAUNCH_REQUIREMENTS.md)
+- **TGame crashes around datetime/startup** → use one of the compatibility helpers above
+- **legacy security-driver / modern Windows startup problems** → [Vital Setup Notes](docs/VITAL_SETUP_NOTES.md) and [Issue #4](https://github.com/armangido/af-emulator/issues/4)
+- **not sure whether a feature is implemented** → [Project Status](docs/STATUS.md)
 
-Install the Python dependency:
+When reporting a problem, include the exact error text and the last server/client log lines before the failure.
 
-```bash
-pip install -r requirements.txt
-```
+## Documentation
 
-The server expects a locally supplied RSA private key. The key itself must **never** be committed.
+You do not need to read everything before trying the project.
 
-By default the stable server looks for:
+| Guide | Use it for |
+| --- | --- |
+| [Getting Started](docs/GETTING_STARTED.md) | first setup and local launch |
+| [Project Status](docs/STATUS.md) | what works, what is partial, what is still planned |
+| [The Altar Runtime](docs/ALTAR_RUNTIME.md) | current v143b / v48 / v9 PvE path |
+| [Launch Requirements](docs/LAUNCH_REQUIREMENTS.md) | TCLS → TGame handoff and compatibility |
+| [Launcher Errors](docs/LAUNCHER_ERRORS.md) | known launcher/AP/TGame messages |
+| [Architecture](docs/ARCHITECTURE.md) | ports, components, and data flow |
+| [FAQ](docs/FAQ.md) | common questions |
+| [Contributing](CONTRIBUTING.md) | submitting fixes, tests, and research |
+
+## Repository layout
 
 ```text
-server/PRIVATE.PEM
+server/      emulator/backend and DS lifecycle
+tools/       setup, compatibility, bridge, loader, and research utilities
+docs/        setup, protocol, architecture, and troubleshooting
+tests/       reproducible regression tests
+.github/     issue and contribution templates
 ```
 
-You can instead set:
+Legacy files such as the older v94 server, v26 loader, and v5 bridge are kept for rollback/history. They are **not** the recommended Altar path.
 
-```text
-AF_PRIVATE_KEY=<path to your local PRIVATE.PEM>
-AF_LOG_PATH=<optional server log path>
-AF_X32DBG_LOG=<optional x32dbg crypto log path>
-```
+## Project scope
 
-Then run:
+This repository contains original emulator code, documentation, and research tooling.
 
-```bash
-python server/assaultfire_server_v143b.py
-```
+Please do **not** commit:
 
-The current baseline is designed around local/isolated preservation testing.
+- original game executables or DLLs
+- `.upk`, `.udk`, maps, audio, textures, or other proprietary assets
+- private keys, credentials, or account data
+- raw memory dumps containing proprietary or personal data
+- files you do not have permission to redistribute
 
-## Repository policy
+Users must obtain any required original game files independently and lawfully.
 
-### Allowed
-
-- Clean-room server/emulator code written by contributors
-- Protocol descriptions derived from observation/research
-- Packet parsers/encoders
-- Debugging and diagnostic tools written for this project
-- Documentation
-- Sanitized test fixtures containing no proprietary content or secrets
-
-### Do not commit
-
-- `TGame.exe`, `TCLS.dll`, or other original game binaries
-- Original `.upk`, `.udk`, audio, textures, maps, or other game assets
-- Private keys or certificates
-- Account credentials
-- Raw player-state files containing personal information
-- Full memory dumps
-- Decompiled/disassembled proprietary code copied verbatim
-- Files you do not have permission to redistribute
-
-Users must obtain any required original game client files independently and lawfully.
-
-## Project structure
-
-```text
-server/      Stable emulator/server implementation
-tools/       Original debugging, packet, and research utilities
-docs/        Protocol and architecture documentation
-tests/       Reproducible tests and sanitized fixtures
-.github/     Contributor and issue templates
-```
-
-For now, only verified/stable material is being promoted into the public baseline.
+The project does not provide tooling or instructions for defeating active anti-cheat or operating-system security protections.
 
 ## Contributing
 
-Contributions are welcome. Good contributions include protocol documentation, packet parsing, reproducible bug reports, tests, and fixes against the stable baseline.
+Contributions are welcome, especially:
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting code or research.
+- reproducible protocol findings
+- packet parsers/encoders
+- client-launch compatibility fixes
+- dedicated-server improvements
+- regression tests
+- documentation corrections
 
-When reporting protocol behavior, include reproducible evidence where possible:
+Please read **[CONTRIBUTING.md](CONTRIBUTING.md)** before opening a PR.
 
-- client version
-- packet direction
-- command/opcode
-- packet length
-- sanitized hex or decoded fields
-- expected behavior
-- observed behavior
-- relevant logs with secrets/private data removed
-
-Please do not submit speculative account-creation/new-account changes to `main` until that flow is reproducibly verified.
-
-## Preservation and interoperability
-
-This project is intended for preservation, interoperability, education, and research around discontinued software. It does not provide the original game client or copyrighted game content.
+For protocol reports, include the client build, opcode/direction, sanitized packet or decoded fields, expected behavior, observed behavior, and relevant logs.
 
 ## License
 
-The original code and documentation in this repository are licensed under the [MIT License](LICENSE).
+Original code and documentation in this repository are licensed under the [MIT License](LICENSE).
 
-This license applies only to material created for the `af-emulator` project. It does **not** grant rights to Assault Fire, the original game client, executables, DLLs, maps, packages, artwork, audio, trademarks, or any other third-party material. Those remain the property of their respective rights holders.
-
-## Solved The Altar runtime
-
-The stable v143b/v48 lazy dedicated-server path is now integrated in the repository. Lobby creation reserves capacity without starting AFDEV; match start arms the bridge; the first valid DS UDP packet lazily starts AFDEV; zero-DSKey verification gates SESSION_READY; and the v9 bridge relays the connected UE3 session. See [docs/ALTAR_RUNTIME.md](docs/ALTAR_RUNTIME.md).
+The license does **not** grant rights to Assault Fire, the original client, executables, DLLs, maps, packages, artwork, audio, trademarks, or other third-party material.
