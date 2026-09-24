@@ -1,6 +1,6 @@
 # Frequently Asked Questions
 
-This FAQ covers the most common setup and troubleshooting questions for the public **Assault Fire PH emulator v94** baseline.
+This FAQ covers the most common setup and troubleshooting questions for the public **Assault Fire PH emulator v143b** baseline.
 
 ## I got an AP / launcher / TGame error code. Where do I look?
 
@@ -95,7 +95,7 @@ See [Issue #4](https://github.com/armangido/af-emulator/issues/4), [Vital Setup 
 
 ## What version should I use?
 
-Use the public **v94 stable baseline**.
+Use the public **v143b stable baseline**.
 
 Later branches contain experimental work, especially first-login/new-account behavior, and are intentionally not part of `main` yet.
 
@@ -188,39 +188,17 @@ Ports 65008 and 7777 are only needed for the bridge/AFDEV PvE research setup.
 
 ## Does The Altar work?
 
-**Partially.**
+**Yes for the local v143b dedicated-server/gameplay handoff integrated on `main`.**
 
-Currently demonstrated:
+The current path reserves DS capacity at room creation, arms the bridge at match start, lazily starts the v48 AFDEV loader on the first valid DS UDP packet, verifies the runtime/zero DS key, and releases the latched UE3 handshake through the v9 multi-peer bridge.
 
-```text
-PvE room
- -> The Altar loading
- -> map entry
- -> player spawn
- -> HUD / weapon / movement
-```
-
-Still incomplete:
-
-```text
-round start
- -> enemies/waves
- -> objectives
- -> normal completion
- -> result/reward lifecycle
-```
-
-See [Issue #1](https://github.com/armangido/af-emulator/issues/1) and the [milestone roadmap](MILESTONES.md).
-
----
+The older Issue #1 sample is retained as historical evidence of the pre-fix state. Match-history/reward work and the PH-client Hard/Normal HUD text mismatch are separate follow-up areas.
 
 ## Do I need the bridge and AFDEV spawner for normal login testing?
 
 No.
 
-VERSION/AUTH/DIR/basic existing-profile testing uses the main v94 emulator.
-
-The bridge and AFDEV spawner are for the current PvE/The Altar research path.
+VERSION/AUTH/DIR/basic existing-profile testing uses the main v143b emulator and does not need a DS instance. For The Altar, v143b launches/manages the bridge and AFDEV loader lazily as part of the match path.
 
 See [PvE Bridge and Spawner](PVE_BRIDGE_AND_SPAWNER.md).
 
@@ -240,7 +218,7 @@ You need your own lawfully obtained client files.
 
 Not reliably.
 
-The first-time nickname/new-account flow is experimental and intentionally excluded from the stable public v94 baseline.
+The first-time nickname/new-account flow is experimental and intentionally excluded from the stable public v143b baseline.
 
 Use the existing/local profile path when testing `main`.
 
@@ -269,24 +247,14 @@ The repository contains useful protocol foundations, but real two-client behavio
 For a basic local test:
 
 ```text
-1. v94 emulator
-2. TGame datetime patcher
+1. v143b emulator
+2. the appropriate TGame/TCLS compatibility helper for your launch path
 3. Assault Fire PH client
 ```
 
-For PvE research:
-
-```text
-1. emulator/backend
-2. AFDEV spawner v26
-3. UDP bridge v5
-4. TGame datetime patcher
-5. client
-```
+For The Altar, set `AF_GAME_DIR` and enable the DS spawner, then run the same v143b server. Do not manually pre-start AFDEV for every lobby; the current path starts it lazily after the client sends the first valid DS UDP packet.
 
 See the [Easy Getting Started Guide](GETTING_STARTED.md) for copy/paste commands.
-
----
 
 ## The server says a port is already in use. What do I do?
 

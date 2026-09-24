@@ -2,7 +2,7 @@
 
 This page tracks the **public stable baseline only**.
 
-Current public baseline: **v94**
+Current public baseline: **v143b**
 
 Later experimental branches are intentionally excluded from `main` until they are reproducibly verified with the Assault Fire PH client.
 
@@ -23,11 +23,11 @@ Later experimental branches are intentionally excluded from `main` until they ar
 | AUTH handshake | ✅ | RSA/DH/AES authentication path used by the local client is implemented. |
 | DIR/server discovery | ✅ | Local directory response and server endpoint discovery are implemented. |
 | ROLE/ZONE connection foundation | ✅ | Stable branch can bring the existing local profile through the established login path. |
-| Existing local player/profile state | ✅ | v94 has a known local player/profile path and persisted player state. |
-| PlayerInfo / property delivery | ✅ | Stable player information and property/inventory messages used by v94 are implemented. |
+| Existing local player/profile state | ✅ | v143b has a known local player/profile path and persisted player state. |
+| PlayerInfo / property delivery | ✅ | Stable player information and property/inventory messages used by v143b are implemented. |
 | Shop foundation | ✅ | Stable shop/balance/purchase work from the pre-v95 branch is present. |
-| Clan ID persistence | ✅ | v94 persists clan membership/ClanID and reflects it in PlayerInfo. |
-| Clan name verification/create request shapes | ✅ | Known v94 request/response shapes are implemented for the stable branch. |
+| Clan ID persistence | ✅ | v143b persists clan membership/ClanID and reflects it in PlayerInfo. |
+| Clan name verification/create request shapes | ✅ | Known v143b request/response shapes are implemented for the stable branch. |
 | DS UDP bridge v5 | ✅ | Known-good transparent 65008 ↔ 7777 bridge used during successful PvE map-entry tests. |
 | AFDEV PvE spawner v26 | ✅ | Known-good listen-server launcher used to load SV-Maya_3_Main for PvE research. |
 
@@ -35,13 +35,13 @@ Later experimental branches are intentionally excluded from `main` until they ar
 
 | Area | Status | Current limitation |
 |---|---:|---|
-| Lobby browser | 🟡 | v94 exposes synthetic Survival rooms plus a client-created room slot. This is not a complete dynamic production-style lobby service. |
+| Lobby browser | 🟡 | v143b exposes synthetic Survival rooms plus a client-created room slot. This is not a complete dynamic production-style lobby service. |
 | Room create/list behavior | 🟡 | Foundation is present, but the complete multiplayer room lifecycle is not finished. |
-| Friends | 🟡 | v94 includes A303-A30A foundation and a local test friend path; real two-client persisted social behavior belongs to later experimental work and is not part of the public baseline. |
-| Private chat | 🟡 | v94 uses a LocalFriend echo/test path. Real friend-to-friend online/offline delivery is not part of this stable baseline. |
+| Friends | 🟡 | v143b includes A303-A30A foundation and a local test friend path; real two-client persisted social behavior belongs to later experimental work and is not part of the public baseline. |
+| Private chat | 🟡 | v143b uses a LocalFriend echo/test path. Real friend-to-friend online/offline delivery is not part of this stable baseline. |
 | Clans | 🟡 | Basic create/name/persistence behavior exists. Large nested clan detail/member responses were deliberately not guessed and still require verification. |
 | Inventory/equipment | 🟡 | The stable profile/property path works, but not every item/equipment/UI edge case is verified. |
-| Match allocation | 🟡 | Research exists, but complete retail-client match allocation and handoff are not in the stable v94 baseline. The stable bridge/spawner are components, not a complete allocation service. |
+| Match allocation | 🟡 | Research exists, but complete retail-client match allocation and handoff are not in the stable v143b baseline. The stable bridge/spawner are components, not a complete allocation service. |
 | Legacy kernel security-driver compatibility | 🟡 | The original client security driver can cause startup/crash problems on modern Windows independently of the emulator. Track separately in Issue #4; system-level changes are outside the supported emulator implementation. |
 | TDR/protocol documentation | 🟡 | Many structures/opcodes are known, but documentation and exact field verification are incomplete. |
 
@@ -50,21 +50,21 @@ Later experimental branches are intentionally excluded from `main` until they ar
 | Area | Status | Why |
 |---|---:|---|
 | First-time account creation | 🔴 | Experimental v95+ work is intentionally excluded because it is not considered stable. |
-| First-login nickname UI | 🔴 | Not part of v94 and not yet reproducibly verified for the public baseline. |
+| First-login nickname UI | 🔴 | Not part of v143b and not yet reproducibly verified for the public baseline. |
 | New-account starter inventory/profile lifecycle | 🔴 | Depends on the experimental account-creation work and is intentionally excluded. |
-| Real multi-account login lifecycle | 🔴 | Later experimental branches added this, but it is not part of stable v94. |
-| Real two-client friends/private chat | 🔴 | Not included in v94; later work still needs proper stock-client validation before promotion. |
+| Real multi-account login lifecycle | 🔴 | Later experimental branches added this, but it is not part of stable v143b. |
+| Real two-client friends/private chat | 🔴 | Not included in v143b; later work still needs proper stock-client validation before promotion. |
 | Full clan UI/detail/member rendering | 🔴 | Nested ClanDetailedInfo/MemberInfo wire layouts are not fully verified. |
-| PvE / The Altar complete gameplay lifecycle | 🔴 | The map can load and the player can spawn, but the PvE round/enemy lifecycle does not start correctly. See [non-working Altar sample issue #1](https://github.com/armangido/af-emulator/issues/1). |
+| PvE / The Altar dedicated-server/gameplay handoff | ✅ | v143b integrates the lazy v48 AFDEV + v9 bridge path, zero-DSKey readiness gate, Maya settings handoff, and player-scoped DS cleanup. |
 | Survival enemy/round backend lifecycle | 🔴 | Not implemented as a complete public stable backend. |
-| Dedicated-server allocation and UE3 handoff | 🔴 | Research exists in later branches, but stable end-to-end DS allocation/session lifecycle is not public yet. |
-| Full match start → gameplay → result lifecycle | 🔴 | Not complete in v94. |
-| Match history / ranking / player-card stock UI | 🔴 | Later backend experiments exist, but exact retail-client wire/UI integration is not part of v94. |
+| Dedicated-server allocation and UE3 handoff | ✅ | A10A is reserve-only; A3A0/A113 arm the DS path; A11A assigns the endpoint; AFDEV starts lazily on first valid DS UDP. |
+| Full match start → gameplay → result lifecycle | 🔴 | Not complete in v143b. |
+| Match history / ranking / player-card stock UI | 🔴 | Later backend experiments exist, but exact retail-client wire/UI integration is not part of v143b. |
 | Party/squad/team matchmaking | 🔴 | Not implemented in the stable public baseline. |
-| Quick-match queue | 🔴 | Not implemented in v94. |
+| Quick-match queue | 🔴 | Not implemented in v143b. |
 | Mail/inbox | 🔴 | Not implemented in the stable public baseline. |
-| Achievements/missions full stock UI integration | 🔴 | Not implemented in v94. |
-| Calendar/daily-login UI | 🔴 | Not part of v94. |
+| Achievements/missions full stock UI integration | 🔴 | Not implemented in v143b. |
+| Calendar/daily-login UI | 🔴 | Not part of v143b. |
 
 ## What we want to implement
 
@@ -89,7 +89,7 @@ Before promotion to `main`, we want evidence that:
 
 - the expected stock Assault Fire PH client request is observed;
 - the response schema is based on verified protocol evidence rather than guessed nested structures;
-- the feature does not regress the existing v94 login/profile path;
+- the feature does not regress the existing v143b login/profile path or solved Altar runtime;
 - secrets, copyrighted assets, and personal data are not included;
 - reproduction steps are documented.
 

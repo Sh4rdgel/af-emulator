@@ -419,43 +419,38 @@ For the public **v94** baseline, test an existing/local profile path. Do not use
 | Server list/DIR loads | ✅ |
 | Existing local profile reaches zone/login path | ✅ baseline target |
 | Basic profile/property state | ✅ baseline target |
-| First-ever account creation | ❌ not supported in public v94 |
-| Full The Altar round lifecycle | ❌ still under research |
+| First-ever account creation | ❌ not supported in public v143b |
+| The Altar dedicated-server/gameplay handoff | ✅ integrated on main |
 
 See [STATUS.md](STATUS.md) for the detailed working/partial/broken matrix.
 
 ---
 
-## 9. Optional: The Altar / PvE research setup
+## 9. The Altar / PvE setup
 
-You do **not** need this part just to test VERSION/AUTH/DIR/login.
+You do **not** need the DS components just to test VERSION/AUTH/DIR/login. For The Altar, the current v143b server manages them as part of the match lifecycle.
 
-For the current known-good PvE research path, use:
-
-```text
-tools\server_spawner\AFDevLoader_v26_pve_natural_loading_completion.py
-tools\bridge\af_ds_udp_bridge_v5_actor_dump.py
-```
-
-Full instructions:
-
-**[Stable PvE bridge + server spawner guide](PVE_BRIDGE_AND_SPAWNER.md)**
-
-The known-good components can currently reach this point:
+Current files:
 
 ```text
-room creation
-  -> The Altar loading
-  -> map entry
-  -> player spawn
-  -> HUD / weapon / movement
+server\assaultfire_ds_spawner.py
+tools\server_spawner\AFDevLoader_v48_spawner_multi_instance.py
+tools\bridge\af_ds_udp_bridge_v9_multi_peer_latch.py
 ```
 
-The normal PvE round/enemy lifecycle is still incomplete.
+Set your local AFDEV game directory, then start v143b:
 
-See **[The Altar investigation — Issue #1](https://github.com/armangido/af-emulator/issues/1)**.
+```powershell
+$env:AF_GAME_DIR = "D:\YourAssaultFireFolder\Binaries\Win32"
+$env:AF_DS_SPAWNER_ENABLED = "1"
+.\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
+```
 
----
+The lifecycle is lazy: A10A reserves capacity only; A3A0/A113 arms the bridge; the first valid DS UDP packet starts AFDEV; verified `SESSION_READY` releases the latched packet and the UE3 session goes live.
+
+See **[Stable PvE / The Altar bridge + server spawner guide](PVE_BRIDGE_AND_SPAWNER.md)** and **[The Altar runtime](ALTAR_RUNTIME.md)**.
+
+The older Issue #1 sample documents the pre-fix state.
 
 ## 10. Super-simple troubleshooting
 
