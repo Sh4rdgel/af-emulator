@@ -253,7 +253,7 @@ IV = bytes.fromhex(
 
 PRIME_BYTES = P_PRIME.to_bytes(64, "big")
 
-PRIVATE_KEY_PATH = r"C:\Users\Admin\Downloads\af\PRIVATE.PEM"
+PRIVATE_KEY_PATH = os.environ.get("AF_PRIVATE_KEY_PATH", str(Path(__file__).resolve().parents[1] / "PRIVATE.PEM"))
 
 
 try:
@@ -288,7 +288,7 @@ def log(label, message):
     )
     print(line, flush=True)
     try:
-        with open(r"C:\Users\Admin\Downloads\af\af_server_live.log", "a", encoding="utf-8") as fp:
+        with open(os.environ.get("AF_LOG_PATH", str(Path(__file__).with_name("af_server_live.log"))), "a", encoding="utf-8") as fp:
             fp.write(line + "\n")
     except OSError:
         pass
@@ -5942,7 +5942,7 @@ def _candidate_x32dbg_logs(explicit=None):
                 candidates.append(p)
 
     # Preserve the old default as a final fallback.
-    fallback = Path(r"C:\Users\Admin\Downloads\afafafafaflog.txt")
+    fallback = Path(os.environ.get("AF_FALLBACK_LOG_PATH", str(Path(__file__).resolve().parents[1] / "afafafafaflog.txt")))
     if fallback not in candidates:
         candidates.append(fallback)
 
