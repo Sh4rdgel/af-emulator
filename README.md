@@ -264,3 +264,7 @@ This project is intended for preservation, interoperability, education, and rese
 The original code and documentation in this repository are licensed under the [MIT License](LICENSE).
 
 This license applies only to material created for the `af-emulator` project. It does **not** grant rights to Assault Fire, the original game client, executables, DLLs, maps, packages, artwork, audio, trademarks, or any other third-party material. Those remain the property of their respective rights holders.
+
+## Solved The Altar runtime
+
+The stable v143b/v48 lazy dedicated-server path is now integrated in the repository. Lobby creation reserves capacity without starting AFDEV; match start arms the bridge; the first valid DS UDP packet lazily starts AFDEV; zero-DSKey verification gates SESSION_READY; and the v9 bridge relays the connected UE3 session. See [docs/ALTAR_RUNTIME.md](docs/ALTAR_RUNTIME.md).

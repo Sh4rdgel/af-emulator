@@ -147,3 +147,11 @@ Tasks:
 The experimental first-time account/nickname work remains intentionally outside the public stable baseline.
 
 It should not become a milestone until the stock PH client flow is reproducibly understood and can be implemented without destabilizing the existing working profile/login path.
+
+## Altar runtime integration
+
+- [x] Solved lazy Altar DS handoff
+- [x] v48 native movement/correction loader
+- [x] zero-DSKey verification before SESSION_READY
+- [x] v9 multi-peer first-packet latch bridge
+- [x] player-scoped shared-DS cleanup

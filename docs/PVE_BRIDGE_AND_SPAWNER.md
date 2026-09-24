@@ -1,3 +1,5 @@
+> **Current stable Altar path:** the repository now includes the v143b lazy DS lifecycle, v48 AFDEV spawner loader and v9 multi-peer first-packet latch bridge. The older v5/v26 files remain for historical reference. See [ALTAR_RUNTIME.md](ALTAR_RUNTIME.md).
+
 # Stable PvE Bridge and Server Spawner
 
 This repository includes the two known-good local tools used to reach the Assault Fire PH PvE map during preservation testing.

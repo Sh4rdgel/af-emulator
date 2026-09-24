@@ -94,3 +94,7 @@ Before promotion to `main`, we want evidence that:
 - reproduction steps are documented.
 
 If you are researching an incomplete feature, opening an issue with logs, packet IDs, sanitized hex, or static-analysis findings is already a useful contribution.
+
+## Solved Altar runtime
+
+The v143b server, lazy DS spawner, v48 AFDEV loader and v9 multi-peer latch bridge are integrated. A10A is reserve-only; A3A0/A113 arm the match path; AFDEV starts on the first valid DS UDP packet; SESSION_READY is gated by the verified runtime state. See [ALTAR_RUNTIME.md](ALTAR_RUNTIME.md).
