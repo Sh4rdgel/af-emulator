@@ -147,7 +147,7 @@ See **[The Altar Runtime](docs/ALTAR_RUNTIME.md)** for implementation details.
 
 Start with the symptom instead of changing random files:
 
-- **`AP client initialization failed.`** → [Launcher / AP / TGame errors](docs/LAUNCHER_ERRORS.md)
+- **`AP client initialization failed.`** → run `tools/patches/diagnose_tcls_apclient.py` first, then see [Launcher / AP / TGame errors](docs/LAUNCHER_ERRORS.md) and [Issue #7](https://github.com/armangido/af-emulator/issues/7) for the known alternate TCLS build.
 - **TCLS launches but TGame does not hand off correctly** → [Vital Launch Requirements](docs/LAUNCH_REQUIREMENTS.md)
 - **TGame crashes around datetime/startup** → use one of the compatibility helpers above
 - **legacy security-driver / modern Windows startup problems** → [Vital Setup Notes](docs/VITAL_SETUP_NOTES.md) and [Issue #4](https://github.com/armangido/af-emulator/issues/4)
