@@ -1,4 +1,4 @@
-# Assault Fire Emulator
+# Assault Fire Server Emulator
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue)](https://www.python.org/)
 [![Engine](https://img.shields.io/badge/Engine-Unreal%20Engine%203-lightgrey)](#)
