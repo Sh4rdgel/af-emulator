@@ -289,24 +289,34 @@ function Stop-RunningGameProcesses {
     $running = @(
         Get-Process -Name "client", "TGame", "TGame_AFDEV" -ErrorAction SilentlyContinue
     )
-    if ($running.Count -eq 0) {
-        return
+    if ($running.Count -gt 0) {
+        Write-Host ""
+        Write-Host "Assault Fire is already running. Setup/patching needs it closed."
+        foreach ($p in $running) {
+            Write-Host ("  {0} PID={1}" -f $p.ProcessName, $p.Id)
+        }
+        $answer = Read-Host "Close these Assault Fire processes automatically? [Y/n]"
+        if ($answer -and $answer -notmatch "^(?i)y(es)?$") {
+            throw "Close client.exe/TGame.exe/TGame_AFDEV.exe, then run this script again."
+        }
+
+        foreach ($p in $running) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+        }
+        Start-Sleep -Milliseconds 800
     }
 
-    Write-Host ""
-    Write-Host "Assault Fire is already running. Setup/patching needs it closed."
-    foreach ($p in $running) {
-        Write-Host ("  {0} PID={1}" -f $p.ProcessName, $p.Id)
+    $debugger = Get-Process -Name "x32dbg" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($debugger) {
+        Write-Host ""
+        Write-Host "x32dbg is running, but the clean one-click launch helper requires it detached/closed."
+        $answer = Read-Host "Close x32dbg automatically? [Y/n]"
+        if ($answer -and $answer -notmatch "^(?i)y(es)?$") {
+            throw "Close or detach x32dbg, then run this script again."
+        }
+        Stop-Process -Id $debugger.Id -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 500
     }
-    $answer = Read-Host "Close these Assault Fire processes automatically? [Y/n]"
-    if ($answer -and $answer -notmatch "^(?i)y(es)?$") {
-        throw "Close client.exe/TGame.exe/TGame_AFDEV.exe, then run this script again."
-    }
-
-    foreach ($p in $running) {
-        Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
-    }
-    Start-Sleep -Milliseconds 800
 }
 
 function Stop-ExistingEmulatorServer([string]$RepoRoot) {
@@ -669,6 +679,20 @@ try {
         $game = Get-Process -Name "TGame" -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($game) {
             Write-Host ""
+            Write-Host "[WAIT] TGame.exe appeared as PID=$($game.Id). Waiting for the automatic launch helper to finish..."
+
+            $helperDeadline = (Get-Date).AddSeconds(30)
+            while (-not $helperWindow.HasExited -and (Get-Date) -lt $helperDeadline) {
+                Start-Sleep -Milliseconds 250
+            }
+            if ($helperWindow.HasExited -and $helperWindow.ExitCode -ne 0) {
+                throw "The automatic launch helper failed with exit code $($helperWindow.ExitCode). TGame was not accepted as a successful launch."
+            }
+            if (-not $helperWindow.HasExited) {
+                Write-Host "[WARNING] TGame exists but the launch helper is still running after 30 seconds. Check the helper window before assuming the launch succeeded." -ForegroundColor Yellow
+            } else {
+                Write-Host "[SUCCESS] TGame launch helper completed successfully." -ForegroundColor Green
+            }
             Write-Host "[SUCCESS] TGame.exe launched. PID=$($game.Id)" -ForegroundColor Green
 
             if ($KeepServer) {
