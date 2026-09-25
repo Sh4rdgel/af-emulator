@@ -216,6 +216,57 @@ class AfreTests(unittest.TestCase):
         self.assertEqual(afre.parse_int(meta["va"]), 0x020731FC)
 
 
+
+    def test_core_structs_are_queryable(self):
+        db = afre.load_object_db(ROOT / "tools" / "research" / "af_objects_10024.json")
+        group, name, meta = afre.lookup_object(db, "FRotator")
+        self.assertEqual((group, name), ("structs", "FRotator"))
+        self.assertEqual(afre.parse_int(meta["fields"]["Yaw"]["offset"]), 0x04)
+
+    def test_pve_movement_layout_and_virtuals(self):
+        db = afre.load_object_db(ROOT / "tools" / "research" / "af_objects_10024.json")
+        pc = db["objects"]["PVEPlayerController"]
+        self.assertEqual(
+            afre.parse_int(pc["fields"]["PendingAdjustmentTimeStamp"]["offset"]),
+            0x424,
+        )
+        self.assertEqual(
+            afre.parse_int(pc["virtuals"]["MoveAutonomous"]["slot_offset"]),
+            0x4D0,
+        )
+        self.assertEqual(
+            afre.parse_int(pc["virtuals"]["MoveAutonomous"]["target"]),
+            0x008F24B0,
+        )
+
+    def test_pve_character_data_layout(self):
+        db = afre.load_object_db(ROOT / "tools" / "research" / "af_objects_10024.json")
+        pri = db["objects"]["PVEPlayerReplicationInfo"]["fields"]
+        self.assertEqual(afre.parse_int(pri["CharInfo"]["offset"]), 0x760)
+        self.assertEqual(afre.parse_int(pri["ArmorTypes"]["offset"]), 0xCA0)
+
+    def test_protocol_database_and_live_chat_capture(self):
+        pdb = afre.load_protocol_db(ROOT / "tools" / "research" / "af_protocol_10024.json")
+        self.assertEqual(afre.protocol_db_errors(pdb, self.catalog), [])
+        packet_id, meta = afre.lookup_packet(pdb, "A403")
+        self.assertEqual(packet_id, "A403")
+        self.assertEqual(meta["name"], "C2ZN_ReqChatBroadcast")
+        self.assertEqual(meta["status"], "verified-live-capture")
+        types = {row["Type"] for row in meta["observations"]}
+        self.assertEqual(types, {"0x0002", "0x0010"})
+
+    def test_private_chat_remains_pending_live_validation(self):
+        pdb = afre.load_protocol_db(ROOT / "tools" / "research" / "af_protocol_10024.json")
+        _, meta = afre.lookup_packet(pdb, "C2ZN_ReqChatP2P")
+        self.assertIn("pending", meta["status"])
+
+    def test_voice_unknown_and_ff02_not_voice(self):
+        pdb = afre.load_protocol_db(ROOT / "tools" / "research" / "af_protocol_10024.json")
+        self.assertEqual(pdb["voice"]["status"], "unknown-needs-live-capture")
+        _, ff02 = afre.lookup_packet(pdb, "FF02")
+        self.assertIn("not-voice", ff02["status"])
+
+
     def test_catalog_is_plain_json(self):
         data = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
         self.assertIn("symbols", data)
