@@ -46,6 +46,7 @@ Experimental or unverified work is excluded from `main` until it is reproducibly
 | Match allocation / capacity policy | 🟡 | The stock A10A/A11A handoff and lazy per-room DS path are integrated, but production-grade pooling, capacity policy, abuse limits, and large-scale multi-host orchestration still need work. |
 | Legacy kernel security-driver compatibility | 🟡 | The original client security driver can cause startup/crash problems on modern Windows independently of the emulator. Track separately in Issue #4; system-level changes are outside the supported emulator implementation. |
 | TDR/protocol documentation | 🟡 | Many structures/opcodes are known, but documentation and exact field verification are incomplete. |
+| Initial AP/GamePoint population | 🟡 | **Temporary local-only workaround.** On PH v1.0.0.24 the persisted server AP is copied into the verified live `LocalPlayerData.GamePoint + 0x84` field once per local `TGame.exe` PID. Normal purchase deduction/persistence remains server-authoritative. The proper native login/A50E TP-balance initialization still needs to be recovered. Disable the workaround with `AF_LOCAL_AP_SYNC=0`. |
 
 ## Broken, unavailable, or intentionally excluded
 

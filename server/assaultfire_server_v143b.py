@@ -39,6 +39,7 @@ from assaultfire_room_registry import (
 )
 
 from assaultfire_preflight import run_server_preflight, update_launch_gate_status
+from local_ap_sync import LocalAPSync
 
 # v24: v20 success framing plus BOTH PublicData bitmap and PrivateData tail probes.
 QUIET_ROLE_HEX = True
@@ -3540,6 +3541,14 @@ def _v140_wallet():
     return w
 
 
+# TEMPORARY PH 1.0.0.24 compatibility workaround.
+# Native initial AP/GamePoint population is still unresolved.  This local-only
+# helper seeds the already-verified client GamePoint field from the
+# authoritative persisted server wallet.  Remove after the native path is
+# implemented (tracked in docs/MILESTONES.md).
+_V143V_LOCAL_AP_SYNC = LocalAPSync(_v140_wallet)
+
+
 def _v140_save_state(reason="update"):
     V140_MALL_STATE["version"] = 1
     V140_MALL_STATE["inventory"] = [dict(p) for p in V111_INVENTORY]
@@ -6939,25 +6948,23 @@ def handle_placeholder(conn, addr, label):
                                             balance_uin = struct.unpack(
                                                 ">Q", app["body"]
                                             )[0]
+                                            wallet = _v140_wallet()
                                             log(
                                                 label,
-                                                "C2ZN_REQ_TPBALANCE v140 "
+                                                "C2ZN_REQ_TPBALANCE v143v "
                                                 f"uin={balance_uin} "
-                                                f"AP={_v140_wallet()['ap']}",
+                                                f"AP={wallet['ap']} "
+                                                "action=TEMP_LOCAL_GAMEPOINT_SYNC "
+                                                "wire_reply=NONE",
                                             )
-                                            pkt = _v140_build_update_player_property(
-                                                UPDATE_FLAG_TP,
-                                                UPDATE_REASON_TP_BALANCE,
-                                            )
-                                            _v48_send_app(
-                                                conn,
-                                                active_tgame_key,
-                                                pkt,
-                                                label,
-                                                "ZN2C_NTF_UPDATEPLAYERPROPERTY v140 "
-                                                f"TPBalance AP={_v140_wallet()['ap']} "
-                                                f"GP={_v140_wallet()['gp']} "
-                                                f"MP={_v140_wallet()['mp']}",
+
+                                            # TEMPORARY workaround: the stock PH
+                                            # native A50E response mapping is not yet
+                                            # verified.  Do not send guessed A00B/A506
+                                            # replies; refresh only the proven local
+                                            # GamePoint field from server state.
+                                            _V143V_LOCAL_AP_SYNC.request(
+                                                reason="A50E-refresh"
                                             )
 
                                         elif app["cmd"] == TGAME_ZN_REQ_BUYCOMMODITY:
@@ -9605,6 +9612,10 @@ print(
     f"state={V140_MALL_STATE_PATH}"
 )
 print(
+    "[BOOT] AP initialization: "
+    + _V143V_LOCAL_AP_SYNC.describe()
+)
+print(
     f"[BOOT] Stable-v143b DS spawner: enabled={V143B_DS_CONFIG.enabled} "
     f"max_instances={V143B_DS_CONFIG.max_instances} "
     f"public={V143B_DS_CONFIG.public_host}:{V143B_DS_CONFIG.public_port_base}+slot "
@@ -9623,6 +9634,10 @@ if __name__ == "__main__":
 
     # Mutable DS runtime state is created only after preflight succeeds.
     _v143b_init_spawner()
+
+    # TEMPORARY local PH AP initializer.  Normal wallet persistence and
+    # A505/A506 purchase handling remain server-authoritative.
+    _V143V_LOCAL_AP_SYNC.start()
 
     print(
         f"[BOOT] VERSION response: "
@@ -9682,5 +9697,6 @@ if __name__ == "__main__":
             "\n[MAIN] Shutting down.",
             flush=True
         )
+        _V143V_LOCAL_AP_SYNC.stop()
         update_launch_gate_status(ready=False, reason="server shutting down")
 

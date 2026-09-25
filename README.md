@@ -615,6 +615,10 @@ Working or integrated areas include:
 
 Some features remain partial or under validation, including first-time nickname/account flow and parts of social/progression systems.
 
+> [!IMPORTANT]
+> **AP initialization currently uses a temporary local-only workaround on PH v1.0.0.24.**
+> The server wallet and normal AP purchases remain authoritative, but the stock client's native initial AP/GamePoint population is not yet fully recovered. On a local Windows setup, the emulator temporarily copies the persisted AP balance into the verified live `LocalPlayerData.GamePoint + 0x84` field once per `TGame.exe` process. This can be disabled with `AF_LOCAL_AP_SYNC=0`. Replacing this with the verified native PH login/TP-balance path is tracked for a later milestone.
+
 See **[Project Status](docs/STATUS.md)** for the current matrix.
 
 ---
