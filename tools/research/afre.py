@@ -691,6 +691,54 @@ def cmd_field(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
     return 0
 
 
+
+def cmd_find_field(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    del catalog
+    db = load_object_db(args.objects_db)
+    needle = args.query.casefold()
+    rows = []
+    for group, name, meta in iter_objects(db):
+        for field_name, field_meta in meta.get("fields", {}).items():
+            hay = f"{group}.{name}.{field_name}".casefold()
+            if needle in hay:
+                rows.append((group, name, field_name, field_meta))
+    if not rows:
+        raise AfreError(f"no fields match {args.query!r}")
+    for group, name, field_name, field_meta in rows:
+        offset = field_meta.get("offset", "-")
+        field_type = field_meta.get("type", "")
+        status = field_meta.get("status", meta.get("status", "-")) if False else ""
+        print(f"{group}.{name}.{field_name:28} {offset:>8} {field_type}")
+        bits = field_meta.get("bits")
+        if isinstance(bits, dict):
+            for bit_name, mask in bits.items():
+                print(f"  bit {bit_name:28} {mask}")
+    return 0
+
+
+def cmd_names(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    del catalog
+    db = load_object_db(args.objects_db)
+    core = db.get("core_fname_indices", {})
+    runtime = db.get("runtime_fname_observations", {})
+    if not args.runtime_only:
+        print("[stable core FName entries]")
+        for name, value in core.get("entries", {}).items():
+            print(f"  {name:36} {value}")
+        for note in core.get("notes", []):
+            print(f"  note: {note}")
+    if not args.core_only:
+        print("[session-dependent observations]")
+        for name, values in runtime.get("entries", {}).items():
+            rendered = ", ".join(values if isinstance(values, list) else [str(values)])
+            print(f"  {name:36} {rendered}")
+        warning = runtime.get("warning")
+        if warning:
+            print(f"  WARNING: {warning}")
+    return 0
+
+
+
 def cmd_conflicts(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
     del catalog
     db = load_object_db(args.objects_db)
@@ -801,6 +849,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("object_name")
     p.add_argument("field")
     p.set_defaults(func=cmd_field)
+
+    p = sub.add_parser("find-field", help="search field names across all known objects")
+    p.add_argument("query")
+    p.set_defaults(func=cmd_find_field)
+
+    p = sub.add_parser("names", help="show stable core and observed runtime FNames")
+    g = p.add_mutually_exclusive_group()
+    g.add_argument("--core-only", action="store_true")
+    g.add_argument("--runtime-only", action="store_true")
+    p.set_defaults(func=cmd_names)
 
     p = sub.add_parser("conflicts", help="show unresolved object-layout conflicts")
     p.set_defaults(func=cmd_conflicts)
