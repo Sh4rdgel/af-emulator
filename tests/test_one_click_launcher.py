@@ -48,7 +48,7 @@ class OneClickLauncherTests(unittest.TestCase):
 
     def test_launcher_prints_revision_for_stale_zip_diagnosis(self):
         s = self.text(SCRIPT)
-        self.assertIn('2026-09-25-oneclick-v7', s)
+        self.assertIn('2026-09-25-oneclick-v8', s)
         self.assertIn('Launcher revision: $LAUNCHER_REVISION', s)
 
     def test_launcher_does_not_elevate_entire_process(self):
@@ -113,6 +113,21 @@ class OneClickLauncherTests(unittest.TestCase):
         self.assertIn(
             "OpenProcess/WriteProcessMemory",
             s,
+        )
+
+    def test_launcher_path_is_initialized_before_console_helper(self):
+        s = self.text(SCRIPT)
+        self.assertIn(
+            '$self = $MyInvocation.MyCommand.Path',
+            s,
+        )
+        self.assertIn(
+            '$consoleHelper = Join-Path $PSScriptRoot',
+            s,
+        )
+        self.assertLess(
+            s.index('$self = $MyInvocation.MyCommand.Path'),
+            s.index('$consoleHelper = Join-Path $PSScriptRoot'),
         )
 
     def test_console_windows_disable_quickedit_blocking(self):
