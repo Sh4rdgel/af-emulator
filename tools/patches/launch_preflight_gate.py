@@ -208,13 +208,46 @@ def require_launch_ready(
             f"Status: {target}\n"
             f"{detail}\n"
             "Start/restart the server and do not continue until every "
-            "[PREFLIGHT] line is YES and 'game launch gate : UNLOCKED'."
+            "required [PREFLIGHT] check passes and 'game launch gate : UNLOCKED'."
         )
     return data
 
 
+def _device_path_to_dos_path(value: str) -> str:
+    """Translate GetMappedFileNameW \\Device\\... paths to a drive-letter path."""
+    raw = str(value)
+    if os.name != "nt" or not raw.lower().startswith("\\device\\"):
+        return raw
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.QueryDosDeviceW.argtypes = [
+        ctypes.c_wchar_p,
+        ctypes.c_wchar_p,
+        ctypes.c_uint32,
+    ]
+    kernel32.QueryDosDeviceW.restype = ctypes.c_uint32
+
+    for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+        drive = f"{letter}:"
+        buf = ctypes.create_unicode_buffer(4096)
+        if not kernel32.QueryDosDeviceW(drive, buf, len(buf)):
+            continue
+        # QueryDosDevice can return multiple NUL-separated targets; the
+        # ctypes buffer exposes the first mapping, which is sufficient here.
+        device = buf.value.rstrip("\\")
+        if not device:
+            continue
+        if raw.lower() == device.lower():
+            return drive
+        prefix = device + "\\"
+        if raw.lower().startswith(prefix.lower()):
+            return drive + raw[len(device):]
+    return raw
+
+
 def _normalized_windows_path(value: str | os.PathLike[str]) -> str:
-    return os.path.normcase(os.path.abspath(os.fspath(value)))
+    raw = _device_path_to_dos_path(os.fspath(value))
+    return os.path.normcase(os.path.abspath(raw))
 
 
 def require_loaded_tcls_matches(status: Mapping, loaded_tcls_path: str) -> None:
