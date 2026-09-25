@@ -48,7 +48,7 @@ class OneClickLauncherTests(unittest.TestCase):
 
     def test_launcher_prints_revision_for_stale_zip_diagnosis(self):
         s = self.text(SCRIPT)
-        self.assertIn('2026-09-25-python-detect-v4', s)
+        self.assertIn('2026-09-25-oneclick-v5', s)
         self.assertIn('Launcher revision: $LAUNCHER_REVISION', s)
 
     def test_launcher_does_not_elevate_entire_process(self):
@@ -71,6 +71,29 @@ class OneClickLauncherTests(unittest.TestCase):
         self.assertIn('Python Launcher default is 3.12', s)
         self.assertIn('return $pyLauncher.Source', s)
         self.assertIn('py -m venv', s)
+
+    def test_native_command_output_cannot_pollute_return_values(self):
+        s = self.text(SCRIPT)
+        self.assertIn(
+            '& $Exe @Arguments 2>&1 | ForEach-Object',
+            s,
+        )
+        self.assertIn(
+            'Write-Host ([string]$_)',
+            s,
+        )
+        self.assertIn('$exitCode = $LASTEXITCODE', s)
+
+    def test_existing_wrong_version_venv_is_recreated(self):
+        s = self.text(SCRIPT)
+        self.assertIn(
+            'Existing .venv is not Python 3.12; recreating it',
+            s,
+        )
+        self.assertIn(
+            'Remove-Item -LiteralPath $venvDir -Recurse -Force',
+            s,
+        )
 
     def test_permanent_tcls_patch_is_prompted_and_hash_guarded(self):
         s = self.text(SCRIPT)
