@@ -29,7 +29,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-$LAUNCHER_REVISION = "2026-09-25-oneclick-v10"
+$LAUNCHER_REVISION = "2026-09-25-oneclick-v11"
 $EXPECTED_TGAME_SHA256 = "B4273F2658CA94EEBC559A997FDFCD02D51E77CE75B892250C1DB7FB80C70B51"
 $TCLS_ORIGINAL_SHA256 = "13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1"
 $TCLS_PATCHED_SHA256  = "3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56"
@@ -164,10 +164,19 @@ function Test-Python312Path([string]$Candidate) {
     }
 }
 
-function Resolve-Python312([string]$RepoRoot = "") {
-    # Fastest/most reliable case: a previously-created project venv already
-    # contains the exact Python version we need. Do not invoke winget merely
-    # because the global PATH is different in an elevated PowerShell window.
+function Resolve-Python312([string]$RepoRoot = "", [string]$GameRoot = "") {
+    # The one-click runtime lives OUTSIDE the downloaded repository folder.
+    # ZIP users can replace af-emulator-main without losing/rebuilding Python.
+    if ($GameRoot) {
+        $persistentPython = Join-Path $GameRoot ".af-emulator-runtime\venv-py312\Scripts\python.exe"
+        $found = Test-Python312Path $persistentPython
+        if ($found) {
+            return $found
+        }
+    }
+
+    # Backward-compatible check for v1-v10 repo-local environments. A valid
+    # legacy .venv can be migrated by Ensure-Venv instead of downloading again.
     if ($RepoRoot) {
         $venvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
         $found = Test-Python312Path $venvPython
@@ -339,8 +348,8 @@ function Resolve-Python312([string]$RepoRoot = "") {
     return $null
 }
 
-function Ensure-Python312([string]$RepoRoot) {
-    $python = Resolve-Python312 $RepoRoot
+function Ensure-Python312([string]$RepoRoot, [string]$GameRoot) {
+    $python = Resolve-Python312 $RepoRoot $GameRoot
     if ($python) {
         Write-Host "[OK] Python 3.12: $python" -ForegroundColor Green
         return $python
@@ -384,7 +393,7 @@ function Ensure-Python312([string]$RepoRoot) {
         # when Python is already installed or when its source state is broken.
         # Rescan the machine first.
         Start-Sleep -Seconds 2
-        $python = Resolve-Python312 $RepoRoot
+        $python = Resolve-Python312 $RepoRoot $GameRoot
         if ($python) {
             Write-Host "[OK] Python 3.12 located after winget attempt: $python" -ForegroundColor Green
             return $python
@@ -417,21 +426,16 @@ function Test-VenvPython312([string]$VenvPython, [string]$VenvDir) {
         return $false
     }
 
-    # Primary live check.
     $validated = Test-Python312Path $VenvPython
     if ($validated) {
         return $true
     }
 
-    # Secondary live check. Do not destroy a venv merely because one probe
-    # transiently failed.
     $versionText = Get-PythonVersionText $VenvPython
     if ($versionText -match "^Python\s+3\.12(?:\.|$)") {
         return $true
     }
 
-    # pyvenv.cfg is only supporting evidence. We still require python.exe to
-    # exist; this fallback handles unusual stdout/launcher behavior.
     $cfg = Join-Path $VenvDir "pyvenv.cfg"
     if (Test-Path -LiteralPath $cfg -PathType Leaf) {
         try {
@@ -440,14 +444,13 @@ function Test-VenvPython312([string]$VenvPython, [string]$VenvDir) {
                 $cfgText -match "(?im)^\s*version\s*=\s*3\.12(?:\.|$)" -and
                 -not $versionText
             ) {
-                Write-Host (
-                    "[WARNING] Existing .venv reports Python 3.12 in pyvenv.cfg, " +
-                    "but python.exe could not be probed. Refusing to delete it automatically."
-                ) -ForegroundColor Yellow
-                throw "Existing .venv could not be safely validated. Nothing was deleted."
+                throw (
+                    "Existing Python runtime says 3.12 in pyvenv.cfg, but its " +
+                    "python.exe could not be probed. Nothing was deleted."
+                )
             }
         } catch {
-            if ($_.Exception.Message -like "Existing .venv could not be safely validated*") {
+            if ($_.Exception.Message -like "Existing Python runtime says 3.12*") {
                 throw
             }
         }
@@ -457,9 +460,7 @@ function Test-VenvPython312([string]$VenvPython, [string]$VenvDir) {
 }
 
 function Test-VenvDependencies([string]$VenvPython) {
-    # requirements.txt currently contains cryptography>=42,<47. This fast probe
-    # avoids a needless pip run when an existing environment already satisfies
-    # the requirement but predates our requirements-hash marker.
+    # requirements.txt currently contains cryptography>=42,<47.
     try {
         & $VenvPython -c @"
 import sys
@@ -476,62 +477,87 @@ raise SystemExit(0 if 42 <= major < 47 else 1)
     }
 }
 
-function Ensure-Venv([string]$RepoRoot, [string]$BootstrapPython) {
-    $venvDir = Join-Path $RepoRoot ".venv"
-    $venvPython = Join-Path $venvDir "Scripts\python.exe"
-    $requirements = Join-Path $RepoRoot "requirements.txt"
-    $marker = Join-Path $venvDir ".af_requirements_sha256"
+function Preserve-BadRuntime([string]$Path, [string]$Kind) {
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return
+    }
+    $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
+    $parent = Split-Path -Parent $Path
+    $leaf = Split-Path -Leaf $Path
+    $backup = Join-Path $parent "$leaf.$Kind.$stamp"
+    Move-Item -LiteralPath $Path -Destination $backup
+    Write-Host "[REPAIR] Preserved old runtime as: $backup" -ForegroundColor Yellow
+}
 
+function Ensure-Venv([string]$RepoRoot, [string]$GameRoot, [string]$BootstrapPython) {
+    $requirements = Join-Path $RepoRoot "requirements.txt"
     if (-not (Test-Path -LiteralPath $requirements -PathType Leaf)) {
         throw "requirements.txt is missing from the emulator folder."
     }
 
-    $venvExists = Test-Path -LiteralPath $venvDir -PathType Container
-    $venvPythonExists = Test-Path -LiteralPath $venvPython -PathType Leaf
+    # IMPORTANT: keep the one-click Python runtime beside the GAME, not inside
+    # af-emulator-main. Users who update by replacing the GitHub ZIP therefore
+    # keep the same environment and do not wait for venv/pip every update.
+    $runtimeRoot = Join-Path $GameRoot ".af-emulator-runtime"
+    $venvDir = Join-Path $runtimeRoot "venv-py312"
+    $venvPython = Join-Path $venvDir "Scripts\python.exe"
+    $marker = Join-Path $venvDir ".af_requirements_sha256"
 
-    if ($venvPythonExists) {
-        if (Test-VenvPython312 $venvPython $venvDir) {
-            Write-Host "[OK] Reusing existing Python 3.12 environment: $venvDir" -ForegroundColor Green
-        } else {
-            # Only replace it when we have positive evidence that it is the
-            # wrong Python version. Never repeatedly delete a valid/transiently
-            # unavailable environment.
+    New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
+
+    if (Test-Path -LiteralPath $venvPython -PathType Leaf) {
+        if (-not (Test-VenvPython312 $venvPython $venvDir)) {
             $versionText = Get-PythonVersionText $venvPython
             if ($versionText -and $versionText -notmatch "^Python\s+3\.12(?:\.|$)") {
-                $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
-                $backupDir = Join-Path $RepoRoot ".venv.incompatible.$stamp"
-                Write-Host (
-                    "[REPAIR] Existing environment is $versionText, not Python 3.12. " +
-                    "Preserving it as: $backupDir"
-                ) -ForegroundColor Yellow
-                Move-Item -LiteralPath $venvDir -Destination $backupDir
-                $venvExists = $false
-                $venvPythonExists = $false
+                Write-Host "[REPAIR] Persistent runtime is $versionText, not Python 3.12." -ForegroundColor Yellow
+                Preserve-BadRuntime $venvDir "incompatible"
             } else {
                 throw (
-                    "Existing .venv could not be validated safely. It was NOT deleted. " +
-                    "Close programs using .venv and run the launcher again."
+                    "Persistent Python runtime could not be validated safely. " +
+                    "It was NOT deleted. Close programs using it and retry."
                 )
             }
         }
-    } elseif ($venvExists) {
-        # A directory without Scripts\python.exe is incomplete. Preserve it for
-        # diagnosis rather than deleting user files.
-        $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
-        $backupDir = Join-Path $RepoRoot ".venv.incomplete.$stamp"
-        Write-Host "[REPAIR] Incomplete .venv preserved as: $backupDir" -ForegroundColor Yellow
-        Move-Item -LiteralPath $venvDir -Destination $backupDir
-        $venvExists = $false
+    } elseif (Test-Path -LiteralPath $venvDir -PathType Container) {
+        Preserve-BadRuntime $venvDir "incomplete"
     }
 
     if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
-        Write-Host "[SETUP] Creating Python environment (FIRST TIME ONLY)..."
-        Invoke-Checked -Exe $BootstrapPython -Arguments @("-m", "venv", $venvDir) -Description "create .venv"
+        # Migration fast-path for users who already paid the setup cost under
+        # older one-click revisions. Copying a validated repo-local environment
+        # is much faster than creating + downloading packages again. We invoke
+        # pip only through "python -m pip", so stale activation/pip launcher
+        # paths inside the copied venv are irrelevant.
+        $legacyDir = Join-Path $RepoRoot ".venv"
+        $legacyPython = Join-Path $legacyDir "Scripts\python.exe"
+        $migrated = $false
 
-        if (-not (Test-VenvPython312 $venvPython $venvDir)) {
-            throw "New .venv was created but did not validate as Python 3.12."
+        if (
+            (Test-Path -LiteralPath $legacyPython -PathType Leaf) -and
+            (Test-VenvPython312 $legacyPython $legacyDir)
+        ) {
+            Write-Host "[SETUP] Migrating existing .venv to persistent one-click runtime (one time)..." -ForegroundColor Yellow
+            Copy-Item -LiteralPath $legacyDir -Destination $venvDir -Recurse
+
+            if (Test-VenvPython312 $venvPython $venvDir) {
+                $migrated = $true
+                Write-Host "[OK] Existing Python environment migrated; no rebuild needed." -ForegroundColor Green
+            } else {
+                Preserve-BadRuntime $venvDir "migration-failed"
+            }
         }
-        Write-Host "[OK] Python 3.12 environment created." -ForegroundColor Green
+
+        if (-not $migrated -and -not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
+            Write-Host "[SETUP] Creating persistent Python environment (FIRST TIME ONLY)..."
+            Invoke-Checked -Exe $BootstrapPython -Arguments @("-m", "venv", $venvDir) -Description "create persistent venv"
+
+            if (-not (Test-VenvPython312 $venvPython $venvDir)) {
+                throw "New persistent Python runtime was created but did not validate as Python 3.12."
+            }
+            Write-Host "[OK] Persistent Python 3.12 environment created." -ForegroundColor Green
+        }
+    } else {
+        Write-Host "[OK] Reusing persistent Python 3.12 environment: $venvDir" -ForegroundColor Green
     }
 
     $wantedHash = Get-Sha256 $requirements
@@ -545,16 +571,13 @@ function Ensure-Venv([string]$RepoRoot, [string]$BootstrapPython) {
         return $venvPython
     }
 
-    # Older launcher revisions may have already installed requirements before
-    # the hash marker existed. Verify the dependency first instead of making
-    # users wait for pip again.
     if (Test-VenvDependencies $venvPython) {
         Set-Content -LiteralPath $marker -Value $wantedHash -Encoding ASCII
         Write-Host "[OK] Existing Python dependencies verified; no pip install needed." -ForegroundColor Green
         return $venvPython
     }
 
-    Write-Host "[SETUP] Installing/updating emulator Python dependencies (FIRST TIME OR REQUIREMENTS CHANGED)..."
+    Write-Host "[SETUP] Installing emulator Python dependency (FIRST TIME OR REQUIREMENTS CHANGED)..."
     Invoke-Checked -Exe $venvPython -Arguments @(
         "-m", "pip", "install",
         "--disable-pip-version-check",
@@ -945,8 +968,8 @@ try {
     Stop-ExistingEmulatorServer $repoRoot
 
     Write-Step "Checking Python 3.12 and emulator dependencies"
-    $bootstrapPython = Ensure-Python312 $repoRoot
-    $venvPython = Ensure-Venv $repoRoot $bootstrapPython
+    $bootstrapPython = Ensure-Python312 $repoRoot $gameRoot
+    $venvPython = Ensure-Venv $repoRoot $gameRoot $bootstrapPython
 
     Write-Step "Checking the exact supported game build"
     Ensure-AFDev $gameRoot
