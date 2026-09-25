@@ -3100,8 +3100,8 @@ def _v48_build_zn_login_response(seq):
         + _v48_u32(1)
         + _v48_u32(1)
         + _v48_f64(float(int(time.time())))
-        + _v48_i32(0)
-        + _v48_i32(0)
+        + _v48_i32(int(_v140_wallet()["ap"]))  # TGamePoint / PH AP
+        + _v48_i32(int(_v140_wallet()["gp"]))  # GoldPoint / GP
         + _v48_i16(0)
     )
     if len(body) != 28:
@@ -4545,15 +4545,16 @@ def _v124_build_bag1_refresh_notification():
 
 def _v48_player_info(uin=10001, nickname="LocalPlayer", cur_role_gid=None):
     # Exact field order recovered from PlayerInfo metalib. v70 uses the runtime-verified\n    # TDR string form for NickName: u32_be(strlen+1) + NUL-terminated bytes.\n    # CurRoleGID/RoleType
-    # v140 resolves the active role from persistent mall state when omitted.
+    # v140 resolves the active role and wallet from persistent mall state when omitted.
     if cur_role_gid is None:
         cur_role_gid = _v140_current_role_gid()
+    wallet = _v140_wallet()
     return (
         _v48_u64(uin)
         + _v48_u32(0)
         + _v50_geo_tdr_string(nickname, 32)
-        + _v48_i32(100000) + _v48_i32(100000)
-        + _v48_i32(0) + _v48_i32(0)
+        + _v48_i32(int(wallet["ap"])) + _v48_i32(int(wallet["gp"]))
+        + _v48_i32(int(wallet["mp"])) + _v48_i32(0)
         + _v48_u32(0) + _v48_u16(0)
         + _v48_i32(0)
         + _v48_dt_zero() + _v48_dt_zero()
@@ -6748,8 +6749,11 @@ def handle_placeholder(conn, addr, label):
                                             _v48_send_app(
                                                 conn, active_tgame_key, login_rsp,
                                                 label,
-                                                "ZN2C_RES_LOGIN v72-roomalloc-accept-probe "
-                                                "result=0x8100 main=1 sub=1 freeprops=0"
+                                                "ZN2C_RES_LOGIN v143-wallet-login "
+                                                f"result=0x8100 main=1 sub=1 freeprops=0 "
+                                                f"AP={_v140_wallet()['ap']} "
+                                                f"GP={_v140_wallet()['gp']} "
+                                                f"MP={_v140_wallet()['mp']}"
                                             )
 
                                             # IMPORTANT v69 change:
