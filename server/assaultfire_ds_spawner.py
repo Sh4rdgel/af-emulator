@@ -47,8 +47,8 @@ class SpawnerConfig:
     public_port_base: int = 65008
     target_host: str = "127.0.0.1"
     target_port_base: int = 7777
-    game_dir: str = r"D:\AssaultFirePH\Binaries\Win32"
-    default_map: str = "SV-Maya_3_Main"
+    game_dir: str = ""
+    default_map: str = ""
     game_class: str = "PVEGame.TGSVGame"
     ready_timeout: float = 90.0
     bridge_ready_timeout: float = 3.0
@@ -79,8 +79,8 @@ class SpawnerConfig:
             public_port_base=int(os.environ.get("AF_DS_PUBLIC_PORT_BASE", "65008")),
             target_host=os.environ.get("AF_DS_TARGET_HOST", "127.0.0.1"),
             target_port_base=int(os.environ.get("AF_DS_TARGET_PORT_BASE", "7777")),
-            game_dir=os.environ.get("AF_GAME_DIR", r"D:\AssaultFirePH\Binaries\Win32"),
-            default_map=os.environ.get("AF_DS_DEFAULT_MAP", "SV-Maya_3_Main"),
+            game_dir=os.environ.get("AF_GAME_DIR", "").strip(),
+            default_map=os.environ.get("AF_DS_DEFAULT_MAP", "").strip(),
             game_class=os.environ.get("AF_DS_GAME_CLASS", "PVEGame.TGSVGame"),
             ready_timeout=max(5.0, float(os.environ.get("AF_DS_READY_TIMEOUT", "90"))),
             bridge_ready_timeout=max(0.25, float(os.environ.get("AF_DS_BRIDGE_READY_TIMEOUT", "3"))),
@@ -234,7 +234,7 @@ class DedicatedServerSpawner:
             slot = self._choose_slot_locked()
             room_id = self._next_room_id
             self._next_room_id += 1
-            desired_map = (map_name or self.config.default_map).strip() or self.config.default_map
+            desired_map = str(map_name or self.config.default_map or "").strip()
             allocation = DSAllocation(
                 slot=slot,
                 public_host=self.config.public_host,
@@ -457,6 +457,18 @@ class DedicatedServerSpawner:
             if not self.config.loader_script.is_file():
                 raise DSStartupError(f"missing loader: {self.config.loader_script}")
 
+            game_dir = str(self.config.game_dir or "").strip()
+            if not game_dir:
+                raise DSStartupError(
+                    "AF_GAME_DIR is not set; point it at your Assault Fire PH Binaries\\Win32 directory"
+                )
+            if not Path(game_dir).is_dir():
+                raise DSStartupError(f"AF_GAME_DIR does not exist or is not a directory: {game_dir}")
+            if not str(allocation.map_name or "").strip():
+                raise DSStartupError(
+                    "no PvE map was selected; use the stock room map selection or set AF_DS_DEFAULT_MAP"
+                )
+
             p = self._instance_paths(allocation)
             p["dir"].mkdir(parents=True, exist_ok=True)
             for key in ("state_file", "ready_file", "pid_file", "loader_pid_file"):
@@ -481,7 +493,7 @@ class DedicatedServerSpawner:
                 "--lazy-spawn",
                 "--python-exe", self.config.python_exe,
                 "--loader-script", str(self.config.loader_script),
-                "--game-dir", self.config.game_dir,
+                "--game-dir", game_dir,
                 "--map", allocation.map_name,
                 "--game", self.config.game_class,
                 "--max-players", str(allocation.max_players),

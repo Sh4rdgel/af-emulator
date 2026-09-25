@@ -1,4 +1,4 @@
-# Contributing to Assault Fire Emulator
+# Contributing to Assault Fire Server Emulator
 
 Thanks for helping with the project.
 

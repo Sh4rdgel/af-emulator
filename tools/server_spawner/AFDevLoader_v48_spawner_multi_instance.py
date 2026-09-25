@@ -1,29 +1,14 @@
 #!/usr/bin/env python3
 r"""
-AFDevLoader v48.2 SPAWNER + v72 ZERO-DSKEY + MAYA LEGACY + NATIVE MOVEMENT/CORRECTION + VIEW
-Assault Fire PH - TRUE DS The Altar / legacy round-flow + native movement/correction/view test
+AFDevLoader v48.2 - generic Assault Fire PH PvE dedicated-server loader.
 
-Goal:
-  Start the real PH TGame runtime without TCLS/network and execute the real
-  UE3 console command:
+Starts the validated TGame_AFDEV runtime, enters true server mode, opens the
+room-selected installed PvE map on the game thread, applies captured room
+settings, verifies native movement/correction and the live zero DS key, then
+publishes SESSION_READY for the v9 bridge.
 
-      OPEN TR-Tutorial_Main
-
-  on TGame's OWN PRIMARY/GAME THREAD.
-
-Why v0.7 is different:
-  - command-line map launching loses to Assault Fire's online startup UI
-  - EXEC= also loses to that startup flow
-  - calling UGameEngine::Exec from a foreign remote thread is unsafe
-  - v0.7 briefly suspends TGame's primary thread, redirects it through a tiny
-    one-shot trampoline, calls UTGameEngine::Exec there, then restores every
-    register/flag and jumps back to the exact interrupted EIP
-
-No game EXE is modified on disk.
-
-Validated clean image:
-  SHA256
-  b4273f2658ca94eebc559a997fdfcd02d51e77ce75b892250c1db7fb80c70b51
+No game executable is modified on disk. Runtime addresses are build-specific
+and guarded by the validated TGame_AFDEV SHA-256 below.
 """
 
 import argparse
@@ -61,8 +46,8 @@ EXPECTED_SHA256 = (
     "d51e77ce75b892250c1db7fb80c70b51"
 )
 
-DEFAULT_GAME_DIR = Path(r"D:\AssaultFirePH\Binaries\Win32")
-DEFAULT_MAP = "SV-Maya_3_Main"
+DEFAULT_GAME_DIR = os.environ.get("AF_GAME_DIR", "")
+DEFAULT_MAP = os.environ.get("AF_DS_DEFAULT_MAP", "")
 
 # ---------------------------------------------------------------------------
 # Validated addresses - clean PH TGame build
@@ -357,21 +342,13 @@ PVE_ACTOR_ROTATION_OFFSET_V48 = 0x60
 PVE_PC_PENDING_ADJ_ACKGOOD_OFFSET_V48 = 0x454
 
 
-# v45 established the correct Maya legacy TGSV round family with all stock
-# movement/ServerMove code untouched.  v48 preserves that round-flow result and
-# restores native MoveAutonomous plus the stock PH correction stage documented above.
+# v45 established the legacy TGSV PvE round family with stock
+# movement/ServerMove code untouched. v48 preserves that round flow and
+# restores native MoveAutonomous plus the stock PH correction stage.
 #
-# Static root-cause finding from the actual shipped packages/map:
-#   Maya_3_Scripting.udk contains PVEGame.TGSVSeqAct_ResetRound
-#   and contains NO TGSV3SeqAct_NotifyRoundStart/Prepare/Clear instances.
-#
-# PVEGame.u source confirms TGSVSeqAct_ResetRound requires:
-#   TGSVGame
-#   TGSVGameReplicationInfo
-#
-# Therefore this Maya map must be tested with PVEGame.TGSVGame rather than
-# TGSVGame.TGSV3Game.  No live GRI reclassification or post-spawn patching.
-
+# Shipped PvE package analysis and PVEGame.u show that the ResetRound path uses
+# TGSVGame with TGSVGameReplicationInfo. The generic PvE loader therefore uses
+# PVEGame.TGSVGame rather than TGSVGame.TGSV3Game.
 # v21: isolate the AFDEV listen-server process from TGame's normal
 # single-instance named mutex. Static call site in the validated PH image:
 #   0x01349D75 -> push 0x01D12F98
@@ -5061,7 +5038,7 @@ def report_gworld_transitions_v40(state):
 
 
 # ---------------------------------------------------------------------------
-# v41 - isolate ONLY the late OPEN / Altar LoadMap.
+# v41 - isolate ONLY the late OPEN / selected PvE map LoadMap.
 #
 # v40 proved that its captured TGSV3Game spawn belonged to the PRE-OPEN
 # frontend world (the world already existed before OPEN).  v41 therefore:
@@ -5072,7 +5049,7 @@ def report_gworld_transitions_v40(state):
 #   * resets the LoadMap stage marker to zero immediately BEFORE OPEN.
 #
 # This makes every reported SetGameInfo/SpawnActor/stage event unambiguously
-# belong to the Altar travel rather than frontend startup.
+# belong to the selected PvE map travel rather than frontend startup.
 # ---------------------------------------------------------------------------
 
 V41_SETGAMEINFO_CALLSITE = 0x009C9627
@@ -5163,7 +5140,7 @@ def reset_post_open_trace_v41(
     )
 
     # Clear every v40 SpawnActor result field so a frontend startup call cannot
-    # be mistaken for an Altar call.
+    # be mistaken for an selected PvE map call.
     zero_spawn_keys = (
         "tracking",
         "orig_ret",
@@ -5204,7 +5181,7 @@ def reset_post_open_trace_v41(
     print("[AFDEV-v41] SpawnActor trace reset to 0.")
     print(
         "[AFDEV-v41] From this point onward every captured event belongs "
-        "to the Altar OPEN travel."
+        "to the selected PvE map OPEN travel."
     )
     print("[AFDEV-v41] ===== END TRACE RESET =====")
     print()
@@ -5224,11 +5201,11 @@ def report_setgameinfo_call_trace_v41(hproc, state):
 
     if count == 0:
         print(
-            "[AFDEV-v41] >>> Altar LoadMap NEVER called UWorld::SetGameInfo."
+            "[AFDEV-v41] >>> selected PvE map LoadMap NEVER called UWorld::SetGameInfo."
         )
     else:
         print(
-            "[AFDEV-v41] >>> Altar LoadMap DID call UWorld::SetGameInfo."
+            "[AFDEV-v41] >>> selected PvE map LoadMap DID call UWorld::SetGameInfo."
         )
 
     print("[AFDEV-v41] ===== END SETGAMEINFO CALL TRACE =====")
@@ -5487,7 +5464,7 @@ def install_native_movement_bridge_v48(hproc):
 
 
 # ---------------------------------------------------------------------------
-# r12 Maya GameSpecificSettings propagation
+# r12 PvE GameSpecificSettings propagation
 # ---------------------------------------------------------------------------
 # Stock shipped UnrealScript proves:
 #   TGGame.UpdateGameSpecificSettings(Settings)
@@ -5499,21 +5476,21 @@ def install_native_movement_bridge_v48(hproc):
 #   PVEGame.GetDifficulty()
 #       0x1001 -> Easy(0), 0x1002 -> Normal(1), 0x1003 -> Hard(2)
 #
-# The old DS backend never delivered the Settings struct to AFDEV, so Maya
+# The old DS backend never delivered the Settings struct to AFDEV, so PvE
 # always retained defaults.  Resolve the live fields by reflection and write
 # only the stock final state before SESSION_READY / before the retail client is
 # allowed through the UDP latch.  No Kismet output is forced or patched.
 
-MAYA_FNAME_FROM_TCHAR_VA = 0x004D78D0
-MAYA_UOBJECT_NAME_INDEX = 0x2C
-MAYA_UOBJECT_NAME_NUMBER = 0x30
-MAYA_UOBJECT_CLASS = 0x34
-MAYA_UFIELD_NEXT = 0x3C
-MAYA_USTRUCT_SUPER = 0x48
-MAYA_USTRUCT_CHILDREN = 0x4C
-MAYA_UPROPERTY_ARRAYDIM = 0x40
-MAYA_UPROPERTY_ELEMENTSIZE = 0x44
-MAYA_UPROPERTY_OFFSET = 0x60
+PVE_FNAME_FROM_TCHAR_VA = 0x004D78D0
+PVE_UOBJECT_NAME_INDEX = 0x2C
+PVE_UOBJECT_NAME_NUMBER = 0x30
+PVE_UOBJECT_CLASS = 0x34
+PVE_UFIELD_NEXT = 0x3C
+PVE_USTRUCT_SUPER = 0x48
+PVE_USTRUCT_CHILDREN = 0x4C
+PVE_UPROPERTY_ARRAYDIM = 0x40
+PVE_UPROPERTY_ELEMENTSIZE = 0x44
+PVE_UPROPERTY_OFFSET = 0x60
 # r20 profile -> authoritative UE3 PRI name synchronization.
 R20_PVE_PC_VTABLE = 0x01E24C28
 R20_ULOCALPLAYER_VTABLE = 0x01D59830
@@ -5521,31 +5498,31 @@ R20_PC_PRI_OFFSET = 0x1DC
 R20_PC_PLAYER_OFFSET = 0x370
 
 
-def _maya_ptr(v):
+def _pve_ptr(v):
     return isinstance(v, int) and 0x00010000 <= v < 0x7FFF0000 and (v & 3) == 0
 
 
-def _maya_object_header(hproc, obj):
-    if not _maya_ptr(obj):
+def _pve_object_header(hproc, obj):
+    if not _pve_ptr(obj):
         return None
     try:
         raw = read_remote(hproc, obj, 0x38)
     except Exception:
         return None
     return {
-        "name_index": struct.unpack_from("<I", raw, MAYA_UOBJECT_NAME_INDEX)[0],
-        "name_number": struct.unpack_from("<I", raw, MAYA_UOBJECT_NAME_NUMBER)[0],
-        "class": struct.unpack_from("<I", raw, MAYA_UOBJECT_CLASS)[0],
+        "name_index": struct.unpack_from("<I", raw, PVE_UOBJECT_NAME_INDEX)[0],
+        "name_number": struct.unpack_from("<I", raw, PVE_UOBJECT_NAME_NUMBER)[0],
+        "class": struct.unpack_from("<I", raw, PVE_UOBJECT_CLASS)[0],
     }
 
 
-def _maya_construct_fname(hproc, hthread, text_value):
+def _pve_construct_fname(hproc, hthread, text_value):
     text_bytes = text_value.encode("utf-16le") + b"\x00\x00"
     remote = kernel32.VirtualAllocEx(
         hproc, None, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE
     )
     if not remote:
-        winerr("VirtualAllocEx(Maya FName)")
+        winerr("VirtualAllocEx(PvE FName)")
     remote = int(ctypes.cast(remote, ctypes.c_void_p).value)
     string_ptr = remote + 0x000
     fname_ptr = remote + 0x400
@@ -5557,20 +5534,20 @@ def _maya_construct_fname(hproc, hthread, text_value):
 
     prev = kernel32.SuspendThread(hthread)
     if prev == 0xFFFFFFFF:
-        winerr("SuspendThread(Maya FName)")
+        winerr("SuspendThread(PvE FName)")
     suspended = True
     try:
         ctx = WOW64_CONTEXT()
         ctx.ContextFlags = WOW64_CONTEXT_FULL
         if not kernel32.Wow64GetThreadContext(hthread, ctypes.byref(ctx)):
-            winerr("Wow64GetThreadContext(Maya FName)")
+            winerr("Wow64GetThreadContext(PvE FName)")
         original_eip = ctx.Eip
         sc = bytearray()
         sc += b"\x9C\x60"  # pushfd; pushad
         sc += b"\xB9" + struct.pack("<I", fname_ptr)  # ecx=this
         sc += b"\x6A\x01\x6A\x01"
         sc += b"\x68" + struct.pack("<I", string_ptr)
-        sc += b"\xB8" + struct.pack("<I", MAYA_FNAME_FROM_TCHAR_VA)
+        sc += b"\xB8" + struct.pack("<I", PVE_FNAME_FROM_TCHAR_VA)
         sc += b"\xFF\xD0"
         sc += b"\xC7\x05" + struct.pack("<I", done_ptr) + struct.pack("<I", 1)
         sc += b"\x61\x9D"
@@ -5578,15 +5555,15 @@ def _maya_construct_fname(hproc, hthread, text_value):
         write_remote(hproc, code_ptr, bytes(sc))
         ctx.Eip = code_ptr
         if not kernel32.Wow64SetThreadContext(hthread, ctypes.byref(ctx)):
-            winerr("Wow64SetThreadContext(Maya FName)")
+            winerr("Wow64SetThreadContext(PvE FName)")
         if kernel32.ResumeThread(hthread) == 0xFFFFFFFF:
-            winerr("ResumeThread(Maya FName)")
+            winerr("ResumeThread(PvE FName)")
         suspended = False
         deadline = time.time() + 5.0
         while time.time() < deadline:
             if read_u32(hproc, done_ptr) == 1:
                 idx, num = struct.unpack("<II", read_remote(hproc, fname_ptr, 8))
-                print(f"[AFDEV-MAYA-SETTINGS] FName {text_value!r}=0x{idx:08X}:{num}")
+                print(f"[AFDEV-PVE-SETTINGS] FName {text_value!r}=0x{idx:08X}:{num}")
                 return idx, num
             time.sleep(0.01)
         raise RuntimeError(f"FName({text_value!r}) timed out")
@@ -5595,42 +5572,42 @@ def _maya_construct_fname(hproc, hthread, text_value):
             kernel32.ResumeThread(hthread)
 
 
-def _maya_find_field(hproc, start_struct, fname_pair):
+def _pve_find_field(hproc, start_struct, fname_pair):
     idx, num = fname_pair
     cur = start_struct
     seen_structs = set()
-    while _maya_ptr(cur) and cur not in seen_structs:
+    while _pve_ptr(cur) and cur not in seen_structs:
         seen_structs.add(cur)
         try:
-            fld = read_u32(hproc, cur + MAYA_USTRUCT_CHILDREN)
+            fld = read_u32(hproc, cur + PVE_USTRUCT_CHILDREN)
         except Exception:
             break
         seen_fields = set()
-        while _maya_ptr(fld) and fld not in seen_fields:
+        while _pve_ptr(fld) and fld not in seen_fields:
             seen_fields.add(fld)
-            hdr = _maya_object_header(hproc, fld)
+            hdr = _pve_object_header(hproc, fld)
             if not hdr:
                 break
             if hdr["name_index"] == idx and hdr["name_number"] == num:
                 raw = read_remote(hproc, fld, 0x68)
                 return {
                     "field": fld,
-                    "offset": struct.unpack_from("<I", raw, MAYA_UPROPERTY_OFFSET)[0],
-                    "array_dim": struct.unpack_from("<I", raw, MAYA_UPROPERTY_ARRAYDIM)[0],
-                    "element_size": struct.unpack_from("<I", raw, MAYA_UPROPERTY_ELEMENTSIZE)[0],
+                    "offset": struct.unpack_from("<I", raw, PVE_UPROPERTY_OFFSET)[0],
+                    "array_dim": struct.unpack_from("<I", raw, PVE_UPROPERTY_ARRAYDIM)[0],
+                    "element_size": struct.unpack_from("<I", raw, PVE_UPROPERTY_ELEMENTSIZE)[0],
                 }
             try:
-                fld = read_u32(hproc, fld + MAYA_UFIELD_NEXT)
+                fld = read_u32(hproc, fld + PVE_UFIELD_NEXT)
             except Exception:
                 break
         try:
-            cur = read_u32(hproc, cur + MAYA_USTRUCT_SUPER)
+            cur = read_u32(hproc, cur + PVE_USTRUCT_SUPER)
         except Exception:
             break
     return None
 
 
-def _maya_struct_descriptor(hproc, struct_property, target_fname):
+def _pve_struct_descriptor(hproc, struct_property, target_fname):
     # UStructProperty stores a pointer to its UScriptStruct after the UProperty
     # base. Scan only the small subclass tail and accept only a UObject whose
     # FName is exactly GameSpecificSettings.
@@ -5639,7 +5616,7 @@ def _maya_struct_descriptor(hproc, struct_property, target_fname):
     hits = []
     for off in range(0x64, 0xA0 - 3, 4):
         cand = struct.unpack_from("<I", raw, off)[0]
-        hdr = _maya_object_header(hproc, cand)
+        hdr = _pve_object_header(hproc, cand)
         if hdr and hdr["name_index"] == idx and hdr["name_number"] == num:
             hits.append((off, cand))
     if len(hits) != 1:
@@ -5649,7 +5626,7 @@ def _maya_struct_descriptor(hproc, struct_property, target_fname):
     return hits[0][1]
 
 
-def _maya_write_int(hproc, address, value, element_size, label):
+def _pve_write_int(hproc, address, value, element_size, label):
     if element_size == 1:
         data = struct.pack("<B", int(value) & 0xFF)
     elif element_size == 2:
@@ -5664,24 +5641,24 @@ def _maya_write_int(hproc, address, value, element_size, label):
     if verify != data:
         raise RuntimeError(f"{label}: write verification failed")
     print(
-        f"[AFDEV-MAYA-SETTINGS] {label} @0x{address:08X} "
+        f"[AFDEV-PVE-SETTINGS] {label} @0x{address:08X} "
         f"{int.from_bytes(old, 'little')} -> {int(value)}"
     )
 
 
 
 def _r20_probable_uobject(hproc, obj):
-    if not _maya_ptr(obj):
+    if not _pve_ptr(obj):
         return False
     try:
         vt = read_u32(hproc, obj)
-        hdr = _maya_object_header(hproc, obj)
+        hdr = _pve_object_header(hproc, obj)
     except Exception:
         return False
     return bool(
         hdr
         and 0x00400000 <= int(vt) < 0x03000000
-        and _maya_ptr(int(hdr.get("class") or 0))
+        and _pve_ptr(int(hdr.get("class") or 0))
     )
 
 
@@ -5784,7 +5761,7 @@ def _r20_read_fstring(hproc, address):
 
     if num <= 0:
         return ""
-    if not _maya_ptr(data) or num > 128 or cap < num or cap > 256:
+    if not _pve_ptr(data) or num > 128 or cap < num or cap > 256:
         return f"<invalid data=0x{data:08X} num={num} max={cap}>"
 
     try:
@@ -5819,15 +5796,15 @@ def r20_sync_remote_pri_name(hproc, hthread, nickname, timeout=45.0):
 
         if len(remotes) == 1:
             pc, player, pri = remotes[0]
-            ph = _maya_object_header(hproc, pri)
+            ph = _pve_object_header(hproc, pri)
             if not ph:
                 time.sleep(0.10)
                 continue
 
-            pair = _maya_construct_fname(
+            pair = _pve_construct_fname(
                 hproc, hthread, "PlayerName"
             )
-            prop = _maya_find_field(
+            prop = _pve_find_field(
                 hproc, ph["class"], pair
             )
             if (
@@ -5892,94 +5869,92 @@ def r20_sync_remote_pri_name(hproc, hthread, nickname, timeout=45.0):
     )
     return False
 
-def apply_maya_game_settings(hproc, hthread, authority, mode_id, map_id, sub_mode_id, room_flags):
+def apply_pve_game_settings(hproc, hthread, authority, mode_id, map_id, sub_mode_id, room_flags):
     mode_id = int(mode_id) & 0xFFFFFFFF
     map_id = int(map_id) & 0xFFFFFFFF
     sub_mode_id = int(sub_mode_id) & 0xFFFFFFFF
     room_flags = int(room_flags) & 0xFFFFFFFF
 
     if mode_id != 0x00002001:
-        raise RuntimeError(f"Maya loader expected ModeId 0x2001, got 0x{mode_id:08X}")
-    if map_id != 0x002F:
-        raise RuntimeError(f"Maya loader expected MapId 0x002F, got 0x{map_id:04X}")
+        raise RuntimeError(f"PvE loader expected ModeId 0x2001, got 0x{mode_id:08X}")
     if sub_mode_id not in (0x00001001, 0x00001002, 0x00001003):
-        raise RuntimeError(f"unsupported Maya SubModeId 0x{sub_mode_id:08X}")
+        raise RuntimeError(f"unsupported PvE SubModeId 0x{sub_mode_id:08X}")
 
     difficulty = sub_mode_id - 0x00001001
     diff_name = ("Easy", "Normal", "Hard")[difficulty]
     advanced_hero = bool(room_flags & 0x00040000)
     print(
-        f"[AFDEV-MAYA-SETTINGS] APPLY mode=0x{mode_id:08X} map=0x{map_id:04X} "
+        f"[AFDEV-PVE-SETTINGS] APPLY mode=0x{mode_id:08X} map=0x{map_id:04X} "
         f"submode=0x{sub_mode_id:08X} flags=0x{room_flags:08X} "
         f"difficulty={diff_name}({difficulty}) advanced_hero={advanced_hero}"
     )
 
     world_info = int((authority or {}).get("world_info") or 0)
     game_info = int((authority or {}).get("game_info") or 0)
-    if not _maya_ptr(world_info) or not _maya_ptr(game_info):
-        raise RuntimeError("Maya settings: live WorldInfo/GameInfo missing")
-    gi_hdr = _maya_object_header(hproc, game_info)
-    wi_hdr = _maya_object_header(hproc, world_info)
+    if not _pve_ptr(world_info) or not _pve_ptr(game_info):
+        raise RuntimeError("PvE settings: live WorldInfo/GameInfo missing")
+    gi_hdr = _pve_object_header(hproc, game_info)
+    wi_hdr = _pve_object_header(hproc, world_info)
     if not gi_hdr or not wi_hdr:
-        raise RuntimeError("Maya settings: invalid WorldInfo/GameInfo UObject header")
+        raise RuntimeError("PvE settings: invalid WorldInfo/GameInfo UObject header")
 
     wanted = {}
     for name in (
         "GameSettings", "GameSpecificSettings", "ModeId", "SubModeId", "MapId", "Flags",
         "GameSettingFlags", "GameReplicationInfo", "Difficulty",
     ):
-        wanted[name] = _maya_construct_fname(hproc, hthread, name)
+        wanted[name] = _pve_construct_fname(hproc, hthread, name)
 
-    game_settings_prop = _maya_find_field(hproc, gi_hdr["class"], wanted["GameSettings"])
+    game_settings_prop = _pve_find_field(hproc, gi_hdr["class"], wanted["GameSettings"])
     if not game_settings_prop or game_settings_prop["array_dim"] != 1:
-        raise RuntimeError("Maya settings: reflected GameSettings property not found")
+        raise RuntimeError("PvE settings: reflected GameSettings property not found")
     if not (0x20 <= game_settings_prop["element_size"] <= 0x80):
         raise RuntimeError(
-            f"Maya settings: unexpected GameSettings ElementSize=0x{game_settings_prop['element_size']:X}"
+            f"PvE settings: unexpected GameSettings ElementSize=0x{game_settings_prop['element_size']:X}"
         )
-    settings_struct = _maya_struct_descriptor(
+    settings_struct = _pve_struct_descriptor(
         hproc, game_settings_prop["field"], wanted["GameSpecificSettings"]
     )
 
     members = {}
     for name in ("ModeId", "SubModeId", "MapId", "Flags"):
-        m = _maya_find_field(hproc, settings_struct, wanted[name])
+        m = _pve_find_field(hproc, settings_struct, wanted[name])
         if not m or m["array_dim"] != 1 or m["element_size"] != 4:
-            raise RuntimeError(f"Maya settings: reflected {name} member invalid: {m}")
+            raise RuntimeError(f"PvE settings: reflected {name} member invalid: {m}")
         if m["offset"] + 4 > game_settings_prop["element_size"]:
-            raise RuntimeError(f"Maya settings: {name} offset outside GameSettings struct")
+            raise RuntimeError(f"PvE settings: {name} offset outside GameSettings struct")
         members[name] = m
 
     base = game_info + game_settings_prop["offset"]
-    _maya_write_int(hproc, base + members["ModeId"]["offset"], mode_id, 4, "GameSettings.ModeId")
-    _maya_write_int(hproc, base + members["SubModeId"]["offset"], sub_mode_id, 4, "GameSettings.SubModeId")
-    _maya_write_int(hproc, base + members["MapId"]["offset"], map_id, 4, "GameSettings.MapId")
-    _maya_write_int(hproc, base + members["Flags"]["offset"], room_flags, 4, "GameSettings.Flags")
+    _pve_write_int(hproc, base + members["ModeId"]["offset"], mode_id, 4, "GameSettings.ModeId")
+    _pve_write_int(hproc, base + members["SubModeId"]["offset"], sub_mode_id, 4, "GameSettings.SubModeId")
+    _pve_write_int(hproc, base + members["MapId"]["offset"], map_id, 4, "GameSettings.MapId")
+    _pve_write_int(hproc, base + members["Flags"]["offset"], room_flags, 4, "GameSettings.Flags")
 
-    world_flags_prop = _maya_find_field(hproc, wi_hdr["class"], wanted["GameSettingFlags"])
+    world_flags_prop = _pve_find_field(hproc, wi_hdr["class"], wanted["GameSettingFlags"])
     if not world_flags_prop or world_flags_prop["array_dim"] != 1 or world_flags_prop["element_size"] != 4:
-        raise RuntimeError(f"Maya settings: WorldInfo.GameSettingFlags invalid: {world_flags_prop}")
-    _maya_write_int(
+        raise RuntimeError(f"PvE settings: WorldInfo.GameSettingFlags invalid: {world_flags_prop}")
+    _pve_write_int(
         hproc, world_info + world_flags_prop["offset"], room_flags, 4, "WorldInfo.GameSettingFlags"
     )
 
-    gri_prop = _maya_find_field(hproc, gi_hdr["class"], wanted["GameReplicationInfo"])
+    gri_prop = _pve_find_field(hproc, gi_hdr["class"], wanted["GameReplicationInfo"])
     if not gri_prop or gri_prop["element_size"] != 4:
-        raise RuntimeError(f"Maya settings: GameReplicationInfo property invalid: {gri_prop}")
+        raise RuntimeError(f"PvE settings: GameReplicationInfo property invalid: {gri_prop}")
     gri = read_u32(hproc, game_info + gri_prop["offset"])
-    gri_hdr = _maya_object_header(hproc, gri)
+    gri_hdr = _pve_object_header(hproc, gri)
     if not gri_hdr:
-        raise RuntimeError("Maya settings: live GameReplicationInfo missing")
-    diff_prop = _maya_find_field(hproc, gri_hdr["class"], wanted["Difficulty"])
+        raise RuntimeError("PvE settings: live GameReplicationInfo missing")
+    diff_prop = _pve_find_field(hproc, gri_hdr["class"], wanted["Difficulty"])
     if not diff_prop or diff_prop["array_dim"] != 1 or diff_prop["element_size"] not in (1, 2, 4):
-        raise RuntimeError(f"Maya settings: PVE GRI Difficulty invalid: {diff_prop}")
-    _maya_write_int(
+        raise RuntimeError(f"PvE settings: PVE GRI Difficulty invalid: {diff_prop}")
+    _pve_write_int(
         hproc, gri + diff_prop["offset"], difficulty, diff_prop["element_size"],
         "PVEGameReplicationInfo.Difficulty",
     )
 
     print(
-        "[AFDEV-MAYA-SETTINGS] VERIFIED stock final state; "
+        "[AFDEV-PVE-SETTINGS] VERIFIED stock final state; "
         "PVEGame.GetDifficulty() will now read the captured SubModeId."
     )
     return {
@@ -6037,7 +6012,7 @@ def main():
     )
     ap.add_argument(
         "--sub-mode-id", type=lambda x: int(x, 0), default=0x00001001,
-        help="TGGame GameSpecificSettings.SubModeId (Maya: 0x1001 Easy, 0x1002 Normal, 0x1003 Hard).",
+        help="TGGame GameSpecificSettings.SubModeId (PvE: 0x1001 Easy, 0x1002 Normal, 0x1003 Hard).",
     )
     ap.add_argument(
         "--room-flags", type=lambda x: int(x, 0), default=0x00003008,
@@ -6101,6 +6076,15 @@ def main():
 
     args = ap.parse_args()
 
+    if not str(args.game_dir or "").strip():
+        raise SystemExit(
+            "Missing --game-dir / AF_GAME_DIR. Point it at your Assault Fire PH Binaries\\Win32 directory."
+        )
+    if not str(args.map or "").strip():
+        raise SystemExit(
+            "Missing --map. Use the room-selected PvE MapString or set AF_DS_DEFAULT_MAP explicitly."
+        )
+
     if args.no_uac:
         if not shell32.IsUserAnAdmin():
             raise SystemExit(
@@ -6118,13 +6102,13 @@ def main():
     if not exe.is_file():
         raise SystemExit(
             f"Missing:\n  {exe}\n\n"
-            "Keep the TGame_AFDEV.exe staged by the previous loader."
+            "Place your compatible TGame_AFDEV.exe in the configured Binaries\\Win32 directory."
         )
 
     digest = sha256_file(exe)
 
     print(
-        "[AFDEV] Assault Fire PH GAME-THREAD MAP TEST"
+        "[AFDEV] Assault Fire PH PVE MAP LOADER"
     )
     print(
         f"[AFDEV] GAME DIR : {game_dir}"
@@ -6443,7 +6427,7 @@ def main():
 
         print()
         print(
-            "[AFDEV-v45] MAYA LEGACY-SV TEST: PVEGame.TGSVGame selected from actual map Kismet."
+            "[AFDEV-v45] PVE LEGACY-SV TEST: PVEGame.TGSVGame selected from actual map Kismet."
         )
         print(
             "[AFDEV-v45] Required mode: GIsClient=0 GIsServer=1 GIsEditor=0"
@@ -6468,7 +6452,7 @@ def main():
 
         game_class = args.game.strip()
 
-        # v26: production target is Survival / The Altar.  The previous v25
+        # v26: production target is Survival / the selected PvE map.  The previous v25
         # test accidentally inherited tutorial defaults, which caused the
         # real client to reach that listen server and receive
         # Engine.GameMessage.MaxedOutMessage.  Keep an explicit banner here.
@@ -6634,7 +6618,7 @@ def main():
                         "v45 movement baseline."
                     )
                 print(
-                    "[AFDEV-v41] The Altar server world is left running for "
+                    "[AFDEV-v41] the selected PvE map server world is left running for "
                     "the normal PH client / bridge connection."
                 )
                 v28_dsm_census(
@@ -6646,7 +6630,7 @@ def main():
                     "expected GIsClient=0 GIsServer=1."
                 )
 
-                # r12: apply the room's real Maya settings before the client
+                # r12: apply the room's real PvE settings before the client
                 # handshake is released.  This is early enough that PVE GameStart
                 # / difficulty Kismet consumes the captured SubModeId instead of
                 # AFDEV's Easy default.
@@ -6656,13 +6640,13 @@ def main():
                 # intermittently exit rc=1.  Retry the idempotent stock-field apply
                 # for a bounded window; permanent room-setting errors still fail
                 # immediately.
-                maya_settings_deadline = time.time() + 12.0
-                maya_settings_attempt = 0
-                maya_settings_last_error = None
+                pve_settings_deadline = time.time() + 12.0
+                pve_settings_attempt = 0
+                pve_settings_last_error = None
                 while True:
-                    maya_settings_attempt += 1
+                    pve_settings_attempt += 1
                     try:
-                        maya_settings_state = apply_maya_game_settings(
+                        pve_settings_state = apply_pve_game_settings(
                             pi.hProcess,
                             pi.hThread,
                             authority,
@@ -6671,28 +6655,27 @@ def main():
                             args.sub_mode_id,
                             args.room_flags,
                         )
-                        if maya_settings_attempt > 1:
+                        if pve_settings_attempt > 1:
                             print(
-                                f"[AFDEV-MAYA-SETTINGS] READY after retry attempts={maya_settings_attempt}"
+                                f"[AFDEV-PVE-SETTINGS] READY after retry attempts={pve_settings_attempt}"
                             )
                         break
                     except Exception as exc:
-                        maya_settings_last_error = exc
+                        pve_settings_last_error = exc
                         msg = str(exc)
                         permanent = (
                             "expected ModeId" in msg
-                            or "expected MapId" in msg
-                            or "unsupported Maya SubModeId" in msg
+                            or "unsupported PvE SubModeId" in msg
                         )
                         if permanent or not process_alive(pi.hProcess):
                             raise
-                        if time.time() >= maya_settings_deadline:
+                        if time.time() >= pve_settings_deadline:
                             raise RuntimeError(
-                                "Maya settings did not become writable within 12.0s; "
-                                f"attempts={maya_settings_attempt}; last={msg}"
+                                "PvE settings did not become writable within 12.0s; "
+                                f"attempts={pve_settings_attempt}; last={msg}"
                             ) from exc
                         print(
-                            f"[AFDEV-MAYA-SETTINGS] WAIT attempt={maya_settings_attempt} "
+                            f"[AFDEV-PVE-SETTINGS] WAIT attempt={pve_settings_attempt} "
                             f"transient={type(exc).__name__}: {msg}"
                         )
                         time.sleep(0.25)
@@ -6704,7 +6687,7 @@ def main():
                             )
                         except Exception as refresh_exc:
                             print(
-                                f"[AFDEV-MAYA-SETTINGS] authority refresh pending: {refresh_exc}"
+                                f"[AFDEV-PVE-SETTINGS] authority refresh pending: {refresh_exc}"
                             )
 
                 # r8: A11A advertises a zero DSKey.  Do not publish
@@ -6732,9 +6715,9 @@ def main():
                         "map_id": int(args.map_id),
                         "sub_mode_id": int(args.sub_mode_id),
                         "room_flags": int(args.room_flags),
-                        "pve_difficulty": int(maya_settings_state["difficulty"]),
-                        "pve_difficulty_name": str(maya_settings_state["difficulty_name"]),
-                        "advanced_hero": bool(maya_settings_state["advanced_hero"]),
+                        "pve_difficulty": int(pve_settings_state["difficulty"]),
+                        "pve_difficulty_name": str(pve_settings_state["difficulty_name"]),
+                        "advanced_hero": bool(pve_settings_state["advanced_hero"]),
                         "gworld": int(final_gworld or 0),
                         "loadmap_stage": int(highest_stage),
                         "native_movement": bool(v48_movement_state),
@@ -6752,7 +6735,7 @@ def main():
                     print(
                         f"[AFDEV-v48-SPAWNER] SESSION_READY file={ready_file} "
                         f"pid={pi.dwProcessId} udp={port} native_movement={bool(v48_movement_state)} "
-                        f"difficulty={maya_settings_state['difficulty_name']} "
+                        f"difficulty={pve_settings_state['difficulty_name']} "
                         f"submode=0x{int(args.sub_mode_id):08x} flags=0x{int(args.room_flags):08x} "
                         f"zero_dskey={bool(zero_dskey_state.get('verified'))}"
                     )

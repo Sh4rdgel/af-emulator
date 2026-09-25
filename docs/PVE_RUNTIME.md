@@ -36,6 +36,4 @@ A client HUD difficulty label mismatch is tracked separately from the authoritat
 - `tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py`
 - `tools/bridge/af_ds_udp_bridge_v9_multi_peer_latch.py`
 
-The legacy v94 server, bridge v5 and loader v26 remain available as historical rollback/reference files.
-
 The repository does not redistribute `TGame_AFDEV.exe`, cooked maps, private keys, player state, or runtime DS state.

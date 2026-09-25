@@ -19,6 +19,7 @@ private/
 assaultfire_player_state.json
 assaultfire_clan_state.json
 *.sqlite
+*.sqlite3
 *.db
 
 # Local/generated mappings
@@ -34,6 +35,7 @@ shop_item_map.json
 logs/
 captures/
 dumps/
+runtime/
 
 # Proprietary game/client files
 *.exe
@@ -52,6 +54,7 @@ dumps/
 *.rar
 *.bin
 *.dat
+*.bak
 build/
 dist/
 __pycache__/

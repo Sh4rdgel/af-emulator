@@ -1,7 +1,7 @@
-"""SQLite account storage for the Assault Fire emulator.
+"""SQLite account storage for the Assault Fire Server Emulator.
 
-This module is intentionally independent from the network protocol so the web
-registration service and the emulator can share one authoritative account DB.
+This module is intentionally independent from the network protocol so local
+account tooling and future frontends can share one authoritative account DB.
 """
 
 from __future__ import annotations

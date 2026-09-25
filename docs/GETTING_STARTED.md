@@ -91,7 +91,7 @@ Typical client layout:
 Example:
 
 ```powershell
-.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "D:\AssaultFirePH\TCLS\config"
+.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "<game-root>\TCLS\config"
 ```
 
 The helper will:
@@ -212,7 +212,7 @@ config\hosts.txt
 Open Notepad as Administrator and edit:
 
 ```text
-C:\Windows\System32\drivers\etc\hosts
+$env:SystemRoot\System32\drivers\etc\hosts
 ```
 
 Add the three lines, save, then run:
@@ -251,14 +251,14 @@ A good sign is:
 If your private key is stored somewhere else, you can point the server to it:
 
 ```powershell
-$env:AF_PRIVATE_KEY = "D:\MyPrivateFolder\PRIVATE.PEM"
+$env:AF_PRIVATE_KEY = "<private-dir>\PRIVATE.PEM"
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
 Optional log path:
 
 ```powershell
-$env:AF_LOG_PATH = "D:\af-logs\server.log"
+$env:AF_LOG_PATH = "<log-dir>\server.log"
 ```
 
 Keep the server window open while testing.
@@ -452,8 +452,6 @@ By default `AF_DS_USE_CLIENT_MAP=1`, so the selected stock-client `MapString` is
 
 See **[Stable PvE bridge + server spawner guide](PVE_BRIDGE_AND_SPAWNER.md)** and **[PvE runtime and map selection](PVE_RUNTIME.md)**.
 
-The older Issue #1 sample documents the pre-fix state.
-
 ## 10. Super-simple troubleshooting
 
 ### Launcher says "AP client initialization failed."
@@ -463,14 +461,14 @@ First look at the emulator window. If you see VERSION traffic but **no `[AUTH] C
 Reinstall a matching generated APClient file into the exact client copy you launch:
 
 ~~~powershell
-.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "D:\Assault Fire PH\TCLS\config" --force
+.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "<game-root>\TCLS\config" --force
 ~~~
 
 Then verify:
 
 ~~~powershell
-Get-Item "D:\Assault Fire PH\TCLS\config\APClient.dat" | Select-Object FullName,Length
-Get-Content "D:\Assault Fire PH\TCLS\config\APClient.dat" -TotalCount 1
+Get-Item "<game-root>\TCLS\config\APClient.dat" | Select-Object FullName,Length
+Get-Content "<game-root>\TCLS\config\APClient.dat" -TotalCount 1
 ~~~
 
 The repository-generated file should be **272 bytes** and start with:
@@ -506,7 +504,7 @@ The most common thing to check first is that the client public key and server pr
 Regenerate/install both together:
 
 ```powershell
-.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "D:\YourGameFolder\TCLS\config" --force
+.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "<game-root>\TCLS\config" --force
 ```
 
 Then restart both the server and client.

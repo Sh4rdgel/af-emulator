@@ -103,7 +103,7 @@ BodyLen
 
 These messages sit in the TGame login path immediately before or around selection of the local ZONE endpoint.
 
-Source implementation: `server/assaultfire_server_v94.py` (protocol foundation inherited by the stable line).
+Source implementation: `server/assaultfire_server_v143b.py`.
 
 ## 5. One accepted stock A10A room-creation capture
 
@@ -123,7 +123,7 @@ These values are a known accepted reference, not universal constants for every r
 
 The current implementation preserves the stock room fields and allows the later A11E `SetGameSettings` update to replace the map/settings snapshot before lazy AFDEV startup. A later stock `MapString` can therefore become the actual map launched by v48.
 
-Source implementation/comments: `server/assaultfire_server_v94.py`, `server/assaultfire_server_v143b.py`, and `server/assaultfire_ds_spawner.py`.
+Source implementation/comments: `server/assaultfire_server_v143b.py` and `server/assaultfire_ds_spawner.py`.
 
 ## 6. Tutorial completion has a recovered client request entry, but rewards are not solved
 

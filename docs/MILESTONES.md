@@ -10,7 +10,7 @@ The rule for every milestone is simple:
 
 **Status: complete**
 
-Goal: publish a clean, reproducible starting point without the broken new-account branch.
+Goal: publish a clean, reproducible starting point without unverified first-login/new-account work.
 
 Completed:
 
@@ -56,7 +56,7 @@ Tasks:
 
 **Status: partial**
 
-Goal: promote only live-verified multiplayer frontend/backend behavior into the stable branch.
+Goal: promote only live-verified multiplayer frontend/backend behavior into the public `main` baseline.
 
 Tasks:
 
@@ -120,7 +120,7 @@ Goal: make the emulator useful to other preservation researchers without requiri
 
 Tasks:
 
-- [ ] Split the monolithic v94 server into readable modules without changing behavior
+- [ ] Split the monolithic v143b server into readable modules without changing behavior
 - [ ] Add automated protocol/unit tests
 - [ ] Add sanitized packet fixtures
 - [ ] Add architecture and protocol reference docs

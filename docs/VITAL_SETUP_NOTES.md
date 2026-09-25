@@ -31,7 +31,7 @@ TCLS/config/APClient.dat
 Generate a matching pair with:
 
 ```powershell
-.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "D:\YourAssaultFireFolder\TCLS\config"
+.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "<game-root>\TCLS\config"
 ```
 
 Never upload or commit `PRIVATE.PEM`.
@@ -122,7 +122,7 @@ tools/bridge/af_ds_udp_bridge_v9_multi_peer_latch.py
 tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py
 ```
 
-The intended flow is reserve-only at A10A, arm the bridge at A3A0/A113, then lazy-start AFDEV on the first valid DS UDP packet. The v5 bridge and v26 loader are retained only as legacy rollback/reference files.
+The intended flow is reserve-only at A10A, arm the bridge at A3A0/A113, then lazy-start AFDEV on the first valid DS UDP packet.
 
 See [PVE_RUNTIME.md](PVE_RUNTIME.md).
 

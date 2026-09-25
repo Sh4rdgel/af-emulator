@@ -260,7 +260,7 @@ server\PRIVATE.PEM  <---- matching pair ---->  TCLS\config\APClient.dat
 Use:
 
 ```powershell
-.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "D:\AssaultFirePH\TCLS\config"
+.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "<game-root>\TCLS\config"
 ```
 
 The known local PH setup loads `APClient.dat` as a raw PEM public key after a verified TCLS compatibility patch.
@@ -290,7 +290,7 @@ B4        ->  B8
 Use the repository helper rather than editing bytes manually:
 
 ```powershell
-.\.venv\Scripts\python.exe .\tools\patches\patch_tcls_apclient_raw_pem.py "D:\AssaultFirePH\TCLS\Tenio\TCLS.dll" --apply
+.\.venv\Scripts\python.exe .\tools\patches\patch_tcls_apclient_raw_pem.py "<game-root>\TCLS\Tenio\TCLS.dll" --apply
 ```
 
 The helper accepts only the verified source hash, checks the original signatures, creates a backup, and requires the final hash to match the verified working DLL exactly.

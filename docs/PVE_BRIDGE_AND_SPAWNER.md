@@ -77,18 +77,6 @@ The default local slot layout uses public bridge ports beginning at UDP 65008 an
 
 ## Validation
 
-The repository includes lifecycle/difficulty tests plus `tests/test_pve_map_selection.py` for stock-client map propagation invariants. Live Windows validation still depends on a lawfully supplied PH client and AFDEV executable.
-
-## Legacy rollback files
-
-These remain for historical comparison and rollback:
-
-```text
-server/assaultfire_server_v94.py
-tools/bridge/af_ds_udp_bridge_v5_actor_dump.py
-tools/server_spawner/AFDevLoader_v26_pve_natural_loading_completion.py
-```
-
-They are no longer the default PvE path.
+The repository includes `tests/test_pve_ds_lifecycle.py`, `tests/test_pve_difficulty.py`, and `tests/test_pve_map_selection.py` for stock-client map propagation invariants. Live Windows validation still depends on a lawfully supplied PH client and AFDEV executable.
 
 See [PvE runtime and map selection](PVE_RUNTIME.md), [Project Status](STATUS.md), and [Architecture](ARCHITECTURE.md).

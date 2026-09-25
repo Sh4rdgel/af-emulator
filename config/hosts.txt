@@ -1,7 +1,7 @@
 # Assault Fire PH local emulator host mappings
 #
 # Copy ONLY the active mapping lines below into:
-#   C:\Windows\System32\drivers\etc\hosts
+#   %SystemRoot%\System32\drivers\etc\hosts
 #
 # Run your editor as Administrator.
 # Remove/comment these lines to restore normal DNS resolution.

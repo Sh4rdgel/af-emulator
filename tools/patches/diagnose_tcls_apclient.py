@@ -160,7 +160,7 @@ def print_diagnosis(classification: str, check: KeyCheck) -> None:
 def parse_args():
     repo_root = Path(__file__).resolve().parents[2]
     ap = argparse.ArgumentParser(description="Read-only TCLS/APClient compatibility diagnostic")
-    ap.add_argument("--client-root", type=Path, help=r'Assault Fire root, e.g. "D:\\AssaultFirePH"')
+    ap.add_argument("--client-root", type=Path, help=r'Assault Fire root, e.g. "<game-root>"')
     ap.add_argument("--tcls", type=Path, help="explicit path to TCLS.dll")
     ap.add_argument("--apclient", type=Path, help="explicit path to APClient.dat")
     ap.add_argument(

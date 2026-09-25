@@ -3,7 +3,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 
-class AltarRuntimeTests(unittest.TestCase):
+class PVERuntimeTests(unittest.TestCase):
     def text(self, rel):
         return (ROOT / rel).read_text(encoding="utf-8", errors="replace")
 
@@ -28,6 +28,19 @@ class AltarRuntimeTests(unittest.TestCase):
         s = self.text("server/assaultfire_ds_spawner.py")
         for marker in ("room_players", "match_players", "ROUND_ENDED"):
             self.assertIn(marker, s)
+
+    def test_active_pve_path_has_no_fixed_install_or_map_fallback(self):
+        spawner = self.text("server/assaultfire_ds_spawner.py")
+        bridge = self.text("tools/bridge/af_ds_udp_bridge_v9_multi_peer_latch.py")
+        loader = self.text("tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py")
+        for text in (spawner, bridge, loader):
+            self.assertNotIn("D:\\AssaultFirePH", text)
+            self.assertNotIn("SV-Maya", text)
+            self.assertNotIn("The Altar", text)
+        self.assertIn('game_dir: str = ""', spawner)
+        self.assertIn('default_map: str = ""', spawner)
+        self.assertIn("AF_GAME_DIR is not set", spawner)
+        self.assertIn("no PvE map was selected", spawner)
 
 if __name__ == "__main__":
     unittest.main()

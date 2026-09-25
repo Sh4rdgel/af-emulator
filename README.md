@@ -53,7 +53,7 @@ py -3.12 -m venv .venv
 Point the helper at your own Assault Fire PH `TCLS\config` directory:
 
 ```powershell
-.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "D:\YourAssaultFireFolder\TCLS\config"
+.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "<game-root>\TCLS\config"
 ```
 
 This creates the local server key and matching `APClient.dat`.
@@ -65,7 +65,7 @@ This creates the local server key and matching `APClient.dat`.
 Before launching, verify the exact `TCLS.dll` that your client uses:
 
 ```powershell
-.\.venv\Scripts\python.exe .\tools\patches\diagnose_tcls_apclient.py --client-root "D:\YourAssaultFireFolder"
+.\.venv\Scripts\python.exe .\tools\patches\diagnose_tcls_apclient.py --client-root "<game-root>"
 ```
 
 For the known PH build, the diagnostic will identify one of these states:
@@ -81,7 +81,7 @@ For the known PH build, the diagnostic will identify one of these states:
 If the original `13EAD403...` build is detected, fully close `client.exe` / TCLS and run:
 
 ```powershell
-.\.venv\Scripts\python.exe .\tools\patches\patch_tcls_apclient_raw_pem.py "D:\YourAssaultFireFolder\TCLS\Tenio\TCLS.dll" --apply
+.\.venv\Scripts\python.exe .\tools\patches\patch_tcls_apclient_raw_pem.py "<game-root>\TCLS\Tenio\TCLS.dll" --apply
 ```
 
 The helper verifies the exact source hash and instruction bytes, creates `TCLS.dll.bak`, applies only the recovered compatibility edits, and requires the final DLL hash to match the verified working build. **Do not force this patch onto an unknown TCLS hash.**
@@ -191,6 +191,7 @@ You do not need to read everything before trying the project.
 | [Launch Requirements](docs/LAUNCH_REQUIREMENTS.md) | TCLS → TGame handoff and compatibility |
 | [Launcher Errors](docs/LAUNCHER_ERRORS.md) | known launcher/AP/TGame messages |
 | [Architecture](docs/ARCHITECTURE.md) | ports, components, and data flow |
+| [Research Findings](docs/RESEARCH_FINDINGS.md) | verified protocol/runtime findings and clearly marked research leads |
 | [FAQ](docs/FAQ.md) | common questions |
 | [Contributing](CONTRIBUTING.md) | submitting fixes, tests, and research |
 
@@ -204,7 +205,6 @@ tests/       reproducible regression tests
 .github/     issue and contribution templates
 ```
 
-Legacy files such as the older v94 server, v26 loader, and v5 bridge are kept for rollback/history. They are **not** the recommended PvE path.
 
 ## Project scope
 

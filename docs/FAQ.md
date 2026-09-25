@@ -1,6 +1,6 @@
 # Frequently Asked Questions
 
-This FAQ covers the most common setup and troubleshooting questions for the public **Assault Fire PH emulator v143b** baseline.
+This FAQ covers the most common setup and troubleshooting questions for the public **Assault Fire PH Server Emulator v143b** baseline.
 
 ## I got an AP / launcher / TGame error code. Where do I look?
 
@@ -97,7 +97,7 @@ See [Issue #4](https://github.com/armangido/af-emulator/issues/4), [Vital Setup 
 
 Use the public **v143b stable baseline**.
 
-Later branches contain experimental work, especially first-login/new-account behavior, and are intentionally not part of `main` yet.
+Unverified first-login/new-account work is intentionally not part of `main` yet.
 
 See [Project Status](STATUS.md).
 
@@ -117,7 +117,7 @@ private key          <---->    matching public key
 Generate both with:
 
 ```powershell
-.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "D:\YourAssaultFireFolder\TCLS\config"
+.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "<game-root>\TCLS\config"
 ```
 
 Never commit or upload `PRIVATE.PEM`.
@@ -228,7 +228,7 @@ Use the existing/local profile path when testing `main`.
 
 Not yet.
 
-The stable branch contains a lobby/room foundation, but some room behavior is synthetic/research-grade rather than a complete production-style dynamic lifecycle.
+The public v143b baseline contains a lobby/room foundation, but some room behavior is synthetic/research-grade rather than a complete production-style dynamic lifecycle.
 
 See [STATUS.md](STATUS.md).
 

@@ -6,7 +6,7 @@ from server.assaultfire_room_registry import RoomRegistry
 ROOT = Path(__file__).resolve().parents[1]
 
 
-class AltarDifficultyTests(unittest.TestCase):
+class PVEDifficultyTests(unittest.TestCase):
     def text(self, rel):
         return (ROOT / rel).read_text(encoding="utf-8", errors="replace")
 
@@ -24,7 +24,7 @@ class AltarDifficultyTests(unittest.TestCase):
         self.assertIn("prepare_lobby_settings_update", server)
         self.assertIn("update_lobby_settings", server)
 
-    def test_easy_normal_hard_pipeline_is_present(self):
+    def test_pve_difficulty_pipeline_is_present(self):
         server = self.text("server/assaultfire_server_v143b.py")
         spawner = self.text("server/assaultfire_ds_spawner.py")
         loader = self.text(
@@ -52,7 +52,7 @@ class AltarDifficultyTests(unittest.TestCase):
             {
                 "room_id": 1,
                 "display_id": 1,
-                "name": "The Altar",
+                "name": "PvE Test Room",
                 "match_settings_wire": easy_wire,
                 "mode_id": 0x00002001,
                 "map_id": 0x002F,

@@ -115,8 +115,6 @@ tools/bridge/af_ds_udp_bridge_v9_multi_peer_latch.py
 tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py
 ```
 
-The older v5/v26 pair is retained as a historical rollback path.
-
 ## Port reference
 
 | Port | Transport | Component | Notes |
@@ -141,7 +139,7 @@ PARTIAL
   useful implementation exists but complete retail behavior is not proven
 
 EXPERIMENTAL
-  research branch, inferred structure, or incomplete client verification
+  research snapshot, inferred structure, or incomplete client verification
 ```
 
 Only verified/reproducible behavior should be promoted into the stable public baseline.

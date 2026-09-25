@@ -4,7 +4,7 @@ This page tracks the **public stable baseline only**.
 
 Current public baseline: **v143b**
 
-Later experimental branches are intentionally excluded from `main` until they are reproducibly verified with the Assault Fire PH client.
+Experimental or unverified work is excluded from `main` until it is reproducibly verified with the Assault Fire PH client.
 
 ## Status legend
 
@@ -22,12 +22,12 @@ Later experimental branches are intentionally excluded from `main` until they ar
 | VERSION service | ✅ | Local version-service response path is implemented. |
 | AUTH handshake | ✅ | RSA/DH/AES authentication path used by the local client is implemented. |
 | DIR/server discovery | ✅ | Local directory response and server endpoint discovery are implemented. |
-| ROLE/ZONE connection foundation | ✅ | Stable branch can bring the existing local profile through the established login path. |
+| ROLE/ZONE connection foundation | ✅ | The public v143b baseline can bring the existing local profile through the established login path. |
 | Existing local player/profile state | ✅ | v143b has a known local player/profile path and persisted player state. |
 | PlayerInfo / property delivery | ✅ | Stable player information and property/inventory messages used by v143b are implemented. |
 | Shop foundation | ✅ | Stable shop/balance/purchase work from the pre-v95 branch is present. |
 | Clan ID persistence | ✅ | v143b persists clan membership/ClanID and reflects it in PlayerInfo. |
-| Clan name verification/create request shapes | ✅ | Known v143b request/response shapes are implemented for the stable branch. |
+| Clan name verification/create request shapes | ✅ | Known v143b request/response shapes are implemented on `main`. |
 | DS UDP bridge v9 | ✅ | Multi-peer first-packet latch bridge used by the integrated v143b PvE handoff. |
 | AFDEV PvE loader v48 | ✅ | Lazy multi-instance AFDEV loader started on the first valid DS UDP packet; launches the room-selected installed PvE map with `PVEGame.TGSVGame`. |
 | PvE dedicated-server/gameplay handoff + map selection | ✅ | v143b integrates the lazy v48 AFDEV + v9 bridge path, zero-DSKey readiness gate, stock A10A/A11E map/settings propagation, and player-scoped DS cleanup. |
@@ -54,7 +54,7 @@ Later experimental branches are intentionally excluded from `main` until they ar
 | First-time account creation | 🔴 | Experimental v95+ work is intentionally excluded because it is not considered stable. |
 | First-login nickname UI | 🔴 | Not part of v143b and not yet reproducibly verified for the public baseline. |
 | New-account starter inventory/profile lifecycle | 🔴 | Depends on the experimental account-creation work and is intentionally excluded. |
-| Real multi-account login lifecycle | 🔴 | Later experimental branches added this, but it is not part of stable v143b. |
+| Real multi-account login lifecycle | 🔴 | Experimental implementations exist, but this is not part of stable v143b. |
 | Real two-client friends/private chat | 🔴 | Not included in v143b; later work still needs proper stock-client validation before promotion. |
 | Full clan UI/detail/member rendering | 🔴 | Nested ClanDetailedInfo/MemberInfo wire layouts are not fully verified. |
 | Survival enemy/round backend lifecycle | 🔴 | Not implemented as a complete public stable backend. |

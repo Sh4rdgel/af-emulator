@@ -361,8 +361,8 @@ def main():
     ap.add_argument("--lazy-spawn", action="store_true")
     ap.add_argument("--python-exe", default=sys.executable)
     ap.add_argument("--loader-script", default="")
-    ap.add_argument("--game-dir", default=r"D:\AssaultFirePH\Binaries\Win32")
-    ap.add_argument("--map", dest="map_name", default="SV-Maya_3_Main")
+    ap.add_argument("--game-dir", default=os.environ.get("AF_GAME_DIR", ""))
+    ap.add_argument("--map", dest="map_name", default=os.environ.get("AF_DS_DEFAULT_MAP", ""))
     ap.add_argument("--game", dest="game_class", default="PVEGame.TGSVGame")
     ap.add_argument("--max-players", type=int, default=4)
     ap.add_argument("--mode-id", type=lambda x: int(x, 0), default=0x00002001)
@@ -535,6 +535,12 @@ def main():
             raise RuntimeError(f"missing loader: {loader_script}")
         if not ready_file or not pid_file or not loader_pid_file:
             raise RuntimeError("lazy mode requires --ready-file --pid-file --loader-pid-file")
+        game_dir = str(args.game_dir or "").strip()
+        map_name = str(args.map_name or "").strip()
+        if not game_dir:
+            raise RuntimeError("missing --game-dir / AF_GAME_DIR (expected Assault Fire PH Binaries\\Win32)")
+        if not map_name:
+            raise RuntimeError("missing room-selected --map / AF_DS_DEFAULT_MAP")
         for p in (ready_file, pid_file, loader_pid_file):
             try:
                 p.unlink()
@@ -553,8 +559,8 @@ def main():
 
         cmd = [
             args.python_exe, str(loader_script),
-            "--game-dir", args.game_dir,
-            "--map", args.map_name,
+            "--game-dir", game_dir,
+            "--map", map_name,
             "--game", args.game_class,
             "--max-players", str(max(2, int(args.max_players))),
             "--mode-id", str(int(args.mode_id)),

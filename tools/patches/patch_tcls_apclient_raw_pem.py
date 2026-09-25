@@ -225,7 +225,7 @@ def parse_args():
     ap.add_argument(
         "tcls",
         type=Path,
-        help=r'path to TCLS.dll, e.g. "D:\AssaultFirePH\TCLS\Tenio\TCLS.dll"',
+        help=r'path to TCLS.dll, e.g. "<game-root>\\TCLS\\Tenio\\TCLS.dll"',
     )
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--apply", action="store_true", help="apply the verified patch")
