@@ -9181,7 +9181,7 @@ def _v97_build_welcome_payload(level_name=None, game_name=None, redirect_url=Non
     )
 
 
-def listen_on_udp_port(port, label="DS-UDP"):
+def listen_on_udp_port(port, label="DS-UDP", sock=None):
     """v98: accept AF's coalesced Netspeed+Login and send NMT_Welcome.
 
     v96 proved ACK + NMT_Challenge are accepted.  The client then sent one
@@ -9191,9 +9191,11 @@ def listen_on_udp_port(port, label="DS-UDP"):
     v100 parses that stream, logs Login, and replies with Assault Fire's
     native two-FString NMT_Welcome.  The LevelName comes from AF_DS_WELCOME_MAP or AF_DS_DEFAULT_MAP; no PvE map is hard-coded.
     """
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind(("0.0.0.0", port))
+    s = sock
+    if s is None:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(("0.0.0.0", port))
 
     log(
         label,
@@ -9486,23 +9488,53 @@ def listen_on_udp_port(port, label="DS-UDP"):
 # Listener
 # ---------------------------------------------------------------------------
 
-def listen_on_port(port, label):
-    s = socket.socket(
-        socket.AF_INET,
-        socket.SOCK_STREAM
-    )
-
-    s.setsockopt(
-        socket.SOL_SOCKET,
-        socket.SO_REUSEADDR,
-        1
-    )
-
-    s.bind(
-        ("0.0.0.0", port)
-    )
-
+def _bind_tcp_listener(port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(("0.0.0.0", int(port)))
     s.listen(10)
+    return s
+
+
+def _bind_udp_listener(port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(("0.0.0.0", int(port)))
+    return s
+
+
+def _prepare_listener_sockets():
+    specs = [
+        ("VERSION", "tcp", 9060),
+        ("AUTH", "tcp", 8000),
+        ("DIR", "tcp", 9010),
+        ("ROLE", "tcp", 65005),
+        ("ZONE", "tcp", TGAME_ZONE_PORT),
+        ("DS-TCP", "tcp", TGAME_DS_PORT),
+        ("DS-UDP", "udp", TGAME_DS_PORT),
+    ]
+    bound = []
+    try:
+        for label, kind, port in specs:
+            sock = (
+                _bind_tcp_listener(port)
+                if kind == "tcp"
+                else _bind_udp_listener(port)
+            )
+            bound.append((label, kind, port, sock))
+            log("MAIN", f"prebound {label} {kind.upper()} 0.0.0.0:{port}")
+        return bound
+    except Exception:
+        for _label, _kind, _port, sock in bound:
+            try:
+                sock.close()
+            except Exception:
+                pass
+        raise
+
+
+def listen_on_port(port, label, sock=None):
+    s = sock if sock is not None else _bind_tcp_listener(port)
 
     log(
         label,
@@ -9577,6 +9609,9 @@ if __name__ == "__main__":
     if not run_server_preflight(Path(PRIVATE_KEY_PATH)):
         raise SystemExit(2)
 
+    # Mutable DS runtime state is created only after preflight succeeds.
+    _v143b_init_spawner()
+
     print(
         f"[BOOT] VERSION response: "
         f"{len(VERSION_RESPONSE)}B",
@@ -9595,50 +9630,31 @@ if __name__ == "__main__":
         flush=True
     )
 
-    threading.Thread(
-        target=listen_on_port,
-        args=(9060, "VERSION"),
-        daemon=True
-    ).start()
+    try:
+        listener_sockets = _prepare_listener_sockets()
+    except Exception as bind_exc:
+        reason = f"listener bind failed: {type(bind_exc).__name__}: {bind_exc}"
+        log("MAIN", reason)
+        update_launch_gate_status(ready=False, reason=reason)
+        raise SystemExit(3)
 
-    threading.Thread(
-        target=listen_on_port,
-        args=(8000, "AUTH"),
-        daemon=True
-    ).start()
+    # Only after every required TCP/UDP bind succeeds may the game launch gate
+    # become UNLOCKED. If that state cannot be persisted/logged, fail closed.
+    if not update_launch_gate_status(ready=True):
+        for _label, _kind, _port, sock in listener_sockets:
+            try:
+                sock.close()
+            except Exception:
+                pass
+        raise SystemExit(4)
 
-    threading.Thread(
-        target=listen_on_port,
-        args=(9010, "DIR"),
-        daemon=True
-    ).start()
-
-    threading.Thread(
-        target=listen_on_port,
-        args=(65005, "ROLE"),
-        daemon=True
-    ).start()
-
-    threading.Thread(
-        target=listen_on_port,
-        args=(TGAME_ZONE_PORT, "ZONE"),
-        daemon=True
-    ).start()
-
-    # Keep the existing TCP probe, but also listen on the same numeric
-    # DS port over UDP.  UE3/gameplay networking may use UDP even though the
-    # lobby/ZONE transport is TCP.
-    threading.Thread(
-        target=listen_on_port,
-        args=(TGAME_DS_PORT, "DS-TCP"),
-        daemon=True
-    ).start()
-
-    threading.Thread(
-        target=listen_on_udp_port,
-        args=(TGAME_DS_PORT, "DS-UDP"),
-        daemon=True
-    ).start()
+    for label, kind, port, sock in listener_sockets:
+        target = listen_on_port if kind == "tcp" else listen_on_udp_port
+        threading.Thread(
+            target=target,
+            args=(port, label, sock),
+            daemon=True,
+        ).start()
 
     print(
         "[MAIN] All listeners running.",
@@ -9654,3 +9670,5 @@ if __name__ == "__main__":
             "\n[MAIN] Shutting down.",
             flush=True
         )
+        update_launch_gate_status(ready=False, reason="server shutting down")
+
