@@ -100,15 +100,18 @@ powershell -ExecutionPolicy Bypass -File .\tools\setup\setup_assaultfire_hosts.p
 
 ### 5. Start the emulator
 
+For normal VERSION / AUTH / DIR / ROLE / ZONE testing:
+
 ```powershell
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
-For **PvE**, point `AF_GAME_DIR` at the `Binaries\\Win32` directory inside your own Assault Fire PH installation before starting the server. The drive letter and install location do not matter:
+For **PvE**, set the dedicated-server variables **before** starting the emulator. Point `AF_GAME_DIR` at the `Binaries\Win32` directory inside your own Assault Fire PH installation; the drive letter and install location do not matter:
 
 ```powershell
 $env:AF_GAME_DIR = "<full path to your Assault Fire PH Binaries\Win32 folder>"
 $env:AF_DS_SPAWNER_ENABLED = "1"
+.\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
 The repository does **not** provide `TGame_AFDEV.exe`, maps, packages, or other original game files.
