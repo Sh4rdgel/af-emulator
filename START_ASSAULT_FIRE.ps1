@@ -29,7 +29,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-$LAUNCHER_REVISION = "2026-09-25-oneclick-v6"
+$LAUNCHER_REVISION = "2026-09-25-oneclick-v7"
 $EXPECTED_TGAME_SHA256 = "B4273F2658CA94EEBC559A997FDFCD02D51E77CE75B892250C1DB7FB80C70B51"
 $TCLS_ORIGINAL_SHA256 = "13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1"
 $TCLS_PATCHED_SHA256  = "3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56"
@@ -844,6 +844,7 @@ try {
     Write-Host ""
     Write-Host "[READY] First-time setup checks are complete." -ForegroundColor Green
     Write-Host "[READY] PvE DS spawning is enabled."
+    Write-Host "[READY] Runtime components that use OpenProcess will be elevated automatically."
     Write-Host "[READY] You no longer need to set AF_CLIENT_ROOT / AF_GAME_DIR manually."
 
     if ($SetupOnly) {
@@ -861,16 +862,27 @@ try {
     $serverCommand = (
         ". " + (Quote-PS $consoleHelper) + "; " +
         "Disable-AFConsoleBlockingSelection; " +
+        "$env:AF_CLIENT_ROOT=" + (Quote-PS $gameRoot) + "; " +
+        "$env:AF_GAME_DIR=" + (Quote-PS $win32) + "; " +
+        "$env:AF_DS_SPAWNER_ENABLED='1'; " +
+        "$env:AF_DS_PYTHON=" + (Quote-PS $venvPython) + "; " +
         "Set-Location -LiteralPath " + (Quote-PS $repoRoot) + "; " +
+        "Write-Host '[AF-ADMIN] Emulator server running elevated.' -ForegroundColor Green; " +
         "& " + (Quote-PS $venvPython) + " " + (Quote-PS $serverScript)
     )
 
-    $serverWindow = Start-Process -FilePath "powershell.exe" -WorkingDirectory $repoRoot -PassThru -ArgumentList @(
-        "-NoProfile",
-        "-NoExit",
-        "-Command",
-        $serverCommand
-    )
+    Write-Host "[UAC] Administrator permission is required for the server runtime because the AFDEV/OpenProcess path needs elevated process access." -ForegroundColor Yellow
+    try {
+        $serverWindow = Start-Process -FilePath "powershell.exe" -Verb RunAs -WorkingDirectory $repoRoot -PassThru -ArgumentList @(
+            "-NoProfile",
+            "-NoExit",
+            "-ExecutionPolicy", "Bypass",
+            "-Command",
+            $serverCommand
+        )
+    } catch {
+        throw "Administrator permission for the emulator server was cancelled or failed: $($_.Exception.Message)"
+    }
 
     Write-Host "[WAIT] Waiting for server preflight and listener gate..."
     $status = Wait-ForLaunchGate $statusPath 45
@@ -881,15 +893,23 @@ try {
     $helperCommand = (
         ". " + (Quote-PS $consoleHelper) + "; " +
         "Disable-AFConsoleBlockingSelection; " +
+        "$env:AF_CLIENT_ROOT=" + (Quote-PS $gameRoot) + "; " +
         "Set-Location -LiteralPath " + (Quote-PS $repoRoot) + "; " +
+        "Write-Host '[AF-ADMIN] TGame launch/OpenProcess helper running elevated.' -ForegroundColor Green; " +
         "& " + (Quote-PS $venvPython) + " " + (Quote-PS $helper) + " --timeout 900"
     )
 
-    $helperWindow = Start-Process -FilePath "powershell.exe" -WorkingDirectory $repoRoot -PassThru -ArgumentList @(
-        "-NoProfile",
-        "-Command",
-        $helperCommand
-    )
+    Write-Host "[UAC] Administrator permission is required for the TGame launch helper (OpenProcess/WriteProcessMemory)." -ForegroundColor Yellow
+    try {
+        $helperWindow = Start-Process -FilePath "powershell.exe" -Verb RunAs -WorkingDirectory $repoRoot -PassThru -ArgumentList @(
+            "-NoProfile",
+            "-ExecutionPolicy", "Bypass",
+            "-Command",
+            $helperCommand
+        )
+    } catch {
+        throw "Administrator permission for the TGame launch helper was cancelled or failed: $($_.Exception.Message)"
+    }
 
     Start-Sleep -Milliseconds 700
 
