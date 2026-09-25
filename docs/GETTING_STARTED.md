@@ -12,14 +12,15 @@ You will do the basic backend setup, then verify the client launch handoff:
 1. Clone the repo
 2. Install the Python dependency
 3. Generate a local RSA key pair
-4. Redirect the old Assault Fire PH hostnames to 127.0.0.1
-5. Start the v143b server
-6. Launch client.exe / TCLS and log in until START is available
-7. Choose ONE compatibility path:
+4. Verify/patch TCLS raw-PEM APClient.dat compatibility
+5. Redirect the old Assault Fire PH hostnames to 127.0.0.1
+6. Start the v143b server
+7. Launch client.exe / TCLS and log in until START is available
+8. Choose ONE compatibility path:
    - normal launch: patch_tgame_datetime.py
    - suspended launch: patch_tcls_suspended_launch.py
-8. Click START
-9. Confirm TGame reaches ROLE and ZONE
+9. Click START
+10. Confirm TGame reaches ROLE and ZONE
 ```
 
 Before your first test, also read **[Vital Launch Requirements](LAUNCH_REQUIREMENTS.md)**. It explains the TCLS → TGame shared-memory handoff and the build-specific launch patch that is easy to miss.
@@ -174,7 +175,37 @@ If VERSION works but AUTH fails immediately at the RSA step even though the two 
 
 ---
 
-## 4. Redirect the retired Assault Fire PH services to localhost
+## 4. Verify TCLS raw-PEM APClient.dat compatibility
+
+Before launching the client, verify the exact `TCLS.dll` used by your Assault Fire PH installation:
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\patches\diagnose_tcls_apclient.py --client-root "<game-root>"
+```
+
+For the supported PH v1.0.0.24 setup, the diagnostic recognizes these verified states:
+
+```text
+13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1
+  -> original/pre-patch TCLS; raw APClient.dat compatibility patch is required
+
+3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56
+  -> verified patched TCLS; no APClient loader patch is needed
+```
+
+If the original `13EAD403...` build is detected, fully close `client.exe` / TCLS and run:
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\patches\patch_tcls_apclient_raw_pem.py "<game-root>\TCLS\Tenio\TCLS.dll" --apply
+```
+
+The helper verifies the exact source hash and instruction bytes, creates `TCLS.dll.bak`, applies only the recovered compatibility edits, and verifies the final known-good hash. **Do not force this patch onto an unknown TCLS build.**
+
+This is the step to check when the launcher reports **`AP client initialization failed.`** even though `server\PRIVATE.PEM` and `TCLS\config\APClient.dat` are a matching generated pair.
+
+---
+
+## 5. Redirect the retired Assault Fire PH services to localhost
 
 The local emulator needs the old PH service names to resolve to your own PC.
 
@@ -223,7 +254,7 @@ ipconfig /flushdns
 
 ---
 
-## 5. Start the stable v143b emulator
+## 6. Start the stable v143b emulator
 
 From the repository folder:
 
@@ -281,7 +312,7 @@ See [Issue #4](https://github.com/armangido/af-emulator/issues/4), [Vital Setup 
 
 ---
 
-## 6. Choose one client compatibility path
+## 7. Choose one client compatibility path
 
 The validated PH client needs the TGame datetime compatibility fix. There are now **two ways** to apply it. Use only one for a given launch.
 
@@ -348,7 +379,7 @@ More details: [Vital Launch Requirements](LAUNCH_REQUIREMENTS.md) and [Issue #3]
 
 ---
 
-## 7. Verify the TCLS → TGame launch handoff
+## 8. Verify the TCLS → TGame launch handoff
 
 Do **not** treat the launcher and TGame as the same program. The normal retail path is:
 
@@ -402,7 +433,7 @@ Full details and failure diagnosis: **[LAUNCH_REQUIREMENTS.md](LAUNCH_REQUIREMEN
 
 ---
 
-## 8. Launch Assault Fire PH
+## 9. Launch Assault Fire PH
 
 Start the client using the same local client setup you normally use.
 
@@ -426,7 +457,7 @@ See [STATUS.md](STATUS.md) for the detailed working/partial/broken matrix.
 
 ---
 
-## 9. PvE map setup
+## 10. PvE map setup
 
 You do **not** need the DS components just to test VERSION/AUTH/DIR/login. For PvE, the current v143b server manages them as part of the match lifecycle.
 
@@ -452,7 +483,7 @@ By default `AF_DS_USE_CLIENT_MAP=1`, so the selected stock-client `MapString` is
 
 See **[Stable PvE bridge + server spawner guide](PVE_BRIDGE_AND_SPAWNER.md)** and **[PvE runtime and map selection](PVE_RUNTIME.md)**.
 
-## 10. Super-simple troubleshooting
+## 11. Super-simple troubleshooting
 
 ### Launcher says "AP client initialization failed."
 
@@ -477,7 +508,7 @@ The repository-generated file should be **272 bytes** and start with:
 -----BEGIN PUBLIC KEY-----
 ~~~
 
-Important: the known PH setup needs the client-side TCLS configuration that accepts this raw PEM form. If VERSION succeeds but AUTH is never opened, repeatedly changing the server's AP response will not fix that stage.
+Important: the known PH setup needs the client-side TCLS configuration that accepts this raw PEM form. If VERSION succeeds but AUTH is never opened, run **step 4** above and verify/patch the exact `TCLS.dll` used by the client. Repeatedly changing the server's AP response will not fix that stage.
 
 Also, `TCLS.dll+0x584E0` is the **TGame suspended-launch patch**, not the APClient loader fix.
 
@@ -547,7 +578,7 @@ Close an older copy of the emulator before starting another one.
 
 ---
 
-## 11. How to report a useful bug
+## 12. How to report a useful bug
 
 Please include:
 
@@ -580,7 +611,7 @@ Never attach `PRIVATE.PEM`.
 
 ---
 
-## 12. Easy ways to contribute
+## 13. Easy ways to contribute
 
 You do not have to know assembly.
 
