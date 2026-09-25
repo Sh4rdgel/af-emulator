@@ -35,7 +35,13 @@ Before the launch helper will arm TCLS, the server must show a valid client and 
 [PREFLIGHT] hosts tversion.levelupgames.ph   : YES
 [PREFLIGHT] hosts tauthproxy.levelupgames.ph : YES
 [PREFLIGHT] hosts tdir.levelupgames.ph       : YES
+```
+
+After those client checks pass, the gate may briefly show **LOCKED while the server pre-binds every required listener**. That is normal. Do not launch yet. Continue only after the same server process prints:
+
+```text
 [PREFLIGHT] game launch gate         : UNLOCKED
+[MAIN] All listeners running.
 ```
 
 If you instead see something like:
@@ -372,11 +378,18 @@ A healthy startup should include:
 [PREFLIGHT] hosts tversion.levelupgames.ph    : YES
 [PREFLIGHT] hosts tauthproxy.levelupgames.ph  : YES
 [PREFLIGHT] hosts tdir.levelupgames.ph        : YES
-[PREFLIGHT] game launch gate         : UNLOCKED
-[PREFLIGHT] PASS - all required checks succeeded; supported game launch helpers are UNLOCKED.
+[PREFLIGHT] game launch gate         : LOCKED
+[PREFLIGHT] PASS - client checks succeeded; launch gate remains LOCKED until all required server listeners bind successfully.
 ```
 
-Only after that should the listeners start:
+That temporary **LOCKED** state is expected. The server then pre-binds every required TCP/UDP listener. A healthy startup continues with:
+
+```text
+[PREFLIGHT] game launch gate         : UNLOCKED
+[MAIN] All listeners running.
+```
+
+Only after **UNLOCKED** should you launch the game. The listener threads then report:
 
 ```text
 [VERSION] Listening on port 9060
