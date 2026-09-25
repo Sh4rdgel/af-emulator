@@ -29,7 +29,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-$LAUNCHER_REVISION = "2026-09-25-oneclick-v5"
+$LAUNCHER_REVISION = "2026-09-25-oneclick-v6"
 $EXPECTED_TGAME_SHA256 = "B4273F2658CA94EEBC559A997FDFCD02D51E77CE75B892250C1DB7FB80C70B51"
 $TCLS_ORIGINAL_SHA256 = "13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1"
 $TCLS_PATCHED_SHA256  = "3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56"
@@ -776,6 +776,15 @@ function Wait-ForLaunchGate([string]$StatusPath, [int]$TimeoutSeconds = 45) {
 Write-Title "Assault Fire PH - ONE CLICK SETUP + PLAY"
 Write-Host "[AF-ONECLICK] Launcher revision: $LAUNCHER_REVISION"
 
+$consoleHelper = Join-Path (Split-Path -Parent $self) "tools\setup\af_console_nonblocking.ps1"
+if (Test-Path -LiteralPath $consoleHelper -PathType Leaf) {
+    . $consoleHelper
+    Disable-AFConsoleBlockingSelection
+    Write-Host "[AF-ONECLICK] Console mouse selection: NON-BLOCKING"
+} else {
+    Write-Host "[AF-ONECLICK] WARNING: console non-blocking helper is missing." -ForegroundColor Yellow
+}
+
 $self = $MyInvocation.MyCommand.Path
 if (-not $self) {
     Stop-WithMessage "Could not determine the launcher script path."
@@ -850,6 +859,8 @@ try {
 
     $serverScript = Join-Path $repoRoot "server\assaultfire_server_v143b.py"
     $serverCommand = (
+        ". " + (Quote-PS $consoleHelper) + "; " +
+        "Disable-AFConsoleBlockingSelection; " +
         "Set-Location -LiteralPath " + (Quote-PS $repoRoot) + "; " +
         "& " + (Quote-PS $venvPython) + " " + (Quote-PS $serverScript)
     )
@@ -868,6 +879,8 @@ try {
     Write-Step "Starting the automatic TGame launch helper"
     $helper = Join-Path $repoRoot "tools\patches\patch_tcls_suspended_launch.py"
     $helperCommand = (
+        ". " + (Quote-PS $consoleHelper) + "; " +
+        "Disable-AFConsoleBlockingSelection; " +
         "Set-Location -LiteralPath " + (Quote-PS $repoRoot) + "; " +
         "& " + (Quote-PS $venvPython) + " " + (Quote-PS $helper) + " --timeout 900"
     )
