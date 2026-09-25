@@ -167,6 +167,17 @@
         "GamePlayers.Max": {
           "offset": "0x484",
           "type": "int32"
+        },
+        "PendingURL": {
+          "offset": "0x674",
+          "type": "FString",
+          "status": "static-recovered",
+          "notes": "OPEN path stores the requested travel URL here."
+        },
+        "PendingURLState": {
+          "offset": "0x680",
+          "type": "byte/state",
+          "status": "static-recovered"
         }
       }
     },
@@ -446,6 +457,91 @@
           }
         }
       }
+    },
+    "AFEncryptedUDPSocket": {
+      "status": "verified-true-ds",
+      "fields": {
+        "CryptoEnabled": {
+          "offset": "0x18",
+          "type": "uint32",
+          "expected_enabled": "1"
+        },
+        "AESContext": {
+          "offset": "0x1C",
+          "type": "FAESContext"
+        }
+      },
+      "notes": [
+        "Resolved from UWorld->NetDriver->Socket in the true-DS zero-DSKey work."
+      ]
+    },
+    "FAESContext": {
+      "status": "verified-by-v72-rekey",
+      "fields": {
+        "EncryptScheduleHead": {
+          "offset": "0x000",
+          "type": "byte[16]"
+        },
+        "DecryptScheduleHead": {
+          "offset": "0x100",
+          "type": "byte[16]"
+        },
+        "Rounds": {
+          "offset": "0x200",
+          "type": "uint32",
+          "expected_aes128": "10"
+        }
+      }
+    },
+    "TGDsDsmNetHandler": {
+      "status": "live-validated",
+      "vtable": "0x01D8EE60",
+      "fields": {
+        "Host": {
+          "offset": "0x74",
+          "type": "FString"
+        },
+        "Port": {
+          "offset": "0x80",
+          "type": "uint32"
+        }
+      },
+      "notes": [
+        "Runtime instance was observed with Host 172.25.34.160 and Port 9002 during DS backend tracing."
+      ]
+    },
+    "TGDsDsaNetHandler": {
+      "status": "live-validated",
+      "vtable": "0x01D8ECD0"
+    },
+    "UTGOnlineDS": {
+      "status": "live-validated",
+      "vtable": "0x01DB2168",
+      "notes": [
+        "The DS backend probes proved the object exists; its player-info store globals were observed empty before stock sync."
+      ]
+    },
+    "ProtocalHandlerConnection": {
+      "module": "ProtocalHandler.dll",
+      "status": "static-recovered-external-module",
+      "fields": {
+        "RawGeneratedKey": {
+          "offset": "0x50",
+          "type": "byte[16]"
+        },
+        "EncryptionMode": {
+          "offset": "0x84",
+          "type": "uint32",
+          "known_values": [
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      "notes": [
+        "Kept here for cross-module RE convenience; this is not a UObject layout."
+      ]
     }
   },
   "native_classes": {
@@ -490,6 +586,12 @@
     "UTPlayerController": {
       "vtable": "0x01D61428",
       "status": "recovered-from-exact-build"
+    },
+    "ATGPlayerController": {
+      "alias_of": "TGPlayerController",
+      "vtable": "0x01D64720",
+      "native_size": "0x9E0",
+      "status": "static-class-registration"
     }
   },
   "script_classes": {
@@ -508,7 +610,9 @@
       "status": "verified-from-package"
     },
     "TGTMPlayerController_Tutorial": {
-      "status": "verified-from-package"
+      "status": "verified-from-package",
+      "parent": "TGTMPlayerController",
+      "native_runtime_base": "TGTeamPlayerController"
     }
   },
   "known_functions": {
@@ -610,7 +714,12 @@
       "trace_pve_lifecycle_now.py",
       "trace_pve_lifecycle_full_v3_spawnanchored.py",
       "probe_pve_rpc_game_thread_clock_sync_v23.py",
-      "probe_pve_loading_complete_v48.py"
+      "probe_pve_loading_complete_v48.py",
+      "fix_afdev_zero_dskey_v72.py",
+      "probe_afdev_tgnethandler_registration_v18.py",
+      "probe_afdev_ds_transport_v2.py",
+      "dsm_runtime_redirect_v30.py",
+      "assaultfire_server_role_v76_propoperation.py"
     ],
     "status_meanings": {
       "verified": "Repeatedly validated against the exact clean PH v1.0.0.24 binary and/or live runtime.",
@@ -658,5 +767,14 @@
       ]
     },
     "warning": "Game/package FName indices can shift between fresh processes. Resolve or construct names live."
-  }
+  },
+  "superseded_findings": [
+    {
+      "id": "old_TGGame_vtable_01D687E0",
+      "old_value": "0x01D687E0",
+      "replacement": "0x01D61948",
+      "status": "superseded-by-later-corrected-native-class-map",
+      "notes": "An earlier loader mapped TGGame to 0x01D687E0; later exact-build class mapping explicitly replaced that interpretation."
+    }
+  ]
 }
