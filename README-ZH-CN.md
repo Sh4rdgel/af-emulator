@@ -1,6 +1,6 @@
 # Assault Fire Server Emulator
 
-**语言：** [English](README.md) | [Tagalog](README-TL.md) | **简体中文**
+**语言：** [English](README.md) | [Tagalog](README-TL.md) | [Cebuano](README-CEB.md) | **简体中文**
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue)](https://www.python.org/)
 [![Engine](https://img.shields.io/badge/Engine-Unreal%20Engine%203-lightgrey)](#)
