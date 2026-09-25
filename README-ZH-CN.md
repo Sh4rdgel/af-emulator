@@ -58,6 +58,27 @@ TGame.exe is resumed
 
 如果工具报告 **TGame build/signature mismatch**，请停止，不要强制补丁。目前只支持/测试 Assault Fire PH **v1.0.0.24**。
 
+## 日志级别
+
+你可以让 console 更简洁，同时保留完整的 development DEBUG 日志。
+
+```powershell
+$env:AF_LOG_LEVEL = "DEBUG"
+```
+
+支持 `DEBUG`、`INFO`（默认）、`WARNING`、`ERROR`。
+
+- `DEBUG` — console 显示全部日志。
+- `INFO` — console 隐藏 DEBUG。
+- `WARNING` — 只显示 WARNING 和 ERROR。
+- `ERROR` — 只显示 ERROR。
+
+**即使 console 没有选择 DEBUG，`server\af_server_live.log` 仍然会保存 DEBUG 以及所有更高级别的日志。** 这样用户使用安静的 console 时，bug report 仍然保留完整诊断信息。
+
+Raw AUTH plaintext/ciphertext 可能包含认证信息，因此不会自动保存。只在受控的本地诊断中使用：`$env:AF_DEBUG_AUTH_HEX = "1"`.
+
+---
+
 ## 强制 preflight 启动门
 
 启动 helper 在允许游戏继续之前，服务器 preflight 必须先 **PASS**：
