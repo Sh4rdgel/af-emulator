@@ -77,6 +77,36 @@ class AfreTests(unittest.TestCase):
         self.assertEqual(pe["sections"][0]["name"], ".text")
         self.assertEqual(pe["sections"][0]["va"], 0x00401000)
 
+
+    def test_annotate_text(self):
+        source = "crash at 0x00DA2765\n"
+        annotated = afre.annotate_text(source, self.catalog)
+        self.assertIn(
+            "0x00DA2765=functions.UWorld_SetGameInfo+0x5",
+            annotated,
+        )
+
+    def test_json_diff(self):
+        changes = afre.diff_json(
+            {"graph": {"count": 1}, "same": 7},
+            {"graph": {"count": 2}, "same": 7},
+        )
+        self.assertEqual(changes, [("graph.count", 1, 2)])
+
+    def test_loader_constant_extract(self):
+        with tempfile.TemporaryDirectory() as td:
+            loader = Path(td) / "loader.py"
+            loader.write_text(
+                "GIS_EDITOR_VA = 0x01FD69AC\n"
+                "GIS_CLIENT_VA = 0x01FD69C8\n"
+                "GIS_SERVER_VA = 0x01FD69CC\n",
+                encoding="utf-8",
+            )
+            constants = afre.extract_int_constants(loader)
+        self.assertEqual(constants["GIS_EDITOR_VA"], 0x01FD69AC)
+        self.assertEqual(constants["GIS_CLIENT_VA"], 0x01FD69C8)
+
+
     def test_catalog_is_plain_json(self):
         data = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
         self.assertIn("symbols", data)
