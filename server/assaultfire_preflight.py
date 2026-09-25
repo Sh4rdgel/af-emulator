@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import socket
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Mapping
@@ -20,6 +22,23 @@ REQUIRED_HOSTS = (
     "tdir.levelupgames.ph",
 )
 LOOPBACK_IPV4 = "127.0.0.1"
+
+PREFLIGHT_STATUS_SCHEMA = 1
+
+
+def default_preflight_status_path() -> Path:
+    """Machine-readable launch gate shared by the server and launch helpers."""
+    override = (os.environ.get("AF_PREFLIGHT_STATUS_PATH") or "").strip()
+    if override:
+        return Path(override).expanduser().resolve()
+    return Path(__file__).resolve().parents[1] / "runtime" / "preflight_status.json"
+
+
+def default_server_log_path() -> Path:
+    override = (os.environ.get("AF_LOG_PATH") or "").strip()
+    if override:
+        return Path(override).expanduser().resolve()
+    return Path(__file__).resolve().with_name("af_server_live.log")
 
 
 @dataclass(frozen=True)
@@ -269,61 +288,186 @@ def evaluate_preflight(
     return report
 
 
-def print_preflight_report(report: PreflightReport) -> None:
-    print("[PREFLIGHT] Assault Fire PH startup checks", flush=True)
-    print(f"[PREFLIGHT] client root             : {report.client_root}", flush=True)
+def preflight_check_flags(report: PreflightReport) -> dict[str, bool]:
+    check = report.key_check
+    host_ok = all(
+        report.host_file_values.get(name, []) == [LOOPBACK_IPV4]
+        and report.host_resolved_values.get(name) == LOOPBACK_IPV4
+        for name in REQUIRED_HOSTS
+    )
+    return {
+        "client_root": report.client_root is not None,
+        "tcls_validated_build": report.tcls_class == "validated-raw-pem-patched",
+        "apclient_exact_bytes": bool(check and check.exact_bytes_match),
+        "same_rsa_key": bool(check and check.same_rsa_key),
+        "rsa_1024": bool(check and check.rsa_key_size == 1024),
+        "apclient_272_bytes": bool(check and check.apclient_length == 272),
+        "hosts": host_ok,
+    }
+
+
+def preflight_status_payload(report: PreflightReport) -> dict:
+    flags = preflight_check_flags(report)
+    return {
+        "schema": PREFLIGHT_STATUS_SCHEMA,
+        "checked_at_unix": time.time(),
+        "server_pid": os.getpid(),
+        "passed": bool(report.ok and all(flags.values())),
+        "checks": flags,
+        "client_root": str(report.client_root) if report.client_root else None,
+        "tcls_path": str(report.tcls_path) if report.tcls_path else None,
+        "tcls_sha256": report.tcls_sha256,
+        "apclient_path": str(report.apclient_path) if report.apclient_path else None,
+        "private_key_path": str(report.private_key_path) if report.private_key_path else None,
+        "hosts": {
+            name: {
+                "file_values": report.host_file_values.get(name, []),
+                "resolved": report.host_resolved_values.get(name),
+            }
+            for name in REQUIRED_HOSTS
+        },
+        "errors": list(report.errors),
+    }
+
+
+def write_preflight_status(
+    report: PreflightReport,
+    status_path: Path | None = None,
+) -> Path:
+    path = (
+        Path(status_path).expanduser().resolve()
+        if status_path is not None
+        else default_preflight_status_path()
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(
+        json.dumps(preflight_status_payload(report), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    os.replace(tmp, path)
+    return path
+
+
+def preflight_report_lines(report: PreflightReport) -> list[str]:
+    lines = [
+        "[PREFLIGHT] Assault Fire PH startup checks",
+        f"[PREFLIGHT] client root             : {report.client_root}",
+    ]
 
     if report.tcls_path is not None:
-        print(f"[PREFLIGHT] TCLS.dll                : {report.tcls_path}", flush=True)
-    print(
+        lines.append(f"[PREFLIGHT] TCLS.dll                : {report.tcls_path}")
+    lines.append(
         "[PREFLIGHT] TCLS validated build    : "
-        + ("YES" if report.tcls_class == "validated-raw-pem-patched" else "NO"),
-        flush=True,
+        + ("YES" if report.tcls_class == "validated-raw-pem-patched" else "NO")
     )
     if report.tcls_sha256:
-        print(f"[PREFLIGHT] TCLS SHA256             : {report.tcls_sha256.upper()}", flush=True)
+        lines.append(f"[PREFLIGHT] TCLS SHA256             : {report.tcls_sha256.upper()}")
 
     check = report.key_check
-    print(
+    lines.append(
         "[PREFLIGHT] APClient exact bytes    : "
-        + ("YES" if check and check.exact_bytes_match else "NO"),
-        flush=True,
+        + ("YES" if check and check.exact_bytes_match else "NO")
     )
-    print(
+    lines.append(
         "[PREFLIGHT] same RSA key            : "
-        + ("YES" if check and check.same_rsa_key else "NO"),
-        flush=True,
+        + ("YES" if check and check.same_rsa_key else "NO")
     )
     if check:
-        print(
+        lines.append(
             f"[PREFLIGHT] RSA/APClient format     : "
-            f"{check.rsa_key_size}-bit / {check.apclient_length} bytes",
-            flush=True,
+            f"{check.rsa_key_size}-bit / {check.apclient_length} bytes"
         )
 
     if report.host_file_path is not None:
-        print(f"[PREFLIGHT] hosts file              : {report.host_file_path}", flush=True)
+        lines.append(f"[PREFLIGHT] hosts file              : {report.host_file_path}")
     for name in REQUIRED_HOSTS:
         file_values = report.host_file_values.get(name, [])
         resolved = report.host_resolved_values.get(name)
         passed = file_values == [LOOPBACK_IPV4] and resolved == LOOPBACK_IPV4
-        print(
+        lines.append(
             f"[PREFLIGHT] hosts {name:<27}: "
             f"{'YES' if passed else 'NO'} "
-            f"(file={file_values or 'missing'}, resolved={resolved})",
-            flush=True,
+            f"(file={file_values or 'missing'}, resolved={resolved})"
         )
 
-    if report.ok:
-        print("[PREFLIGHT] PASS - all required checks succeeded.", flush=True)
-        return
+    flags = preflight_check_flags(report)
+    gate_ok = report.ok and all(flags.values())
+    lines.append(
+        "[PREFLIGHT] game launch gate         : "
+        + ("UNLOCKED" if gate_ok else "LOCKED")
+    )
 
-    print("[PREFLIGHT] FAILED - server listeners will NOT start.", flush=True)
-    for error in report.errors:
-        print(f"[PREFLIGHT]   - {error}", flush=True)
+    if gate_ok:
+        lines.append(
+            "[PREFLIGHT] PASS - all required checks succeeded; "
+            "supported game launch helpers are UNLOCKED."
+        )
+    else:
+        lines.append(
+            "[PREFLIGHT] FAILED - server listeners will NOT start; "
+            "supported game launch helpers remain LOCKED."
+        )
+        for error in report.errors:
+            lines.append(f"[PREFLIGHT]   - {error}")
+    return lines
 
 
-def run_server_preflight(private_key_path: Path) -> bool:
+def print_preflight_report(
+    report: PreflightReport,
+    *,
+    log_path: Path | None = None,
+) -> None:
+    lines = preflight_report_lines(report)
+    for line in lines:
+        print(line, flush=True)
+
+    path = (
+        Path(log_path).expanduser().resolve()
+        if log_path is not None
+        else default_server_log_path()
+    )
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fp:
+            stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            fp.write(f"\n[{stamp}] --- PREFLIGHT ---\n")
+            for line in lines:
+                fp.write(line + "\n")
+    except OSError as exc:
+        print(f"[PREFLIGHT] WARNING - could not append server log: {exc}", flush=True)
+
+
+def run_server_preflight(
+    private_key_path: Path,
+    *,
+    status_path: Path | None = None,
+    log_path: Path | None = None,
+) -> bool:
     report = evaluate_preflight(private_key_path=private_key_path)
-    print_preflight_report(report)
-    return report.ok
+
+    try:
+        written = write_preflight_status(report, status_path=status_path)
+    except Exception as exc:
+        report.errors.append(
+            f"could not write launch-gate status; refusing startup: {exc}"
+        )
+        written = None
+        # Best effort: remove a stale PASS status so it cannot be reused.
+        try:
+            stale = (
+                Path(status_path).expanduser().resolve()
+                if status_path is not None
+                else default_preflight_status_path()
+            )
+            stale.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    print_preflight_report(report, log_path=log_path)
+    if written is not None:
+        print(f"[PREFLIGHT] launch-gate status       : {written}", flush=True)
+
+    flags = preflight_check_flags(report)
+    return bool(report.ok and all(flags.values()) and written is not None)
+
