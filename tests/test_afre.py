@@ -160,6 +160,62 @@ class AfreTests(unittest.TestCase):
         self.assertEqual(afre.parse_int(meta["va"]), 0x00483440)
 
 
+
+    def test_full_uproperty_layout(self):
+        db = afre.load_object_db(ROOT / "tools" / "research" / "af_objects_10024.json")
+        prop = db["reflection"]["UProperty"]["fields"]
+        self.assertEqual(afre.parse_int(prop["ArrayDim"]["offset"]), 0x40)
+        self.assertEqual(afre.parse_int(prop["Offset"]["offset"]), 0x68)
+        self.assertEqual(
+            afre.parse_int(db["reflection"]["UBoolProperty"]["fields"]["BitMask"]["offset"]),
+            0x6C,
+        )
+
+    def test_true_ds_connection_layout(self):
+        db = afre.load_object_db(ROOT / "tools" / "research" / "af_objects_10024.json")
+        conn = db["objects"]["UNetConnection"]["fields"]
+        channel = db["objects"]["UChannel"]["fields"]
+        self.assertEqual(afre.parse_int(conn["Channels"]["offset"]), 0xF04)
+        self.assertEqual(afre.parse_int(conn["OpenChannels"]["offset"]), 0x4F0C)
+        self.assertEqual(afre.parse_int(channel["Connection"]["offset"]), 0x3C)
+        self.assertEqual(afre.parse_int(channel["ChannelType"]["offset"]), 0x50)
+
+    def test_ds_handler_and_crypto_layouts(self):
+        db = afre.load_object_db(ROOT / "tools" / "research" / "af_objects_10024.json")
+        dsm = db["objects"]["TGDsDsmNetHandler"]
+        sock = db["objects"]["AFEncryptedUDPSocket"]["fields"]
+        self.assertEqual(afre.parse_int(dsm["vtable"]), 0x01D8EE60)
+        self.assertEqual(afre.parse_int(dsm["fields"]["Host"]["offset"]), 0x74)
+        self.assertEqual(afre.parse_int(dsm["fields"]["Port"]["offset"]), 0x80)
+        self.assertEqual(afre.parse_int(sock["AESContext"]["offset"]), 0x1C)
+
+    def test_pve_gameinfo_and_gri_vtables(self):
+        db = afre.load_object_db(ROOT / "tools" / "research" / "af_objects_10024.json")
+        self.assertEqual(
+            afre.parse_int(db["objects"]["PVEGameInfo"]["vtable"]), 0x01E28F28
+        )
+        self.assertEqual(
+            afre.parse_int(db["objects"]["PVEGameReplicationInfo"]["vtable"]),
+            0x01E24800,
+        )
+
+    def test_fname_stability_is_explicit(self):
+        db = afre.load_object_db(ROOT / "tools" / "research" / "af_objects_10024.json")
+        self.assertEqual(db["core_fname_indices"]["entries"]["BoolProperty"], "0x00000003")
+        restart = db["runtime_fname_observations"]["entries"]["RestartPlayer"]
+        self.assertIn("0x00006DDF", restart)
+        self.assertIn("0x00006DE5", restart)
+        self.assertIn("session", db["runtime_fname_observations"]["warning"].lower())
+
+    def test_true_ds_symbols_promoted(self):
+        group, name, meta = afre.lookup_symbol(self.catalog, "UNetConnection_CreateChannel")
+        self.assertEqual((group, name), ("functions", "UNetConnection_CreateChannel"))
+        self.assertEqual(afre.parse_int(meta["va"]), 0x011DF5E0)
+        group, name, meta = afre.lookup_symbol(self.catalog, "ChannelClasses")
+        self.assertEqual((group, name), ("globals", "ChannelClasses"))
+        self.assertEqual(afre.parse_int(meta["va"]), 0x020731FC)
+
+
     def test_catalog_is_plain_json(self):
         data = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
         self.assertIn("symbols", data)
