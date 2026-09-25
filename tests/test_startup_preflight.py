@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVER_DIR = ROOT / "server"
@@ -142,7 +142,13 @@ class StartupPreflightTests(unittest.TestCase):
                 validated_tcls_sha256=validated_hash,
             )
             status_path = Path(td) / "runtime" / "preflight_status.json"
-            written = preflight.write_preflight_status(report, status_path)
+            written = preflight.write_preflight_status(
+                report,
+                status_path,
+                listeners_ready=True,
+                log_written=True,
+                log_path=Path(td) / "af_server_live.log",
+            )
             self.assertEqual(written, status_path.resolve())
 
             import json
@@ -153,6 +159,48 @@ class StartupPreflightTests(unittest.TestCase):
             self.assertTrue(status["checks"]["apclient_exact_bytes"])
             self.assertTrue(status["checks"]["same_rsa_key"])
             self.assertTrue(status["checks"]["hosts"])
+            self.assertTrue(status["listeners_ready"])
+            self.assertTrue(status["log_written"])
+            self.assertTrue(status["launch_ready"])
+
+    def test_non_rsa_public_key_never_reports_same_rsa_key(self):
+        with tempfile.TemporaryDirectory() as td:
+            data = self.build_fixture(Path(td))
+            client_root, private_path, _hosts_path, _validated_hash, _ = data
+            ec_private = ec.generate_private_key(ec.SECP256R1())
+            ec_public = ec_private.public_key().public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+            apclient = client_root / "TCLS" / "config" / "APClient.dat"
+            apclient.write_bytes(ec_public)
+            check = preflight.check_key_pair(private_path, apclient)
+            self.assertFalse(check.same_rsa_key)
+
+    def test_listener_gate_starts_locked_until_bind_success(self):
+        with tempfile.TemporaryDirectory() as td:
+            data = self.build_fixture(Path(td))
+            client_root, private_path, hosts_path, validated_hash, _ = data
+            report = preflight.evaluate_preflight(
+                private_key_path=private_path,
+                client_root=client_root,
+                hosts_path=hosts_path,
+                resolver=lambda _name: "127.0.0.1",
+                validated_tcls_sha256=validated_hash,
+            )
+            status_path = Path(td) / "preflight_status.json"
+            log_path = Path(td) / "server.log"
+            preflight.write_preflight_status(
+                report,
+                status_path,
+                listeners_ready=False,
+                log_written=True,
+                log_path=log_path,
+            )
+            import json
+            before = json.loads(status_path.read_text(encoding="utf-8"))
+            self.assertTrue(before["passed"])
+            self.assertFalse(before["launch_ready"])
 
     def test_server_calls_preflight_before_listener_threads(self):
         server = (ROOT / "server" / "assaultfire_server_v143b.py").read_text(
@@ -160,8 +208,14 @@ class StartupPreflightTests(unittest.TestCase):
         )
         main = server.index('if __name__ == "__main__":')
         gate = server.index("run_server_preflight(Path(PRIVATE_KEY_PATH))", main)
-        listener = server.index("threading.Thread(", main)
-        self.assertLess(gate, listener)
+        spawner = server.index("_v143b_init_spawner()", gate)
+        prebind = server.index("_prepare_listener_sockets()", spawner)
+        unlock = server.index("update_launch_gate_status(ready=True)", prebind)
+        listener = server.index("threading.Thread(", unlock)
+        self.assertLess(gate, spawner)
+        self.assertLess(spawner, prebind)
+        self.assertLess(prebind, unlock)
+        self.assertLess(unlock, listener)
 
 
 if __name__ == "__main__":
