@@ -166,6 +166,21 @@
       "UTGOnlineSubsystem_RegisterTGNetHandler": {
         "va": "0x01582010",
         "status": "static-recovered"
+      },
+      "PVE_ServerMove_StrippedStub": {
+        "va": "0x013A88D0",
+        "status": "static-recovered",
+        "notes": "Target used by PVE ServerMove and PlayerWalkingServerMove outer slots; ret 0x28."
+      },
+      "PVE_MoveAutonomous": {
+        "va": "0x008F24B0",
+        "status": "static-recovered",
+        "notes": "Surviving stock authoritative movement engine."
+      },
+      "PVE_ServerMove_Correction": {
+        "va": "0x008F2620",
+        "status": "static-recovered",
+        "notes": "Surviving stock PH client-error/correction engine."
       }
     },
     "vtables": {
@@ -228,6 +243,10 @@
       "UTGOnlineDS": {
         "va": "0x01DB2168",
         "status": "live-validated"
+      },
+      "UFunction": {
+        "va": "0x01A1ECE0",
+        "status": "verified-exact-build"
       }
     },
     "patch_sites": {
