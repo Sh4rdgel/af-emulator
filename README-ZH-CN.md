@@ -19,6 +19,47 @@
 
 ---
 
+# ⚠️ 重要 — 点击 START 之前先做这一步
+
+为了获得最稳定的首次启动体验，请先使用 **suspended TCLS launch patcher**。
+
+**现在不要点击 Assault Fire 启动器里的 START。**
+
+完成下面的设置、启动模拟器、登录 `client.exe` / TCLS 并到达正常的 **START** 页面后，在 repository 根目录运行：
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\patches\patch_tcls_suspended_launch.py
+```
+
+等待工具显示：
+
+```text
+TCLS ARMED
+Click START in the Assault Fire launcher now.
+```
+
+**只有看到这两行之后再点击 START。**
+
+该工具会自动完成正确的启动顺序：
+
+```text
+TCLS creates TGame.exe suspended
+        ↓
+TCLS finishes the shared-memory handoff
+        ↓
+required TGame datetime compatibility patch is applied
+        ↓
+TGame.exe is resumed
+```
+
+这样可以避免一个已知的旧版 TGame 启动崩溃：如果兼容补丁还没生效，TGame 就开始运行，游戏可能直接报 Fatal error。
+
+> 使用 `patch_tcls_suspended_launch.py` 时，**同一次启动不要再运行 `patch_tgame_datetime.py`**。suspended-launch helper 已经会自动应用 datetime patch。
+
+如果工具报告 **TGame build/signature mismatch**，请停止，不要强制补丁。目前只支持/测试 Assault Fire PH **v1.0.0.24**。
+
+---
+
 # 从这里开始
 
 如果你是第一次使用本项目，请**严格按顺序**执行下面的步骤。
