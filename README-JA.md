@@ -210,6 +210,22 @@ TCLS で login して **START** 画面で止めてから:
 
 **同じ launch で両方を実行しないでください。**
 
+## Mandatory preflight launch gate
+
+Launch helper がゲームの続行を許可する前に、server preflight が **PASS** している必要があります:
+
+```text
+[PREFLIGHT] client root             : <実際のゲームフォルダ>
+[PREFLIGHT] TCLS validated build    : YES
+[PREFLIGHT] APClient exact bytes    : YES
+[PREFLIGHT] same RSA key            : YES
+[PREFLIGHT] game launch gate         : UNLOCKED
+```
+
+`NO`、`client root : None`、または `game launch gate : LOCKED` がある場合は、**START を押さないでください**。Server listeners は開かず、対応 launch helper は `GAME LAUNCH BLOCKED` で停止します。
+
+完全な preflight report は `server\af_server_live.log`、machine-readable gate state は `runtime\preflight_status.json` に保存されます。問題を修正して server を再起動し、**UNLOCKED** を確認してから続行してください。
+
 ---
 
 # よくある問題
