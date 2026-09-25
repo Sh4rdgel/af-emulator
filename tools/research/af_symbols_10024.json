@@ -56,6 +56,26 @@
         "va": "0x020731FC",
         "kind": "UClass*[]",
         "status": "live-validated-true-ds"
+      },
+      "TGDsDsaNetHandler_ClassGlobal": {
+        "va": "0x020D4B70",
+        "kind": "UClass*",
+        "status": "static-recovered"
+      },
+      "TGDsDsmNetHandler_ClassGlobal": {
+        "va": "0x020D4B78",
+        "kind": "UClass*",
+        "status": "static-recovered"
+      },
+      "UTGOnlineDS_PlayerArray": {
+        "va": "0x020D6B50",
+        "kind": "pointer/array-global",
+        "status": "live-validated"
+      },
+      "UTGOnlineDS_PlayerCount": {
+        "va": "0x020D6B54",
+        "kind": "int32",
+        "status": "live-validated"
       }
     },
     "functions": {
@@ -142,6 +162,10 @@
       "PlayerController_ServerMove_ExecWrapper": {
         "va": "0x00951E40",
         "status": "static-recovered"
+      },
+      "UTGOnlineSubsystem_RegisterTGNetHandler": {
+        "va": "0x01582010",
+        "status": "static-recovered"
       }
     },
     "vtables": {
@@ -196,6 +220,14 @@
       "PVEGameReplicationInfo": {
         "va": "0x01E24800",
         "status": "live-validated"
+      },
+      "TGDsDsaNetHandler": {
+        "va": "0x01D8ECD0",
+        "status": "live-validated"
+      },
+      "UTGOnlineDS": {
+        "va": "0x01DB2168",
+        "status": "live-validated"
       }
     },
     "patch_sites": {
@@ -225,6 +257,13 @@
         "va": "0x00DA4BBF",
         "status": "static-recovered-true-ds",
         "notes": "Compatible-version NMT_Hello path that calls NMT_Challenge helper."
+      }
+    },
+    "data": {
+      "HardcodedDedicatedServerAESKey": {
+        "va": "0x01DC0DA4",
+        "status": "verified",
+        "expected_bytes": "74 67 61 6D 65 1F E9 2C 9A 97 1A 0C D1 F6 10 FB"
       }
     }
   },
