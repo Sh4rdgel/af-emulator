@@ -51,6 +51,11 @@
         "va": "0x02041B68",
         "kind": "pointer",
         "status": "verified"
+      },
+      "ChannelClasses": {
+        "va": "0x020731FC",
+        "kind": "UClass*[]",
+        "status": "live-validated-true-ds"
       }
     },
     "functions": {
@@ -121,6 +126,22 @@
       "TGTeamPawn_ctor": {
         "va": "0x013EF920",
         "status": "recovered-from-exact-build"
+      },
+      "UNetConnection_CreateChannel": {
+        "va": "0x011DF5E0",
+        "status": "static-recovered-true-ds"
+      },
+      "NMT_Challenge_Helper": {
+        "va": "0x00D92440",
+        "status": "static-recovered-true-ds"
+      },
+      "PlayerWalking_ServerMove_ExecWrapper": {
+        "va": "0x013B7570",
+        "status": "static-recovered"
+      },
+      "PlayerController_ServerMove_ExecWrapper": {
+        "va": "0x00951E40",
+        "status": "static-recovered"
       }
     },
     "vtables": {
@@ -163,6 +184,18 @@
       "TGTeamPawn": {
         "va": "0x01D5B350",
         "status": "recovered-from-exact-build"
+      },
+      "UTPlayerController": {
+        "va": "0x01D61428",
+        "status": "recovered-from-exact-build"
+      },
+      "PVEGameInfo": {
+        "va": "0x01E28F28",
+        "status": "live-validated"
+      },
+      "PVEGameReplicationInfo": {
+        "va": "0x01E24800",
+        "status": "live-validated"
       }
     },
     "patch_sites": {
@@ -180,6 +213,18 @@
         "va": "0x013494DE",
         "expected": "89 1D CC 69 FD 01",
         "status": "verified"
+      }
+    },
+    "network_sites": {
+      "UNetConnection_InstallChannelSlot": {
+        "va": "0x011DF931",
+        "status": "static-recovered-true-ds",
+        "notes": "Stores Connection->Channels[ChannelIndex] = Channel."
+      },
+      "NMT_Hello_Case": {
+        "va": "0x00DA4BBF",
+        "status": "static-recovered-true-ds",
+        "notes": "Compatible-version NMT_Hello path that calls NMT_Challenge helper."
       }
     }
   },
