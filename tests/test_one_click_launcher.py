@@ -48,7 +48,7 @@ class OneClickLauncherTests(unittest.TestCase):
 
     def test_launcher_prints_revision_for_stale_zip_diagnosis(self):
         s = self.text(SCRIPT)
-        self.assertIn('2026-09-25-oneclick-v10', s)
+        self.assertIn('2026-09-25-oneclick-v11', s)
         self.assertIn('Launcher revision: $LAUNCHER_REVISION', s)
 
     def test_launcher_does_not_elevate_entire_process(self):
@@ -84,26 +84,41 @@ class OneClickLauncherTests(unittest.TestCase):
         )
         self.assertIn('$exitCode = $LASTEXITCODE', s)
 
-    def test_existing_venv_is_reused_and_never_blindly_deleted(self):
+    def test_existing_venv_is_persistent_across_zip_updates(self):
         s = self.text(SCRIPT)
         self.assertIn(
-            'Reusing existing Python 3.12 environment',
+            '.af-emulator-runtime\\venv-py312',
             s,
         )
         self.assertIn(
-            'Creating Python environment (FIRST TIME ONLY)',
+            'Reusing persistent Python 3.12 environment',
             s,
         )
         self.assertIn(
-            '.venv.incompatible.',
+            'Creating persistent Python environment (FIRST TIME ONLY)',
             s,
         )
         self.assertIn(
-            '.venv.incomplete.',
+            'Migrating existing .venv to persistent one-click runtime',
+            s,
+        )
+        self.assertIn(
+            'Preserve-BadRuntime',
             s,
         )
         self.assertNotIn(
             'Remove-Item -LiteralPath $venvDir -Recurse -Force',
+            s,
+        )
+
+    def test_main_uses_game_root_persistent_runtime(self):
+        s = self.text(SCRIPT)
+        self.assertIn(
+            'Ensure-Python312 $repoRoot $gameRoot',
+            s,
+        )
+        self.assertIn(
+            'Ensure-Venv $repoRoot $gameRoot $bootstrapPython',
             s,
         )
 
