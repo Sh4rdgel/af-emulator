@@ -72,6 +72,27 @@ D:\AssaultFirePH
 
 ---
 
+## Logging level
+
+Console を静かにしても development 用 DEBUG log は失われません。
+
+```powershell
+$env:AF_LOG_LEVEL = "DEBUG"
+```
+
+利用可能: `DEBUG`, `INFO`（default）, `WARNING`, `ERROR`.
+
+- `DEBUG` — console にすべて表示。
+- `INFO` — DEBUG を console から隠す。
+- `WARNING` — WARNING と ERROR のみ。
+- `ERROR` — ERROR のみ。
+
+**Console が DEBUG でなくても、`server\af_server_live.log` には DEBUG 以上が常に保存されます。** Bug report や development の詳細情報は失われません。
+
+Raw AUTH plaintext/ciphertext は認証情報を含む可能性があるため自動保存しません。Controlled local diagnostic の場合のみ `$env:AF_DEBUG_AUTH_HEX = "1"` を使用してください。
+
+---
+
 # Quick start
 
 ## 1. Emulator を取得
