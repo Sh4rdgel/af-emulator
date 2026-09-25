@@ -29,7 +29,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-$LAUNCHER_REVISION = "2026-09-25-python-detect-v2"
+$LAUNCHER_REVISION = "2026-09-25-python-detect-v3"
 $EXPECTED_TGAME_SHA256 = "B4273F2658CA94EEBC559A997FDFCD02D51E77CE75B892250C1DB7FB80C70B51"
 $TCLS_ORIGINAL_SHA256 = "13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1"
 $TCLS_PATCHED_SHA256  = "3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56"
@@ -194,16 +194,20 @@ function Resolve-Python312([string]$RepoRoot = "") {
     }
 
     if ($pyLauncher) {
-        try {
-            $resolved = (& $pyLauncher.Source -3.12 -c "import sys; print(sys.executable)" 2>$null |
-                Select-Object -First 1)
-            if ($LASTEXITCODE -eq 0 -and $resolved) {
-                $found = Test-Python312Path $resolved.Trim()
-                if ($found) {
-                    return $found
+        # Support both the classic launcher syntax (-3.12) and the newer
+        # Python install manager selector syntax (-V:3.12).
+        foreach ($selector in @("-3.12", "-V:3.12")) {
+            try {
+                $resolved = (& $pyLauncher.Source $selector -c "import sys; print(sys.executable)" 2>$null |
+                    Select-Object -First 1)
+                if ($LASTEXITCODE -eq 0 -and $resolved) {
+                    $found = Test-Python312Path $resolved.Trim()
+                    if ($found) {
+                        return $found
+                    }
                 }
-            }
-        } catch {}
+            } catch {}
+        }
 
         # Fallback: if plain "py" already launches Python 3.12, accept that too.
         try {
@@ -219,6 +223,34 @@ function Resolve-Python312([string]$RepoRoot = "") {
                 }
             }
         } catch {}
+
+        # Last launcher fallback: parse the launcher's installed-runtime list.
+        foreach ($listArgs in @(
+            @("-0p"),
+            @("--list-paths")
+        )) {
+            try {
+                $rows = @(& $pyLauncher.Source @listArgs 2>$null)
+                foreach ($row in $rows) {
+                    $text = [string]$row
+                    if ($text -notmatch "3\.12") {
+                        continue
+                    }
+
+                    $match = [regex]::Match(
+                        $text,
+                        '([A-Za-z]:\\[^\r\n]*?python(?:3\.12)?\.exe)',
+                        [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+                    )
+                    if ($match.Success) {
+                        $found = Test-Python312Path $match.Groups[1].Value.Trim()
+                        if ($found) {
+                            return $found
+                        }
+                    }
+                }
+            } catch {}
+        }
     }
 
     # Search common installer locations. UAC/elevation can inherit a stale
@@ -285,6 +317,19 @@ function Ensure-Python312([string]$RepoRoot) {
     }
 
     Write-Host "[SETUP] Python 3.12 was not found after checking all known local locations."
+    $visiblePy = Get-Command py, py.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($visiblePy) {
+        try {
+            $pyVersion = (& $visiblePy.Source --version 2>&1 | Select-Object -First 1)
+            Write-Host "[DIAG] py command : $($visiblePy.Source)"
+            Write-Host "[DIAG] py version : $pyVersion"
+            $pyList = @(& $visiblePy.Source -0p 2>&1)
+            if ($pyList.Count -gt 0) {
+                Write-Host "[DIAG] py -0p:"
+                $pyList | ForEach-Object { Write-Host ("       " + [string]$_) }
+            }
+        } catch {}
+    }
     Write-Host "[SETUP] Automatic installation will be attempted only now."
 
     $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
@@ -402,9 +447,31 @@ function Ensure-Hosts([string]$RepoRoot) {
     }
 
     Write-Host "[SETUP] Repairing Assault Fire localhost mappings..."
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $hostScript
-    if ($LASTEXITCODE -ne 0 -or -not (Test-AFHosts)) {
-        throw "Windows hosts setup did not verify successfully."
+
+    if (Test-IsAdministrator) {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $hostScript
+        if ($LASTEXITCODE -ne 0) {
+            throw "Windows hosts setup helper failed with exit code $LASTEXITCODE."
+        }
+    } else {
+        Write-Host "[SETUP] Windows will ask for Administrator permission only for the hosts-file repair."
+        try {
+            $hostProc = Start-Process -FilePath "powershell.exe" -Verb RunAs -Wait -PassThru -ArgumentList @(
+                "-NoProfile",
+                "-ExecutionPolicy", "Bypass",
+                "-File", ('"' + $hostScript + '"')
+            )
+        } catch {
+            throw "Administrator permission for the hosts-file repair was cancelled or failed: $($_.Exception.Message)"
+        }
+        if ($hostProc.ExitCode -ne 0) {
+            throw "Windows hosts setup helper failed with exit code $($hostProc.ExitCode)."
+        }
+    }
+
+    ipconfig /flushdns | Out-Null
+    if (-not (Test-AFHosts)) {
+        throw "Windows hosts setup finished but the required 127.0.0.1 mappings did not verify."
     }
     Write-Host "[OK] Hosts mappings verified." -ForegroundColor Green
 }
@@ -669,25 +736,10 @@ if (-not $self) {
 }
 $self = (Resolve-Path -LiteralPath $self).Path
 
-if (-not (Test-IsAdministrator)) {
-    Write-Host "[AF-ONECLICK] Administrator access is required for the Windows hosts file and runtime launch patches."
-    Write-Host "[AF-ONECLICK] Asking Windows for permission..."
-    try {
-        $elevatedArgs = @(
-            "-NoProfile",
-            "-ExecutionPolicy", "Bypass",
-            "-File", ('"' + $self + '"')
-        )
-        if ($SetupOnly) { $elevatedArgs += "-SetupOnly" }
-        if ($SkipPythonInstall) { $elevatedArgs += "-SkipPythonInstall" }
-        if ($KeepServer) { $elevatedArgs += "-KeepServer" }
-
-        Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList $elevatedArgs
-    } catch {
-        Stop-WithMessage "Administrator elevation was cancelled or failed: $($_.Exception.Message)"
-    }
-    exit 0
-}
+# Stay in the user's normal PowerShell environment so Python launchers, aliases,
+# PATH entries, and per-user installations remain visible.  Administrator
+# elevation is requested later only if the Windows hosts file actually needs
+# to be changed.
 
 try {
     $repoRoot = Split-Path -Parent $self
