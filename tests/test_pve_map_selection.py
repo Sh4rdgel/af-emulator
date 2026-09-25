@@ -1,6 +1,8 @@
 from pathlib import Path
 import unittest
 
+from server.assaultfire_ds_spawner import AFDEV_MODE_IDS, ROOM_TARGETS, resolve_room_target
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -29,8 +31,26 @@ class PVEMapSelectionTests(unittest.TestCase):
         spawner = self.text("server/assaultfire_ds_spawner.py")
         self.assertIn('map_name=settings.get("map_string") or None', server)
         self.assertIn('map_name: Optional[str] = None', spawner)
-        self.assertIn('allocation.map_name = desired_map', spawner)
+        self.assertIn('allocation.map_name = desired_map or verified_map', spawner)
         self.assertIn('"--map", allocation.map_name', spawner)
+        self.assertIn('"--game", allocation.game_class', spawner)
+
+    def test_defense_steel_forest_empty_mapstring_uses_verified_target(self):
+        self.assertIn(0x00002002, AFDEV_MODE_IDS)
+        self.assertEqual(
+            ROOM_TARGETS[(0x00002002, 0x0010)],
+            ("IF-Factory_3_Main", "PVEGame.TGIFGame"),
+        )
+        self.assertEqual(
+            resolve_room_target(0x00002002, 0x0010, "", "PVEGame.TGSVGame"),
+            ("IF-Factory_3_Main", "PVEGame.TGIFGame"),
+        )
+
+    def test_server_routes_verified_afdev_modes_without_dead_legacy_fallback(self):
+        server = self.text("server/assaultfire_server_v143b.py")
+        self.assertIn("TGAME_AFDEV_MODE_IDS = frozenset(AFDEV_MODE_IDS)", server)
+        self.assertIn("mode_now not in TGAME_AFDEV_MODE_IDS", server)
+        self.assertNotIn("ZN2C_NTF_STARTMATCH legacy-non-PVE", server)
 
 
 if __name__ == "__main__":
