@@ -336,6 +336,79 @@ def diff_json(before: Any, after: Any) -> list[tuple[str, Any, Any]]:
     ]
 
 
+
+def catalog_errors(catalog: dict[str, Any]) -> list[str]:
+    errors = []
+    build = catalog.get("build", {})
+    try:
+        image_lo = parse_int(build["image_base"])
+        image_hi = image_lo + parse_int(build["size_of_image"])
+    except (KeyError, TypeError, ValueError) as exc:
+        return [f"invalid build geometry: {exc}"]
+
+    seen_names = set()
+    for group, name, meta in iter_symbols(catalog):
+        key = f"{group}.{name}"
+        if key in seen_names:
+            errors.append(f"duplicate symbol name: {key}")
+        seen_names.add(key)
+        if "va" not in meta:
+            errors.append(f"symbol has no VA: {key}")
+            continue
+        try:
+            va = parse_int(meta["va"])
+        except (TypeError, ValueError):
+            errors.append(f"invalid VA for {key}: {meta.get('va')!r}")
+            continue
+        if not (image_lo <= va < image_hi):
+            errors.append(
+                f"symbol outside image: {key}=0x{va:08X} "
+                f"range=0x{image_lo:08X}-0x{image_hi:08X}"
+            )
+    return errors
+
+
+def label_name(group: str, name: str) -> str:
+    raw = f"{group}__{name}"
+    return re.sub(r"[^A-Za-z0-9_]", "_", raw)
+
+
+def render_labels(catalog: dict[str, Any], fmt: str) -> str:
+    rows = sorted(
+        (
+            parse_int(meta["va"]),
+            group,
+            name,
+            meta,
+        )
+        for group, name, meta in iter_symbols(catalog)
+        if "va" in meta
+    )
+    if fmt == "csv":
+        lines = ["va,group,name,label,status"]
+        for va, group, name, meta in rows:
+            lines.append(
+                f"0x{va:08X},{group},{name},{label_name(group, name)},"
+                f"{meta.get('status', '')}"
+            )
+        return "\n".join(lines) + "\n"
+
+    if fmt == "idc":
+        lines = [
+            '#include <idc.idc>',
+            '',
+            'static main()',
+            '{',
+        ]
+        for va, group, name, _ in rows:
+            label = label_name(group, name)
+            lines.append(f'  set_name(0x{va:08X}, "{label}", SN_NOWARN);')
+        lines.extend(['}', ''])
+        return "\n".join(lines)
+
+    raise AfreError(f"unsupported label format: {fmt}")
+
+
 def fmt_symbol(group: str, name: str, meta: dict[str, Any]) -> str:
     va = meta.get("va", "-")
     status = meta.get("status", "-")
@@ -463,6 +536,30 @@ def cmd_json_diff(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
     return 0
 
 
+
+def cmd_audit_catalog(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    del args
+    errors = catalog_errors(catalog)
+    if not errors:
+        count = sum(1 for _ in iter_symbols(catalog))
+        print(f"[AFRE] catalog OK ({count} symbols)")
+        return 0
+    for error in errors:
+        print(error)
+    print(f"[AFRE] {len(errors)} catalog error(s)")
+    return 2
+
+
+def cmd_export_labels(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    output = render_labels(catalog, args.format)
+    if args.out:
+        Path(args.out).write_text(output, encoding="utf-8")
+        print(f"[AFRE] labels: {args.out}")
+    else:
+        print(output, end="")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Read-only Assault Fire PH v1.0.0.24 RE helper"
@@ -516,6 +613,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("before")
     p.add_argument("after")
     p.set_defaults(func=cmd_json_diff)
+
+    p = sub.add_parser("audit-catalog", help="validate catalog geometry and symbols")
+    p.set_defaults(func=cmd_audit_catalog)
+
+    p = sub.add_parser("export-labels", help="export known addresses for static analysis")
+    p.add_argument("--format", choices=("idc", "csv"), default="idc")
+    p.add_argument("--out")
+    p.set_defaults(func=cmd_export_labels)
     return parser
 
 
