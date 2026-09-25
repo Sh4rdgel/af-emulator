@@ -222,6 +222,8 @@ Launch helper가 게임 실행을 계속 허용하기 전에 server preflight가
 [PREFLIGHT] game launch gate         : UNLOCKED
 ```
 
+Client checks가 PASS한 직후 server가 필수 listener를 모두 bind하는 동안 gate가 잠시 `LOCKED`로 표시되는 것은 **정상**입니다. 아직 launch하지 말고 이후의 `game launch gate : UNLOCKED`와 `[MAIN] All listeners running.`을 기다리세요.
+
 `NO`, `client root : None` 또는 `game launch gate : LOCKED`가 하나라도 있으면 **START를 누르지 마세요**. Server listeners는 열리지 않고 지원되는 launch helper는 `GAME LAUNCH BLOCKED`와 함께 중지합니다.
 
 전체 preflight report는 `server\af_server_live.log`에 기록되고 machine-readable gate state는 `runtime\preflight_status.json`에 저장됩니다. 문제를 수정하고 server를 다시 시작한 뒤 **UNLOCKED**일 때만 계속하세요.
