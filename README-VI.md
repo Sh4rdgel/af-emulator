@@ -63,6 +63,8 @@ Trước khi helper cho phép game tiếp tục, server preflight phải **PASS*
 [PREFLIGHT] game launch gate         : UNLOCKED
 ```
 
+Việc gate tạm thời hiện `LOCKED` sau khi client checks đã PASS là **bình thường** trong lúc server bind toàn bộ listener bắt buộc. Đừng launch game lúc đó. Hãy chờ `game launch gate : UNLOCKED` và `[MAIN] All listeners running.`
+
 Nếu có bất kỳ `NO`, `client root : None` hoặc `game launch gate : LOCKED`, **không bấm START**. Server sẽ không mở listener và các launch helper được hỗ trợ sẽ dừng với `GAME LAUNCH BLOCKED`.
 
 Toàn bộ preflight report được ghi vào `server\af_server_live.log`; trạng thái gate machine-readable nằm trong `runtime\preflight_status.json`. Sửa lỗi, restart server và chỉ tiếp tục khi thấy **UNLOCKED**.
