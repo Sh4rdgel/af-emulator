@@ -58,6 +58,22 @@ Makatabang kini malikayan ang known legacy TGame startup crash kung modagan ang 
 
 Kung mo-report og **TGame build/signature mismatch**, hunong ug ayaw pugsa ang patch. Assault Fire PH **v1.0.0.24 lamang** ang supported/tested karon.
 
+## Mandatory preflight launch gate
+
+Sa dili pa tugotan sa launch helper ang game, kinahanglan **PASS** una ang server preflight:
+
+```text
+[PREFLIGHT] client root             : <tinuod nga game folder>
+[PREFLIGHT] TCLS validated build    : YES
+[PREFLIGHT] APClient exact bytes    : YES
+[PREFLIGHT] same RSA key            : YES
+[PREFLIGHT] game launch gate         : UNLOCKED
+```
+
+Kung naay `NO`, `client root : None`, o `game launch gate : LOCKED`, **ayaw i-click ang START**. Dili mo-open ang server listeners ug ang supported launch helpers mohunong nga adunay `GAME LAUNCH BLOCKED`.
+
+Ang full preflight report naa sa `server\af_server_live.log` ug ang machine-readable gate state naa sa `runtime\preflight_status.json`. Human ayuhon ang problema, i-restart ang server ug padayon lamang kung **UNLOCKED**.
+
 ---
 
 # Sugdi dinhi
