@@ -29,7 +29,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-$LAUNCHER_REVISION = "2026-09-25-oneclick-v8"
+$LAUNCHER_REVISION = "2026-09-25-oneclick-v9"
 $EXPECTED_TGAME_SHA256 = "B4273F2658CA94EEBC559A997FDFCD02D51E77CE75B892250C1DB7FB80C70B51"
 $TCLS_ORIGINAL_SHA256 = "13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1"
 $TCLS_PATCHED_SHA256  = "3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56"
@@ -864,10 +864,10 @@ try {
     $serverCommand = (
         ". " + (Quote-PS $consoleHelper) + "; " +
         "Disable-AFConsoleBlockingSelection; " +
-        "$env:AF_CLIENT_ROOT=" + (Quote-PS $gameRoot) + "; " +
-        "$env:AF_GAME_DIR=" + (Quote-PS $win32) + "; " +
-        "$env:AF_DS_SPAWNER_ENABLED='1'; " +
-        "$env:AF_DS_PYTHON=" + (Quote-PS $venvPython) + "; " +
+        '$env:AF_CLIENT_ROOT=' + (Quote-PS $gameRoot) + "; " +
+        '$env:AF_GAME_DIR=' + (Quote-PS $win32) + "; " +
+        '$env:AF_DS_SPAWNER_ENABLED=' + (Quote-PS "1") + "; " +
+        '$env:AF_DS_PYTHON=' + (Quote-PS $venvPython) + "; " +
         "Set-Location -LiteralPath " + (Quote-PS $repoRoot) + "; " +
         "Write-Host '[AF-ADMIN] Emulator server running elevated.' -ForegroundColor Green; " +
         "& " + (Quote-PS $venvPython) + " " + (Quote-PS $serverScript)
@@ -895,7 +895,7 @@ try {
     $helperCommand = (
         ". " + (Quote-PS $consoleHelper) + "; " +
         "Disable-AFConsoleBlockingSelection; " +
-        "$env:AF_CLIENT_ROOT=" + (Quote-PS $gameRoot) + "; " +
+        '$env:AF_CLIENT_ROOT=' + (Quote-PS $gameRoot) + "; " +
         "Set-Location -LiteralPath " + (Quote-PS $repoRoot) + "; " +
         "Write-Host '[AF-ADMIN] TGame launch/OpenProcess helper running elevated.' -ForegroundColor Green; " +
         "& " + (Quote-PS $venvPython) + " " + (Quote-PS $helper) + " --timeout 900"
