@@ -66,10 +66,11 @@ if os.name != "nt":
 
 try:
     import patch_tgame_datetime as datetime_patch
+    import launch_preflight_gate as launch_gate
 except Exception as exc:
     raise SystemExit(
-        "Could not import tools/patches/patch_tgame_datetime.py. "
-        "Keep both scripts in the same folder.\n"
+        "Could not import required launch helpers from tools/patches. "
+        "Keep the repository files together.\n"
         f"Import error: {exc}"
     )
 
@@ -585,6 +586,11 @@ def main():
     print("Runtime-only; no game DLL/EXE is modified on disk.")
     print()
 
+    gate_status = launch_gate.require_launch_ready()
+    print("[LAUNCH-GATE] PASS - server preflight is UNLOCKED.")
+    print(f"[LAUNCH-GATE] client root: {gate_status.get('client_root')}")
+    print()
+
     if x32dbg_running():
         raise RuntimeError(
             "x32dbg.exe is running. Close/detach it before using the clean "
@@ -612,6 +618,8 @@ def main():
                 "was not mapped. Leave the launcher at START and retry."
             )
 
+        launch_gate.require_loaded_tcls_matches(gate_status, tcls_path)
+        print("[LAUNCH-GATE] PASS - loaded TCLS.dll matches server preflight.")
         patch_site = tcls_base + TCLS_CREATE_FLAGS_RVA
         print(f"[TCLS] client PID={client_pid}")
         print(f"[TCLS] base=0x{tcls_base:08X}")
