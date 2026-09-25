@@ -1,0 +1,277 @@
+{
+  "schema_version": 1,
+  "build": {
+    "name": "Assault Fire PH v1.0.0.24 clean TGame / AFDEV",
+    "sha256": "b4273f2658ca94eebc559a997fdfcd02d51e77ce75b892250c1db7fb80c70b51"
+  },
+  "reflection": {
+    "UObject": {
+      "status": "verified",
+      "fields": {
+        "Outer": {"offset": "0x28", "type": "UObject*"},
+        "NameIndex": {"offset": "0x2C", "type": "int32"},
+        "NameNumber": {"offset": "0x30", "type": "int32"},
+        "Class": {"offset": "0x34", "type": "UClass*"}
+      }
+    },
+    "UField": {
+      "parent": "UObject",
+      "status": "verified",
+      "fields": {
+        "Next": {"offset": "0x3C", "type": "UField*"}
+      }
+    },
+    "UStruct": {
+      "parent": "UField",
+      "status": "verified",
+      "fields": {
+        "Super": {"offset": "0x48", "type": "UStruct*"},
+        "Children": {"offset": "0x4C", "type": "UField*"},
+        "PropertiesSize": {"offset": "0x50", "type": "int32"}
+      }
+    },
+    "UFunction": {
+      "parent": "UStruct",
+      "status": "verified",
+      "fields": {
+        "Script.Data": {"offset": "0x54", "type": "uint8*"},
+        "Script.Num": {"offset": "0x58", "type": "int32"},
+        "Script.Max": {"offset": "0x5C", "type": "int32"},
+        "FunctionFlags": {"offset": "0xAC", "type": "uint32"},
+        "ParmsSize": {"offset": "0xBE", "type": "uint16"},
+        "ReturnOffset": {"offset": "0xC0", "type": "uint16"},
+        "Func": {"offset": "0xC8", "type": "native function pointer"}
+      }
+    }
+  },
+  "objects": {
+    "UGameEngine": {
+      "status": "verified",
+      "fields": {
+        "GamePlayers.Data": {"offset": "0x47C", "type": "ULocalPlayer**"},
+        "GamePlayers.Count": {"offset": "0x480", "type": "int32"},
+        "GamePlayers.Max": {"offset": "0x484", "type": "int32"}
+      }
+    },
+    "ULocalPlayer": {
+      "status": "verified",
+      "vtable": "0x01D59830",
+      "fields": {
+        "PlayerController": {"offset": "0x40", "type": "APlayerController*"}
+      }
+    },
+    "UWorld": {
+      "status": "verified",
+      "fields": {
+        "PersistentLevel": {"offset": "0x50", "type": "ULevel*"},
+        "NetDriver": {"offset": "0xD8", "type": "UNetDriver*"}
+      }
+    },
+    "ULevel": {
+      "status": "verified",
+      "fields": {
+        "Actors": {"offset": "0x3C", "type": "TArray<AActor*>"},
+        "GameSequences": {"offset": "0xA0", "type": "TArray<USequence*>"}
+      }
+    },
+    "ULevelStreaming": {
+      "status": "observed",
+      "fields": {
+        "PackageName": {"offset": "0x3C", "type": "FName"},
+        "LoadedLevel": {"offset": "0x44", "type": "ULevel*"}
+      }
+    },
+    "WorldInfo": {
+      "status": "verified",
+      "fields": {
+        "Game": {"offset": "0x414", "type": "GameInfo*"}
+      }
+    },
+    "GameInfo": {
+      "status": "verified",
+      "fields": {
+        "GameReplicationInfo": {"offset": "0x2A8", "type": "GameReplicationInfo*"}
+      }
+    },
+    "GameReplicationInfo": {
+      "status": "verified",
+      "fields": {
+        "ElapsedTime": {"offset": "0x1E4", "type": "int32"},
+        "StateFlags": {
+          "offset": "0x318",
+          "type": "uint32",
+          "bits": {
+            "bGameBegun": "0x00000001",
+            "bSuspendGame": "0x00000004"
+          }
+        }
+      }
+    },
+    "PVEPlayerController": {
+      "status": "verified",
+      "vtable": "0x01E24C28",
+      "constructor": "0x01662F60",
+      "native_size": "0xA60",
+      "fields": {
+        "Pawn": {"offset": "0x1D8", "type": "APawn*"},
+        "PlayerReplicationInfo": {"offset": "0x1DC", "type": "PlayerReplicationInfo*"},
+        "Player": {"offset": "0x370", "type": "UPlayer*", "provenance": "live PVE lifecycle probes"},
+        "PlayerCamera": {"offset": "0x374", "type": "APlayerCamera*","provenance": "live PVE lifecycle probes"},
+        "AcknowledgedPawn": {"offset": "0x390", "type": "APawn*"},
+        "ViewTarget": {"offset": "0x39C", "type": "AActor*"},
+        "HUD": {"offset": "0x3D8", "type": "AHUD*"},
+        "PlayerInput": {"offset": "0x478", "type": "UPlayerInput*"},
+        "LoadingGate": {
+          "offset": "0x884",
+          "type": "bitfield",
+          "bits": {"bWaitingLoadingProcessComplete": "0x00000001"}
+        }
+      },
+      "notes": [
+        "NotifyClientLoadingProcessComplete cleared LoadingGate bit 0 on the live remote controller.",
+        "Runtime PVE FName indices are session-dependent; resolve names live."
+      ]
+    },
+    "PlayerReplicationInfo": {
+      "status": "verified-pve",
+      "fields": {
+        "Flags": {
+          "offset": "0x3C0",
+          "type": "uint32",
+          "bits": {"bAlwaysObserver_or_PVE_start_gate": "0x00000004"}
+        }
+      }
+    },
+    "TGSV3HUD": {
+      "status": "verified-pve",
+      "fields": {
+        "bLoadingProcessComplete": {
+          "offset": "0x1EB0",
+          "type": "bitfield",
+          "bits": {"bit0": "0x00000001"}
+        },
+        "HUDRound": {"offset": "0x1F68", "type": "UObject*"}
+      }
+    },
+    "SequenceEvent": {
+      "status": "verified-pve",
+      "fields": {
+        "ActivationTime": {"offset": "0xE4", "type": "float"},
+        "TriggerCount": {"offset": "0xE8", "type": "int32"},
+        "MaxTriggerCount": {"offset": "0xEC", "type": "int32"},
+        "ReTriggerDelay": {"offset": "0xF0", "type": "float"},
+        "Flags": {"offset": "0xF4", "type": "uint32"}
+      }
+    },
+    "UNetDriver": {
+      "status": "verified",
+      "fields": {
+        "Socket": {"offset": "0x1A8", "type": "pointer"}
+      }
+    }
+  },
+  "native_classes": {
+    "TGGame": {
+      "constructor": "0x013F9980",
+      "vtable": "0x01D61948",
+      "status": "recovered-from-exact-build"
+    },
+    "TGTeamGame": {
+      "constructor": "0x013F9A10",
+      "vtable": "0x01D62530",
+      "status": "recovered-from-exact-build"
+    },
+    "TGPlayerController": {
+      "constructor": "0x013F9BA0",
+      "vtable": "0x01D64720",
+      "native_size": "0x9E0",
+      "status": "recovered-from-exact-build"
+    },
+    "TGPVPPlayerController": {
+      "constructor": "0x013F9C00",
+      "vtable": "0x01D651D8",
+      "status": "recovered-from-exact-build"
+    },
+    "TGTeamPlayerController": {
+      "constructor": "0x013F9C30",
+      "vtable": "0x01D65728",
+      "native_size": "0x9F8",
+      "status": "recovered-from-exact-build"
+    },
+    "TGPawn": {
+      "constructor": "0x013EF8C0",
+      "vtable": "0x01D5A830",
+      "status": "recovered-from-exact-build"
+    },
+    "TGTeamPawn": {
+      "constructor": "0x013EF920",
+      "vtable": "0x01D5B350",
+      "native_size": "0x1110",
+      "status": "recovered-from-exact-build"
+    }
+  },
+  "script_classes": {
+    "TGSV3Game": {
+      "parent": "PVEGame",
+      "package": "TGSVGame",
+      "status": "verified-from-old-PH-UnrealScript"
+    },
+    "TGTeamMatch_Tutorial": {
+      "parent": "TGTeamMatch",
+      "status": "verified-from-package"
+    },
+    "TGTMPawn_Tutorial": {
+      "parent": "TGTMPawn",
+      "native_runtime_base": "TGTeamPawn",
+      "status": "verified-from-package"
+    },
+    "TGTMPlayerController_Tutorial": {
+      "status": "verified-from-package"
+    }
+  },
+  "known_functions": {
+    "UObject::ProcessEvent": {"va": "0x00483440", "status": "verified"},
+    "FName(const TCHAR*)": {"va": "0x004D78D0", "status": "verified"},
+    "GenericScriptNativeThunk": {"va": "0x0048DB10", "status": "repeatedly-observed"},
+    "UWorld::GetWorldInfo": {"va": "0x00D9C1A0", "status": "verified"},
+    "UWorld::SetGameInfo": {"va": "0x00DA2760", "status": "verified"}
+  },
+  "known_globals": {
+    "GNames": {"va": "0x02041B68", "type": "pointer", "status": "verified"},
+    "GEngine": {"va": "0x02063820", "type": "pointer", "status": "verified"},
+    "GWorld": {"va": "0x02066BF8", "type": "pointer", "status": "verified"}
+  },
+  "conflicts": [
+    {
+      "id": "APlayerController_player_camera_ack_layout",
+      "status": "unresolved",
+      "description": "Two layouts exist in prior exact-build work. Live PVE lifecycle probes repeatedly used Player=0x370, Camera=0x374, AckPawn=0x390. Later AFDevLoader code labels Player=0x66C, Camera=0x670, AckPawn=0x688 as a same-era UE3 layout. Do not silently merge these until object/class ownership is revalidated.",
+      "variants": [
+        {
+          "name": "live_pve_controller",
+          "fields": {
+            "Player": "0x370",
+            "PlayerCamera": "0x374",
+            "AcknowledgedPawn": "0x390",
+            "ViewTarget": "0x39C",
+            "HUD": "0x3D8",
+            "PlayerInput": "0x478"
+          }
+        },
+        {
+          "name": "current_afdevloader_a_player_controller",
+          "fields": {
+            "Player": "0x66C",
+            "PlayerCamera": "0x670",
+            "AcknowledgedPawn": "0x688"
+          }
+        }
+      ]
+    }
+  ],
+  "rules": [
+    "Do not hardcode game-package FName indices across fresh processes; resolve or construct names live.",
+    "Prefer structural chains such as GWorld -> PersistentLevel -> Actors -> WorldInfo -> GameInfo -> GRI over global vtable scans.",
+    "Treat live addresses of UObject instances as session-specific observations, not permanent symbols."
+  ]
+}
