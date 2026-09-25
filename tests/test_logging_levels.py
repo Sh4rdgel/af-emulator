@@ -91,6 +91,24 @@ class ServerLoggingTests(unittest.TestCase):
     def test_file_capture_floor_is_debug(self):
         self.assertEqual(FILE_CAPTURE_LEVEL, "DEBUG")
 
+    def test_default_server_log_path_and_spawner_routing_are_explicit(self):
+        logging_source = (ROOT / "server" / "assaultfire_logging.py").read_text(
+            encoding="utf-8", errors="replace"
+        )
+        server = (ROOT / "server" / "assaultfire_server_v143b.py").read_text(
+            encoding="utf-8", errors="replace"
+        )
+        self.assertIn('with_name("af_server_live.log")', logging_source)
+        self.assertIn(
+            "DedicatedServerSpawner(V143B_DS_CONFIG, log_fn=log)",
+            server,
+        )
+        self.assertIn(
+            'log("BOOT", f"Persistent server log: {_SERVER_LOGGER.path}")',
+            server,
+        )
+        self.assertIn('"DS-REJOIN"', server)
+
     def test_invalid_console_level_is_rejected(self):
         with tempfile.TemporaryDirectory() as td:
             with self.assertRaises(ValueError):
