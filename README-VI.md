@@ -12,6 +12,47 @@ Mục tiêu là giúp client PH đã ngừng hoạt động có thể chạy l�
 
 ---
 
+# ⚠️ QUAN TRỌNG — trước khi bấm START
+
+Để lần khởi động đầu tiên ổn định nhất, hãy dùng **suspended TCLS launch patcher** trước.
+
+**Đừng bấm START** trong launcher Assault Fire lúc này.
+
+Sau khi hoàn tất phần setup bên dưới, emulator đang chạy, bạn đã đăng nhập qua `client.exe` / TCLS và đang ở màn hình **START**, chạy từ root repository:
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\patches\patch_tcls_suspended_launch.py
+```
+
+Chờ tới khi hiện:
+
+```text
+TCLS ARMED
+Click START in the Assault Fire launcher now.
+```
+
+**Chỉ lúc đó mới bấm START.**
+
+Helper sẽ tự động thực hiện đúng thứ tự:
+
+```text
+TCLS creates TGame.exe suspended
+        ↓
+TCLS finishes the shared-memory handoff
+        ↓
+required TGame datetime compatibility patch is applied
+        ↓
+TGame.exe is resumed
+```
+
+Điều này giúp tránh lỗi crash startup TGame cũ khi game bắt đầu chạy trước khi compatibility patch được áp dụng.
+
+> Khi dùng `patch_tcls_suspended_launch.py`, **không chạy thêm `patch_tgame_datetime.py` trong cùng lần launch**. Suspended-launch helper đã áp dụng datetime patch.
+
+Nếu helper báo **TGame build/signature mismatch**, hãy dừng lại và không ép patch. Hiện chỉ hỗ trợ/test Assault Fire PH **v1.0.0.24**.
+
+---
+
 # Bắt đầu tại đây
 
 Nếu đây là lần đầu bạn dùng dự án, hãy làm các bước dưới đây **đúng thứ tự**.
