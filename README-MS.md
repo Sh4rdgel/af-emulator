@@ -63,6 +63,8 @@ Sebelum helper membenarkan game diteruskan, server preflight mesti **PASS**:
 [PREFLIGHT] game launch gate         : UNLOCKED
 ```
 
+Gate yang sementara menjadi `LOCKED` selepas client checks lulus adalah **normal** semasa server sedang bind semua listener yang diperlukan. Jangan launch lagi. Tunggu `game launch gate : UNLOCKED` dan `[MAIN] All listeners running.`
+
 Jika ada `NO`, `client root : None`, atau `game launch gate : LOCKED`, **jangan klik START**. Listener server tidak dibuka dan helper launch yang disokong berhenti dengan `GAME LAUNCH BLOCKED`.
 
 Laporan preflight penuh disimpan dalam `server\af_server_live.log`, dan status gate machine-readable berada dalam `runtime\preflight_status.json`. Baiki masalah, restart server, dan teruskan hanya apabila **UNLOCKED**.
