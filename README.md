@@ -64,7 +64,7 @@ The script handles the annoying parts for you:
 - finds the game automatically;
 - checks that the client is the supported **Assault Fire PH v1.0.0.24** build;
 - installs Python 3.12 with Windows Package Manager when it is missing;
-- creates `.venv` and installs the Python requirements;
+- creates a persistent Python 3.12 runtime at `GAME_ROOT\.af-emulator-runtime\venv-py312` and reuses it across ZIP/repo updates;
 - asks whether you want the verified **permanent TCLS.dll compatibility patch**;
 - creates/verifies the local RSA key pair and installs the matching `APClient.dat`;
 - repairs the three Windows hosts entries;
