@@ -786,8 +786,15 @@ class DedicatedServerSpawner:
             result["state"] = "ROUND_ENDED"
         return result
 
-    def remove_room_player(self, room_id: int, uin: int, reason: str = "player left room") -> dict:
-        """Remove one lobby member. Shared AFDEV survives while any match player remains."""
+    def remove_room_player(
+        self,
+        room_id: int,
+        uin: int,
+        reason: str = "player left room",
+        *,
+        authoritative_new_owner: Optional[int] = None,
+    ) -> dict:
+        """Remove one lobby member using RoomRegistry as owner-transfer authority."""
         room_id = int(room_id); uin = int(uin)
         action = "KEEP"
         transfer = None
@@ -798,11 +805,19 @@ class DedicatedServerSpawner:
             a.match_players.discard(uin)
             a.room_players.discard(uin)
             if a.owner_id == uin and a.room_players:
+                if authoritative_new_owner is None:
+                    raise SpawnerError(
+                        f"room {room_id} owner left but no authoritative replacement was supplied"
+                    )
                 old_owner = a.owner_id
-                new_owner = min(a.room_players)
+                new_owner = int(authoritative_new_owner)
+                if new_owner not in a.room_players:
+                    raise SpawnerError(
+                        f"room {room_id} authoritative new owner {new_owner} is not a remaining room player"
+                    )
                 self._owner_to_room.pop(int(old_owner), None)
-                a.owner_id = int(new_owner)
-                self._owner_to_room[int(new_owner)] = room_id
+                a.owner_id = new_owner
+                self._owner_to_room[new_owner] = room_id
                 transfer = (old_owner, new_owner)
             room_remaining = len(a.room_players)
             match_remaining = len(a.match_players)
