@@ -70,6 +70,8 @@ Sa dili pa tugotan sa launch helper ang game, kinahanglan **PASS** una ang serve
 [PREFLIGHT] game launch gate         : UNLOCKED
 ```
 
+**Normal ra** nga mahimong `LOCKED` kadiyot ang gate human mopasa ang client checks samtang gi-bind sa server ang tanan required listeners. Ayaw sa pag-launch. Hulata ang sunod nga `game launch gate : UNLOCKED` ug `[MAIN] All listeners running.`
+
 Kung naay `NO`, `client root : None`, o `game launch gate : LOCKED`, **ayaw i-click ang START**. Dili mo-open ang server listeners ug ang supported launch helpers mohunong nga adunay `GAME LAUNCH BLOCKED`.
 
 Ang full preflight report naa sa `server\af_server_live.log` ug ang machine-readable gate state naa sa `runtime\preflight_status.json`. Human ayuhon ang problema, i-restart ang server ug padayon lamang kung **UNLOCKED**.
