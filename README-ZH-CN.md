@@ -70,6 +70,8 @@ TGame.exe is resumed
 [PREFLIGHT] game launch gate         : UNLOCKED
 ```
 
+客户端检查通过后，服务器在绑定所有必需监听端口期间，启动门短暂显示 `LOCKED` 是**正常现象**。此时不要启动游戏；请等待后续出现 `game launch gate : UNLOCKED` 和 `[MAIN] All listeners running.`。
+
 如果出现任何 `NO`、`client root : None` 或 `game launch gate : LOCKED`，**不要点击 START**。服务器不会开放游戏服务监听端口，受支持的启动 helper 会直接显示 `GAME LAUNCH BLOCKED` 并停止。
 
 完整 preflight 报告会写入 `server\af_server_live.log`，机器可读的门状态写入 `runtime\preflight_status.json`。修复问题并重启服务器，只有看到 **UNLOCKED** 后才能继续。
