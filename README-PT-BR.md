@@ -51,6 +51,27 @@ Isso ajuda a evitar um crash conhecido do TGame antigo quando o jogo começa a e
 
 Se aparecer **TGame build/signature mismatch**, pare e não force o patch. Atualmente somente Assault Fire PH **v1.0.0.24** é suportado/testado.
 
+## Logging level
+
+Você pode deixar o console mais limpo sem perder os logs de desenvolvimento.
+
+```powershell
+$env:AF_LOG_LEVEL = "DEBUG"
+```
+
+Níveis: `DEBUG`, `INFO` (padrão), `WARNING`, `ERROR`.
+
+- `DEBUG` — mostra tudo no console.
+- `INFO` — esconde DEBUG do console.
+- `WARNING` — mostra apenas WARNING e ERROR.
+- `ERROR` — mostra apenas ERROR.
+
+**Mesmo que o console não esteja em DEBUG, `server\af_server_live.log` sempre salva DEBUG e todos os níveis superiores.** Assim os detalhes necessários para bugs e development continuam disponíveis.
+
+Raw AUTH plaintext/ciphertext não é salvo automaticamente porque pode conter material de autenticação. Use apenas em diagnostic local controlado com `$env:AF_DEBUG_AUTH_HEX = "1"`.
+
+---
+
 ## Mandatory preflight launch gate
 
 Antes de o helper permitir que o jogo continue, o server preflight precisa estar em **PASS**:
