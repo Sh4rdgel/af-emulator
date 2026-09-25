@@ -52,7 +52,31 @@ You can also export all known absolute symbols as an IDA IDC script or CSV:
 .\.venv\Scripts\python.exe .\tools\research\afre.py export-labels --format csv --out af_10024_labels.csv
 ```
 
-## 3. Resolve crash and trace addresses
+## 3. Query the UE3 object database
+
+The object database is:
+
+```text
+tools/research/af_objects_10024.json
+```
+
+It stores reflection layouts, gameplay objects, native TG classes, script classes, bit masks, and known layout conflicts recovered from prior project research.
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\research\afre.py objects
+.\.venv\Scripts\python.exe .\tools\research\afre.py objects --filter Player
+.\.venv\Scripts\python.exe .\tools\research\afre.py object PVEPlayerController
+.\.venv\Scripts\python.exe .\tools\research\afre.py field PVEPlayerController HUD
+.\.venv\Scripts\python.exe .\tools\research\afre.py audit-objects
+.\.venv\Scripts\python.exe .\tools\research\afre.py conflicts
+```
+
+The database deliberately records unresolved conflicts instead of silently choosing one value. In particular, prior live PVE lifecycle work used the controller fields around `+0x370`, while later AFDEV loader code uses the `+0x66C` family. Keep both until object ownership is revalidated.
+
+Do not store live UObject instance addresses in this file; those are session-specific. Store stable class layouts, constructors, vtables, functions, relationships, and verified masks.
+
+## 4. Resolve crash and trace addresses
+
 
 For one address:
 
@@ -68,7 +92,7 @@ For a whole text log:
 
 AFRE annotates addresses only when they are inside the validated TGame image and sufficiently close to a known symbol.
 
-## 4. Detect loader/catalog drift
+## 5. Detect loader/catalog drift
 
 The AFDEV loader still contains build-specific constants. Check that its important addresses agree with the central catalog:
 
@@ -78,7 +102,7 @@ The AFDEV loader still contains build-specific constants. Check that its importa
 
 If this reports a mismatch, investigate it before copying either value into another script.
 
-## 5. Diff structured captures
+## 6. Diff structured captures
 
 When research produces JSON before/after captures, compare them with:
 
