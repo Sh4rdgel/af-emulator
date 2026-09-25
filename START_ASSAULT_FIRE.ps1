@@ -22,7 +22,8 @@ of the user's exact validated TGame.exe.
 [CmdletBinding()]
 param(
     [switch]$SetupOnly,
-    [switch]$SkipPythonInstall
+    [switch]$SkipPythonInstall,
+    [switch]$KeepServer
 )
 
 $ErrorActionPreference = "Stop"
@@ -202,7 +203,7 @@ function Ensure-Venv([string]$RepoRoot, [string]$BootstrapPython) {
 
     if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
         Write-Host "[SETUP] Creating Python environment..."
-        Invoke-Checked $BootstrapPython @("-m", "venv", (Join-Path $RepoRoot ".venv")) "create .venv"
+        Invoke-Checked -Exe $BootstrapPython -Arguments @("-m", "venv", (Join-Path $RepoRoot ".venv")) -Description "create .venv"
     } else {
         Write-Host "[OK] Python environment already exists." -ForegroundColor Green
     }
@@ -219,7 +220,7 @@ function Ensure-Venv([string]$RepoRoot, [string]$BootstrapPython) {
 
     if ($currentHash -ne $wantedHash) {
         Write-Host "[SETUP] Installing/updating emulator Python dependencies..."
-        Invoke-Checked $venvPython @("-m", "pip", "install", "--disable-pip-version-check", "-r", $requirements) "install requirements"
+        Invoke-Checked -Exe $venvPython -Arguments @("-m", "pip", "install", "--disable-pip-version-check", "-r", $requirements) -Description "install requirements"
         Set-Content -LiteralPath $marker -Value $wantedHash -Encoding ASCII
     } else {
         Write-Host "[OK] Python dependencies are already installed." -ForegroundColor Green
@@ -316,7 +317,10 @@ function Stop-ExistingEmulatorServer([string]$RepoRoot) {
             Where-Object {
                 $_.CommandLine -and
                 $_.CommandLine -match "assaultfire_server_v143b\.py" -and
-                $_.CommandLine -like "*$RepoRoot*"
+                $_.CommandLine.IndexOf(
+                    $RepoRoot,
+                    [System.StringComparison]::OrdinalIgnoreCase
+                ) -ge 0
             }
         )
     } catch {}
@@ -370,7 +374,7 @@ function Ensure-PermanentTCLS([string]$RepoRoot, [string]$GameRoot, [string]$Ven
     }
 
     $patcher = Join-Path $RepoRoot "tools\patches\patch_tcls_apclient_raw_pem.py"
-    Invoke-Checked $VenvPython @($patcher, $tcls, "--apply") "apply verified permanent TCLS compatibility patch"
+    Invoke-Checked -Exe $VenvPython -Arguments @($patcher, $tcls, "--apply") -Description "apply verified permanent TCLS compatibility patch"
 
     $after = Get-Sha256 $tcls
     if ($after -ne $TCLS_PATCHED_SHA256) {
@@ -400,11 +404,11 @@ function Ensure-Keys([string]$RepoRoot, [string]$GameRoot, [string]$VenvPython) 
         Write-Host "[SETUP] Local RSA/APClient pair is incomplete; generating a fresh matching pair..."
         Backup-IfExists $privateKey "oneclick_old"
         Backup-IfExists $publicKey "oneclick_old"
-        Invoke-Checked $VenvPython @(
+        Invoke-Checked -Exe $VenvPython -Arguments @(
             $generator,
             "--client-config-dir", $clientConfig,
             "--force"
-        ) "generate and install local RSA/APClient pair"
+        ) -Description "generate and install local RSA/APClient pair"
     } else {
         $copyNeeded = $true
         if (Test-Path -LiteralPath $clientAP -PathType Leaf) {
@@ -436,11 +440,11 @@ function Ensure-Keys([string]$RepoRoot, [string]$GameRoot, [string]$VenvPython) 
     Backup-IfExists $publicKey "oneclick_mismatch"
     Backup-IfExists $clientAP "oneclick_mismatch"
 
-    Invoke-Checked $VenvPython @(
+    Invoke-Checked -Exe $VenvPython -Arguments @(
         $generator,
         "--client-config-dir", $clientConfig,
         "--force"
-    ) "regenerate matching local RSA/APClient pair"
+    ) -Description "regenerate matching local RSA/APClient pair"
 
     & $VenvPython $diagnose --client-root $GameRoot
     if ($LASTEXITCODE -ne 0) {
@@ -534,11 +538,16 @@ if (-not (Test-IsAdministrator)) {
     Write-Host "[AF-ONECLICK] Administrator access is required for the Windows hosts file and runtime launch patches."
     Write-Host "[AF-ONECLICK] Asking Windows for permission..."
     try {
-        Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList @(
+        $elevatedArgs = @(
             "-NoProfile",
             "-ExecutionPolicy", "Bypass",
             "-File", ('"' + $self + '"')
         )
+        if ($SetupOnly) { $elevatedArgs += "-SetupOnly" }
+        if ($SkipPythonInstall) { $elevatedArgs += "-SkipPythonInstall" }
+        if ($KeepServer) { $elevatedArgs += "-KeepServer" }
+
+        Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList $elevatedArgs
     } catch {
         Stop-WithMessage "Administrator elevation was cancelled or failed: $($_.Exception.Message)"
     }
@@ -661,8 +670,35 @@ try {
         if ($game) {
             Write-Host ""
             Write-Host "[SUCCESS] TGame.exe launched. PID=$($game.Id)" -ForegroundColor Green
-            Write-Host "[SUCCESS] Leave the SERVER window open while you play."
-            Start-Sleep -Seconds 2
+
+            if ($KeepServer) {
+                Write-Host "[SUCCESS] -KeepServer was selected; the emulator server will remain running."
+                Start-Sleep -Seconds 2
+                exit 0
+            }
+
+            Write-Host "[SESSION] This one-click window will stay open while you play."
+            Write-Host "[SESSION] When TGame.exe closes, it will stop the emulator server automatically."
+
+            try {
+                Wait-Process -Id $game.Id
+            } catch {}
+
+            Write-Host ""
+            Write-Host "[CLEANUP] TGame.exe closed. Stopping the emulator server..."
+            try {
+                if ($status.server_pid) {
+                    Stop-Process -Id ([int]$status.server_pid) -Force -ErrorAction SilentlyContinue
+                }
+            } catch {}
+            try {
+                if ($serverWindow -and -not $serverWindow.HasExited) {
+                    Stop-Process -Id $serverWindow.Id -Force -ErrorAction SilentlyContinue
+                }
+            } catch {}
+
+            Write-Host "[CLEANUP] Done." -ForegroundColor Green
+            Read-Host "Press Enter to close"
             exit 0
         }
 
