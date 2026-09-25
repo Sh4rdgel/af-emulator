@@ -39,6 +39,7 @@ from assaultfire_room_registry import (
 )
 
 from assaultfire_preflight import run_server_preflight, update_launch_gate_status
+from assaultfire_logging import build_logger
 from local_ap_sync import LocalAPSync
 
 # v24: v20 success framing plus BOTH PublicData bitmap and PrivateData tail probes.
@@ -292,17 +293,16 @@ except Exception as e:
 # Logging
 # ---------------------------------------------------------------------------
 
-def log(label, message):
-    line = (
-        f"[{time.strftime('%H:%M:%S')}] "
-        f"[{label}] {message}"
+_SERVER_LOGGER = build_logger()
+
+
+def log(label, message, level=None):
+    """Console-filtered logger with always-on DEBUG file capture."""
+    return _SERVER_LOGGER.emit(
+        label,
+        str(message),
+        level=level,
     )
-    print(line, flush=True)
-    try:
-        with open(os.environ.get("AF_LOG_PATH", str(Path(__file__).with_name("af_server_live.log"))), "a", encoding="utf-8") as fp:
-            fp.write(line + "\n")
-    except OSError:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -1279,7 +1279,8 @@ def handle_auth(conn, addr):
         if DEBUG_AUTH_HEX:
             log(
                 "AUTH-DEBUG",
-                f"AP RX encrypted {len(ciphertext)}B: {ciphertext.hex()}"
+                f"AP RX encrypted {len(ciphertext)}B: {ciphertext.hex()}",
+                level="DEBUG",
             )
 
         plaintext = ap_decrypt(
@@ -1290,7 +1291,8 @@ def handle_auth(conn, addr):
         if DEBUG_AUTH_HEX:
             log(
                 "AUTH-DEBUG",
-                f"AP RX plaintext {len(plaintext)}B: {plaintext.hex()}"
+                f"AP RX plaintext {len(plaintext)}B: {plaintext.hex()}",
+                level="DEBUG",
             )
 
         hdr = parse_tdr_header(
@@ -1350,11 +1352,13 @@ def handle_auth(conn, addr):
         if DEBUG_AUTH_HEX:
             log(
                 "AUTH-DEBUG",
-                f"AP TX cmd=4 plaintext {len(result_plain)}B: {result_plain.hex()}"
+                f"AP TX cmd=4 plaintext {len(result_plain)}B: {result_plain.hex()}",
+                level="DEBUG",
             )
             log(
                 "AUTH-DEBUG",
-                f"AP TX cmd=4 frame {len(result_frame)}B: {result_frame.hex()}"
+                f"AP TX cmd=4 frame {len(result_frame)}B: {result_frame.hex()}",
+                level="DEBUG",
             )
         else:
             log("AUTH", f"AP TX cmd=4 frame {len(result_frame)}B")
@@ -1379,7 +1383,8 @@ def handle_auth(conn, addr):
             if DEBUG_AUTH_HEX:
                 log(
                     "AUTH-DEBUG",
-                    f"AP RX second encrypted {len(ack_ciphertext)}B: {ack_ciphertext.hex()}"
+                    f"AP RX second encrypted {len(ack_ciphertext)}B: {ack_ciphertext.hex()}",
+                    level="DEBUG",
                 )
 
             ack_plaintext = ap_decrypt(
@@ -1390,7 +1395,8 @@ def handle_auth(conn, addr):
             if DEBUG_AUTH_HEX:
                 log(
                     "AUTH-DEBUG",
-                    f"AP RX second plaintext {len(ack_plaintext)}B: {ack_plaintext.hex()}"
+                    f"AP RX second plaintext {len(ack_plaintext)}B: {ack_plaintext.hex()}",
+                    level="DEBUG",
                 )
 
             if len(ack_plaintext) >= 10:
@@ -6245,7 +6251,8 @@ def handle_placeholder(conn, addr, label):
         log(
             label,
             f"FIRST RX COMPLETE ({len(data)}B) "
-            f"OWNER={owner}: {_short_hex(data, 96)}"
+            f"OWNER={owner}: {_short_hex(data, 96)}",
+            level="DEBUG",
         )
 
         if label.upper() in ("ROLE", "ZONE", "DS-TCP"):
@@ -6263,7 +6270,8 @@ def handle_placeholder(conn, addr, label):
         if len(data) >= 4:
             log(
                 label,
-                f"First bytes: {data[:16].hex(' ')}"
+                f"First bytes: {data[:16].hex(' ')}",
+                level="DEBUG",
             )
 
             # ProtocalHandler's final send path forces byte[3] = 0x04.
@@ -6398,7 +6406,11 @@ def handle_placeholder(conn, addr, label):
                         tgame_mode4_key, tgame_crypto_mode
                     )
                     conn.sendall(syn)
-                    log(label, f"TX TGAME cmd08 SYN v42 ({len(syn)}B): {syn.hex()}")
+                    log(
+                        label,
+                        f"TX TGAME cmd08 SYN v42 ({len(syn)}B): {syn.hex()}",
+                        level="DEBUG",
+                    )
                     log(
                         label,
                         f"TX TGAME SYN challenge={TGAME_SYN_RAND!r} "
@@ -6423,7 +6435,13 @@ def handle_placeholder(conn, addr, label):
                     cmdid = int.from_bytes(app_plain[8:10], "big")
                     app_seq = int.from_bytes(app_plain[10:14], "big")
                     app_uin = int.from_bytes(app_plain[14:18], "big") if len(app_plain) >= 18 else None
-                    log(label, f"TACC request decoded: len={app_len} magic=0x{magic:04x} ver={ver} cmdid={cmdid} app_seq={app_seq} app_uin={app_uin} raw={app_plain.hex()}")
+                    log(
+                        label,
+                        f"TACC request decoded: len={app_len} magic=0x{magic:04x} "
+                        f"ver={ver} cmdid={cmdid} app_seq={app_seq} "
+                        f"app_uin={app_uin} raw={app_plain.hex()}",
+                        level="DEBUG",
+                    )
                 except Exception as e:
                     log(label, f"TACC request parse error: {e}")
             if label.upper() == "ROLE" and (not role_state.get("tgame")) and role_state.get("mode") == 3 and role_state.get("session_key") and role_state.get("seq") is not None:
