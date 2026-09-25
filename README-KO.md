@@ -72,6 +72,27 @@ D:\AssaultFirePH
 
 ---
 
+## Logging level
+
+Console을 조용하게 해도 development용 DEBUG log는 사라지지 않습니다.
+
+```powershell
+$env:AF_LOG_LEVEL = "DEBUG"
+```
+
+사용 가능: `DEBUG`, `INFO`(기본값), `WARNING`, `ERROR`.
+
+- `DEBUG` — console에 모든 로그 표시.
+- `INFO` — DEBUG를 console에서 숨김.
+- `WARNING` — WARNING과 ERROR만 표시.
+- `ERROR` — ERROR만 표시.
+
+**Console이 DEBUG가 아니어도 `server\af_server_live.log`에는 DEBUG 이상이 항상 저장됩니다.** Bug report와 development에 필요한 상세 기록은 유지됩니다.
+
+Raw AUTH plaintext/ciphertext는 인증 정보를 포함할 수 있으므로 자동 저장하지 않습니다. Controlled local diagnostic에서만 `$env:AF_DEBUG_AUTH_HEX = "1"`을 사용하세요.
+
+---
+
 # Quick start
 
 ## 1. Emulator 받기
