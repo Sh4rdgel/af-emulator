@@ -86,7 +86,8 @@
           "offset": "0xC8",
           "type": "native function pointer"
         }
-      }
+      },
+      "vtable": "0x01A1ECE0"
     },
     "UProperty": {
       "parent": "UField",
@@ -309,12 +310,66 @@
           "bits": {
             "bWaitingLoadingProcessComplete": "0x00000001"
           }
+        },
+        "bInitialProcessingComplete": {
+          "offset": "0x880",
+          "type": "bitfield",
+          "bits": {
+            "bit0": "0x00000001"
+          },
+          "status": "live-validated-character-lifecycle"
+        },
+        "MaxResponseTime": {
+          "offset": "0x388",
+          "type": "float",
+          "status": "verified-movement-bridge"
+        },
+        "CurrentTimeStamp": {
+          "offset": "0x3F8",
+          "type": "float",
+          "status": "verified-movement-bridge"
+        },
+        "PendingAdjustmentTimeStamp": {
+          "offset": "0x424",
+          "type": "float",
+          "status": "verified-movement-bridge"
+        },
+        "PendingAdjustmentAckGoodMove": {
+          "offset": "0x454",
+          "type": "byte/bool",
+          "status": "verified-movement-bridge"
         }
       },
       "notes": [
         "NotifyClientLoadingProcessComplete cleared LoadingGate bit 0 on the live remote controller.",
         "Runtime PVE FName indices are session-dependent; resolve names live."
-      ]
+      ],
+      "virtuals": {
+        "ServerMove": {
+          "slot_offset": "0x4C8",
+          "target": "0x013A88D0",
+          "status": "static-recovered",
+          "notes": "Shipped outer handler is stripped/no-op (ret 0x28)."
+        },
+        "ServerMoveClientError": {
+          "slot_offset": "0x4CC",
+          "target": "0x008F2620",
+          "status": "static-recovered",
+          "notes": "Surviving stock PH client-error/correction engine."
+        },
+        "MoveAutonomous": {
+          "slot_offset": "0x4D0",
+          "target": "0x008F24B0",
+          "status": "static-recovered",
+          "notes": "Surviving authoritative movement engine."
+        },
+        "PlayerWalkingServerMove": {
+          "slot_offset": "0x528",
+          "target": "0x013A88D0",
+          "status": "static-recovered",
+          "notes": "Shipped outer handler is stripped/no-op (ret 0x28)."
+        }
+      }
     },
     "PlayerReplicationInfo": {
       "status": "verified-pve",
@@ -442,7 +497,8 @@
       "fields": {
         "Timers": {
           "offset": "0xA4",
-          "type": "TArray<...>"
+          "type": "TArray<PVEGRITimerElement>",
+          "status": "verified-clock-sync"
         },
         "ElapsedTime": {
           "offset": "0x1E4",
@@ -541,6 +597,48 @@
       },
       "notes": [
         "Kept here for cross-module RE convenience; this is not a UObject layout."
+      ]
+    },
+    "AActor": {
+      "status": "verified-same-era-layout",
+      "fields": {
+        "Rotation": {
+          "offset": "0x60",
+          "type": "FRotator",
+          "status": "verified-movement-bridge"
+        }
+      }
+    },
+    "PVEPlayerReplicationInfo": {
+      "parent": "PlayerReplicationInfo",
+      "status": "live-validated-character-data",
+      "fields": {
+        "LastReceivedCharacterDataTime": {
+          "offset": "0x3BC",
+          "type": "float",
+          "size": "0x04"
+        },
+        "Flags": {
+          "offset": "0x3C0",
+          "type": "uint32",
+          "bits": {
+            "bAlwaysObserver_or_PVE_start_gate": "0x00000004"
+          }
+        },
+        "CharInfo": {
+          "offset": "0x760",
+          "type": "struct/blob",
+          "size": "0xE8"
+        },
+        "ArmorTypes": {
+          "offset": "0xCA0",
+          "type": "TArray",
+          "size": "0x0C"
+        }
+      },
+      "notes": [
+        "The authoritative AFDEV/client split probes used these exact reflected fields.",
+        "A separate unrelated reflected field named CharInfo was observed at +0x2D0; do not confuse it with the proven +0x760 character-data field."
       ]
     }
   },
@@ -719,7 +817,12 @@
       "probe_afdev_tgnethandler_registration_v18.py",
       "probe_afdev_ds_transport_v2.py",
       "dsm_runtime_redirect_v30.py",
-      "assaultfire_server_role_v76_propoperation.py"
+      "assaultfire_server_role_v76_propoperation.py",
+      "AFDevLoader_v48_maya_legacy_native_view.py",
+      "AFDevLoader_v48_spawner_multi_instance.py",
+      "probe_real_character_completion_callers_v6.py",
+      "probe_afdev_charinfo_writers_v35b_fixed.py",
+      "resolve_pve_transition_new_session_v2.py"
     ],
     "status_meanings": {
       "verified": "Repeatedly validated against the exact clean PH v1.0.0.24 binary and/or live runtime.",
@@ -776,5 +879,72 @@
       "status": "superseded-by-later-corrected-native-class-map",
       "notes": "An earlier loader mapped TGGame to 0x01D687E0; later exact-build class mapping explicitly replaced that interpretation."
     }
-  ]
+  ],
+  "structs": {
+    "TArray": {
+      "status": "stable-ue3-layout",
+      "size": "0x0C",
+      "fields": {
+        "Data": {
+          "offset": "0x00",
+          "type": "pointer"
+        },
+        "Num": {
+          "offset": "0x04",
+          "type": "int32"
+        },
+        "Max": {
+          "offset": "0x08",
+          "type": "int32"
+        }
+      }
+    },
+    "FString": {
+      "parent": "TArray<TCHAR>",
+      "status": "stable-ue3-layout",
+      "size": "0x0C",
+      "fields": {
+        "Data": {
+          "offset": "0x00",
+          "type": "TCHAR*"
+        },
+        "Num": {
+          "offset": "0x04",
+          "type": "int32"
+        },
+        "Max": {
+          "offset": "0x08",
+          "type": "int32"
+        }
+      }
+    },
+    "FRotator": {
+      "status": "verified-same-era-layout",
+      "size": "0x0C",
+      "fields": {
+        "Pitch": {
+          "offset": "0x00",
+          "type": "int32"
+        },
+        "Yaw": {
+          "offset": "0x04",
+          "type": "int32"
+        },
+        "Roll": {
+          "offset": "0x08",
+          "type": "int32"
+        }
+      }
+    },
+    "PVEGRITimerElement": {
+      "status": "verified-clock-sync",
+      "size": "0x1C",
+      "fields": {
+        "Accumulator": {
+          "offset": "0x10",
+          "type": "float"
+        }
+      }
+    }
+  }
 }
