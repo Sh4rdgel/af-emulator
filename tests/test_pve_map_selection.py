@@ -52,6 +52,36 @@ class PVEMapSelectionTests(unittest.TestCase):
         self.assertIn("mode_now not in TGAME_AFDEV_MODE_IDS", server)
         self.assertNotIn("ZN2C_NTF_STARTMATCH legacy-non-PVE", server)
 
+    def test_afdev_loader_accepts_defense_settings_family(self):
+        loader = self.text(
+            "tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py"
+        )
+        self.assertIn('0x00002001: "Survival"', loader)
+        self.assertIn('0x00002002: "Defense"', loader)
+        self.assertIn("unsupported AFDEV ModeId", loader)
+        self.assertNotIn(
+            'PvE loader expected ModeId 0x2001',
+            loader,
+        )
+
+    def test_defense_does_not_require_survival_gri_difficulty_field(self):
+        loader = self.text(
+            "tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py"
+        )
+        self.assertIn(
+            "if mode_id == 0x00002001:",
+            loader,
+        )
+        self.assertIn(
+            "Defense GRI difficulty write skipped",
+            loader,
+        )
+        self.assertIn(
+            '"difficulty_applied": difficulty_applied',
+            loader,
+        )
+
+
 
 if __name__ == "__main__":
     unittest.main()
