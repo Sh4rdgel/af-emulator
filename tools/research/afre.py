@@ -9,9 +9,11 @@ symbol lookup, and address-to-symbol resolution for future research tooling.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import struct
 import sys
@@ -198,6 +200,142 @@ def validate_build(
     return ok, messages, pe
 
 
+
+AUDIT_BINDINGS = {
+    "GIS_EDITOR_VA": ("symbols", "globals", "GIsEditor", "va"),
+    "GIS_CLIENT_VA": ("symbols", "globals", "GIsClient", "va"),
+    "GIS_SERVER_VA": ("symbols", "globals", "GIsServer", "va"),
+    "GLOG_PTR_VA": ("symbols", "globals", "GLog", "va"),
+    "GENGINE_PTR_VA": ("symbols", "globals", "GEngine", "va"),
+    "GWORLD_PTR_VA": ("symbols", "globals", "GWorld", "va"),
+    "IS_BOOT_FROM_TCLS_VA": ("symbols", "globals", "IsBootFromTCLS", "va"),
+    "V72_AES_SETKEY": ("symbols", "functions", "AES_SetKey", "va"),
+    "STOP_LOADING_MOVIE_VA": ("symbols", "functions", "StopLoadingMovie", "va"),
+    "AF_SHOW_LOADING_MOVIE_VA": ("symbols", "functions", "AF_ShowLoadingMovie", "va"),
+    "TGAMEENGINE_EXEC_VA": ("symbols", "functions", "UTGameEngine_Exec", "va"),
+    "DEVLOGIN_VA": ("symbols", "functions", "TGTenio_DevLogin", "va"),
+    "DSM_VTABLE_VA": ("symbols", "vtables", "TGDsDsmNetHandler", "va"),
+    "PVE_PC_VTABLE_V24": ("symbols", "vtables", "PVEPlayerController", "va"),
+    "LOGININFO_FAIL_VA": ("symbols", "patch_sites", "LoginInfoFail", "va"),
+    "GIS_CLIENT_FINAL_WRITE_VA": (
+        "symbols", "patch_sites", "GIsClientFinalWrite", "va"
+    ),
+    "GIS_SERVER_FINAL_RESET_VA": (
+        "symbols", "patch_sites", "GIsServerFinalReset", "va"
+    ),
+    "GAMEPLAYERS_OFFSET": ("layouts", "UGameEngine", "GamePlayers", "offset"),
+    "LOCALPLAYER_PC_OFFSET": (
+        "layouts", "ULocalPlayer", "PlayerController", "offset"
+    ),
+    "V72_OFF_WORLD_NETDRIVER": ("layouts", "UWorld", "NetDriver", "offset"),
+    "CONTROLLER_PAWN_OFFSET": ("layouts", "AController", "Pawn", "offset"),
+    "PC_PLAYER_OFFSET": ("layouts", "APlayerController", "Player", "offset"),
+    "PC_CAMERA_OFFSET": ("layouts", "APlayerController", "PlayerCamera", "offset"),
+    "PC_ACK_PAWN_OFFSET": (
+        "layouts", "APlayerController", "AcknowledgedPawn", "offset"
+    ),
+    "PVE_PC_PRI_OFFSET_V24": (
+        "layouts", "PVEPlayerController", "PlayerReplicationInfo", "offset"
+    ),
+    "V72_OFF_NETDRIVER_SOCKET": ("layouts", "UNetDriver", "Socket", "offset"),
+}
+
+
+def catalog_value(catalog: dict[str, Any], path: tuple[str, ...]) -> int:
+    node: Any = catalog
+    for key in path:
+        node = node[key]
+    return parse_int(node)
+
+
+def extract_int_constants(path: Path) -> dict[str, int]:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, SyntaxError) as exc:
+        raise AfreError(f"cannot parse loader {path}: {exc}") from exc
+    out: dict[str, int] = {}
+    for node in tree.body:
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        if not isinstance(target, ast.Name):
+            continue
+        value = node.value
+        if isinstance(value, ast.Constant) and isinstance(value.value, int):
+            out[target.id] = int(value.value)
+    return out
+
+
+def audit_loader_constants(
+    catalog: dict[str, Any], loader_path: Path
+) -> list[tuple[str, int | None, int]]:
+    constants = extract_int_constants(loader_path)
+    mismatches = []
+    for const_name, cat_path in AUDIT_BINDINGS.items():
+        expected = catalog_value(catalog, cat_path)
+        actual = constants.get(const_name)
+        if actual != expected:
+            mismatches.append((const_name, actual, expected))
+    return mismatches
+
+
+ADDRESS_RE = re.compile(r"0x[0-9A-Fa-f]{6,8}")
+
+
+def annotate_text(
+    text: str, catalog: dict[str, Any], max_delta: int = 0x400
+) -> str:
+    build = catalog["build"]
+    image_lo = parse_int(build["image_base"])
+    image_hi = image_lo + parse_int(build["size_of_image"])
+    out = []
+    for line in text.splitlines():
+        annotations = []
+        seen = set()
+        for token in ADDRESS_RE.findall(line):
+            address = parse_int(token)
+            if not (image_lo <= address < image_hi):
+                continue
+            try:
+                group, name, _, delta = nearest_symbol(catalog, address)
+            except AfreError:
+                continue
+            if delta > max_delta:
+                continue
+            label = f"{token}={group}.{name}+0x{delta:X}"
+            if label not in seen:
+                annotations.append(label)
+                seen.add(label)
+        if annotations:
+            out.append(line + "    [AFRE " + "; ".join(annotations) + "]")
+        else:
+            out.append(line)
+    suffix = "\n" if text.endswith("\n") else ""
+    return "\n".join(out) + suffix
+
+
+def flatten_json(value: Any, prefix: str = "") -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    if isinstance(value, dict):
+        for key in sorted(value):
+            child = f"{prefix}.{key}" if prefix else str(key)
+            out.update(flatten_json(value[key], child))
+    else:
+        out[prefix] = value
+    return out
+
+
+def diff_json(before: Any, after: Any) -> list[tuple[str, Any, Any]]:
+    a = flatten_json(before)
+    b = flatten_json(after)
+    keys = sorted(set(a) | set(b))
+    return [
+        (key, a.get(key), b.get(key))
+        for key in keys
+        if a.get(key) != b.get(key)
+    ]
+
+
 def fmt_symbol(group: str, name: str, meta: dict[str, Any]) -> str:
     va = meta.get("va", "-")
     status = meta.get("status", "-")
@@ -280,6 +418,51 @@ def cmd_layout(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
     return 0
 
 
+
+def cmd_audit_loader(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    mismatches = audit_loader_constants(catalog, Path(args.loader))
+    if not mismatches:
+        print("[AFRE] loader/catalog constants match")
+        return 0
+    for name, actual, expected in mismatches:
+        actual_text = "MISSING" if actual is None else f"0x{actual:X}"
+        print(f"{name}: loader={actual_text} catalog=0x{expected:X}")
+    print(f"[AFRE] {len(mismatches)} mismatch(es)")
+    return 2
+
+
+def cmd_annotate(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    path = Path(args.log)
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        raise AfreError(f"cannot read log {path}: {exc}") from exc
+    output = annotate_text(text, catalog, parse_int(args.max_delta))
+    if args.out:
+        Path(args.out).write_text(output, encoding="utf-8")
+        print(f"[AFRE] annotated: {args.out}")
+    else:
+        print(output, end="")
+    return 0
+
+
+def cmd_json_diff(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    del catalog
+    try:
+        before = json.loads(Path(args.before).read_text(encoding="utf-8"))
+        after = json.loads(Path(args.after).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise AfreError(f"cannot read JSON snapshots: {exc}") from exc
+    changes = diff_json(before, after)
+    if not changes:
+        print("[AFRE] no changes")
+        return 0
+    for key, old, new in changes:
+        print(f"{key}: {old!r} -> {new!r}")
+    print(f"[AFRE] {len(changes)} changed field(s)")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Read-only Assault Fire PH v1.0.0.24 RE helper"
@@ -315,6 +498,24 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("layout", help="show known structure offsets")
     p.add_argument("type_name", nargs="?")
     p.set_defaults(func=cmd_layout)
+
+    p = sub.add_parser("audit-loader", help="check loader constants against catalog")
+    p.add_argument(
+        "--loader",
+        default="tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py",
+    )
+    p.set_defaults(func=cmd_audit_loader)
+
+    p = sub.add_parser("annotate", help="annotate TGame addresses in a text log")
+    p.add_argument("log")
+    p.add_argument("--out")
+    p.add_argument("--max-delta", default="0x400")
+    p.set_defaults(func=cmd_annotate)
+
+    p = sub.add_parser("json-diff", help="diff two JSON snapshots")
+    p.add_argument("before")
+    p.add_argument("after")
+    p.set_defaults(func=cmd_json_diff)
     return parser
 
 
