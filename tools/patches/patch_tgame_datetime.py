@@ -231,7 +231,7 @@ def find_module_info(pid, module_name):
     flags = TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32
     snap = kernel32.CreateToolhelp32Snapshot(flags, pid)
     if snap == INVALID_HANDLE_VALUE:
-        return None
+        return None, None
 
     try:
         me = MODULEENTRY32W()
