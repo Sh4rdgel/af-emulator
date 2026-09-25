@@ -58,6 +58,27 @@ Makatabang kini malikayan ang known legacy TGame startup crash kung modagan ang 
 
 Kung mo-report og **TGame build/signature mismatch**, hunong ug ayaw pugsa ang patch. Assault Fire PH **v1.0.0.24 lamang** ang supported/tested karon.
 
+## Logging level
+
+Mahimo nimong pahilumon ang console nga dili mawala ang development logs.
+
+```powershell
+$env:AF_LOG_LEVEL = "DEBUG"
+```
+
+Mga level: `DEBUG`, `INFO` (default), `WARNING`, `ERROR`.
+
+- `DEBUG` — ipakita tanan sa console.
+- `INFO` — itago lang ang DEBUG sa console.
+- `WARNING` — WARNING ug ERROR lang.
+- `ERROR` — ERROR lang.
+
+**Bisan dili DEBUG ang console, ang `server\af_server_live.log` mag-save gihapon sa DEBUG ug tanang mas taas nga level.** Importante kini para sa bug reports ug development.
+
+Ang raw AUTH plaintext/ciphertext dili automatic nga i-save tungod kay mahimong adunay credential/auth material. Para ra sa controlled local diagnostic: `$env:AF_DEBUG_AUTH_HEX = "1"`.
+
+---
+
 ## Mandatory preflight launch gate
 
 Sa dili pa tugotan sa launch helper ang game, kinahanglan **PASS** una ang server preflight:
