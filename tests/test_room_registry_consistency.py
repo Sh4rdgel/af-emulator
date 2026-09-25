@@ -131,6 +131,40 @@ class RoomRegistryConsistencyTests(unittest.TestCase):
         self.assertIsNotNone(registry.room_for_player(10000))
         self.assertIsNotNone(registry.room_for_player(20000))
 
+    def test_spawner_can_begin_new_round_without_relobby(self):
+        with tempfile.TemporaryDirectory() as td:
+            cfg = SpawnerConfig(
+                enabled=True,
+                max_instances=1,
+                public_port_base=0,
+                target_port_base=0,
+                runtime_dir=Path(td) / "runtime",
+                create_cooldown=0.0,
+            )
+            spawner = DedicatedServerSpawner(cfg)
+            allocation = spawner.reserve_lobby(owner_id=10000)
+            first = spawner.begin_match(1, starter_uin=10000)
+            self.assertTrue(first["new_round"])
+            self.assertEqual(first["match_players"], [10000])
+
+            # Model a live prior round without spawning real subprocesses.
+            allocation.state = "READY"
+            stopped = []
+            spawner._stop_allocation = lambda a: stopped.append(a.room_id)
+
+            quit_result = spawner.quit_match_player(
+                1,
+                10000,
+                reason="test return to room UI",
+            )
+            self.assertTrue(quit_result["ended_round"])
+            self.assertEqual(quit_result["state"], "ROUND_ENDED")
+            self.assertEqual(stopped, [1])
+
+            second = spawner.begin_match(1, starter_uin=10000)
+            self.assertTrue(second["new_round"])
+            self.assertEqual(second["match_players"], [10000])
+
     def test_spawner_refuses_to_guess_owner_transfer(self):
         with tempfile.TemporaryDirectory() as td:
             cfg = SpawnerConfig(
