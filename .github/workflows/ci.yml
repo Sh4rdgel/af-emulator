@@ -44,14 +44,15 @@ jobs:
       - name: Validate one-click PowerShell syntax
         shell: pwsh
         run: |
-          $errors = $null
+          $tokens = $null
+          $parseErrors = $null
           [void][System.Management.Automation.Language.Parser]::ParseFile(
             (Resolve-Path ".\START_ASSAULT_FIRE.ps1"),
-            [ref]$null,
-            [ref]$errors
+            [ref]$tokens,
+            [ref]$parseErrors
           )
-          if ($errors.Count -gt 0) {
-            $errors | ForEach-Object {
+          if ($parseErrors -and $parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object {
               Write-Error ("PowerShell parse error: " + $_.Message)
             }
             exit 1
