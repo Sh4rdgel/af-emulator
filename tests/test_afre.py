@@ -126,6 +126,40 @@ class AfreTests(unittest.TestCase):
         )
 
 
+
+    def test_object_database_loads(self):
+        db = afre.load_object_db(ROOT / "tools" / "research" / "af_objects_10024.json")
+        self.assertEqual(db["schema_version"], 1)
+        self.assertEqual(afre.object_db_errors(db, self.catalog), [])
+
+    def test_lookup_pve_player_controller_object(self):
+        db = afre.load_object_db(ROOT / "tools" / "research" / "af_objects_10024.json")
+        group, name, meta = afre.lookup_object(db, "PVEPlayerController")
+        self.assertEqual((group, name), ("objects", "PVEPlayerController"))
+        self.assertEqual(
+            afre.parse_int(meta["fields"]["PlayerReplicationInfo"]["offset"]),
+            0x1DC,
+        )
+
+    def test_object_database_records_controller_conflict(self):
+        db = afre.load_object_db(ROOT / "tools" / "research" / "af_objects_10024.json")
+        conflicts = {item["id"]: item for item in db["conflicts"]}
+        item = conflicts["APlayerController_player_camera_ack_layout"]
+        variants = {v["name"]: v for v in item["variants"]}
+        self.assertEqual(
+            variants["live_pve_controller"]["fields"]["Player"], "0x370"
+        )
+        self.assertEqual(
+            variants["current_afdevloader_a_player_controller"]["fields"]["Player"],
+            "0x66C",
+        )
+
+    def test_promoted_reflection_symbols(self):
+        group, name, meta = afre.lookup_symbol(self.catalog, "UObject_ProcessEvent")
+        self.assertEqual((group, name), ("functions", "UObject_ProcessEvent"))
+        self.assertEqual(afre.parse_int(meta["va"]), 0x00483440)
+
+
     def test_catalog_is_plain_json(self):
         data = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
         self.assertIn("symbols", data)
