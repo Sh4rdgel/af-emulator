@@ -493,6 +493,37 @@ Full details and failure diagnosis: **[LAUNCH_REQUIREMENTS.md](LAUNCH_REQUIREMEN
 
 ---
 
+## Logging level (optional)
+
+You can make the console quieter without losing development diagnostics.
+
+Default:
+
+```powershell
+$env:AF_LOG_LEVEL = "INFO"
+```
+
+Available console levels are `DEBUG`, `INFO`, `WARNING`, and `ERROR`.
+
+```text
+DEBUG    prints everything
+INFO     hides DEBUG
+WARNING  shows WARNING + ERROR
+ERROR    shows ERROR only
+```
+
+The important rule is that **the file log always keeps DEBUG and above regardless of the console level**. The default file is:
+
+```text
+server\af_server_live.log
+```
+
+So if a player uses `INFO` or `WARNING`, ask them for that file when diagnosing a bug; the hidden DEBUG records are still there.
+
+Raw AUTH plaintext/ciphertext remains separately protected. Only enable it for a controlled local diagnostic with `AF_DEBUG_AUTH_HEX=1`.
+
+---
+
 ## 9. Launch Assault Fire PH
 
 Start the client using the same local client setup you normally use.
