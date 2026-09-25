@@ -112,88 +112,186 @@ function Find-GameRoot([string]$RepoRoot) {
     return $null
 }
 
-function Resolve-Python312 {
+function Test-Python312Path([string]$Candidate) {
+    if (-not $Candidate) {
+        return $null
+    }
+
+    try {
+        # Resolve command names/shims as well as literal executable paths.
+        $command = Get-Command $Candidate -ErrorAction SilentlyContinue
+        $exe = if ($command) { $command.Source } else { $Candidate }
+
+        if (-not $exe -or -not (Test-Path -LiteralPath $exe -PathType Leaf)) {
+            return $null
+        }
+
+        $probe = (& $exe -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{sys.executable}')" 2>$null |
+            Select-Object -First 1)
+
+        if ($LASTEXITCODE -ne 0 -or -not $probe) {
+            return $null
+        }
+
+        $parts = $probe.Trim() -split "\|", 2
+        if ($parts.Count -ne 2 -or $parts[0] -ne "3.12") {
+            return $null
+        }
+
+        $resolved = $parts[1].Trim()
+        if ($resolved -and (Test-Path -LiteralPath $resolved -PathType Leaf)) {
+            return (Resolve-Path -LiteralPath $resolved).Path
+        }
+
+        return (Resolve-Path -LiteralPath $exe).Path
+    } catch {
+        return $null
+    }
+}
+
+function Resolve-Python312([string]$RepoRoot = "") {
+    # Fastest/most reliable case: a previously-created project venv already
+    # contains the exact Python version we need. Do not invoke winget merely
+    # because the global PATH is different in an elevated PowerShell window.
+    if ($RepoRoot) {
+        $venvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
+        $found = Test-Python312Path $venvPython
+        if ($found) {
+            return $found
+        }
+    }
+
+    # Many AF developers install Python using a command named python312.
+    # Check command aliases/shims explicitly before falling back to winget.
+    foreach ($name in @(
+        "python312.exe",
+        "python312",
+        "python3.12.exe",
+        "python3.12",
+        "python.exe",
+        "python"
+    )) {
+        $command = Get-Command $name -ErrorAction SilentlyContinue
+        if ($command) {
+            $found = Test-Python312Path $command.Source
+            if ($found) {
+                return $found
+            }
+        }
+    }
+
+    # Python Launcher can locate 3.12 even when python.exe itself is not on PATH.
     $pyLauncher = Get-Command py.exe -ErrorAction SilentlyContinue
     if ($pyLauncher) {
         try {
-            $resolved = (& $pyLauncher.Source -3.12 -c "import sys; print(sys.executable)" 2>$null | Select-Object -First 1)
+            $resolved = (& $pyLauncher.Source -3.12 -c "import sys; print(sys.executable)" 2>$null |
+                Select-Object -First 1)
             if ($LASTEXITCODE -eq 0 -and $resolved) {
-                $resolved = $resolved.Trim()
-                if (Test-Path -LiteralPath $resolved -PathType Leaf) {
-                    return $resolved
+                $found = Test-Python312Path $resolved.Trim()
+                if ($found) {
+                    return $found
                 }
             }
         } catch {}
     }
 
+    # Search common installer locations. UAC/elevation can inherit a stale
+    # PATH, so direct-path discovery is intentional.
     $pf86 = [Environment]::GetEnvironmentVariable("ProgramFiles(x86)")
-    $candidates = @(
-        (Join-Path $env:LOCALAPPDATA "Programs\Python\Python312\python.exe"),
-        (Join-Path $env:ProgramFiles "Python312\python.exe")
-    )
+    $localAppData = [Environment]::GetFolderPath("LocalApplicationData")
+    $programFiles = [Environment]::GetFolderPath("ProgramFiles")
+
+    $candidates = @()
+    if ($localAppData) {
+        $candidates += (Join-Path $localAppData "Programs\Python\Python312\python.exe")
+        $candidates += (Join-Path $localAppData "Programs\Python\Python312-32\python.exe")
+    }
+    if ($programFiles) {
+        $candidates += (Join-Path $programFiles "Python312\python.exe")
+    }
     if ($pf86) {
         $candidates += (Join-Path $pf86 "Python312\python.exe")
     }
 
-    foreach ($candidate in $candidates) {
-        if (-not $candidate -or -not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
-            continue
-        }
+    # Also honor standard Python installer registry entries.
+    foreach ($key in @(
+        "HKCU:\Software\Python\PythonCore\3.12\InstallPath",
+        "HKLM:\Software\Python\PythonCore\3.12\InstallPath",
+        "HKLM:\Software\WOW6432Node\Python\PythonCore\3.12\InstallPath"
+    )) {
         try {
-            $version = (& $candidate -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null | Select-Object -First 1)
-            if ($LASTEXITCODE -eq 0 -and $version.Trim() -eq "3.12") {
-                return $candidate
+            if (Test-Path -LiteralPath $key) {
+                $item = Get-Item -LiteralPath $key
+                $exeValue = [string]$item.GetValue("ExecutablePath", "")
+                if ($exeValue) {
+                    $candidates += $exeValue
+                }
+                $installDir = [string]$item.GetValue("", "")
+                if ($installDir) {
+                    $candidates += (Join-Path $installDir "python.exe")
+                }
             }
         } catch {}
     }
 
-    $python = Get-Command python.exe -ErrorAction SilentlyContinue
-    if ($python) {
-        try {
-            $version = (& $python.Source -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null | Select-Object -First 1)
-            if ($LASTEXITCODE -eq 0 -and $version.Trim() -eq "3.12") {
-                return $python.Source
-            }
-        } catch {}
+    foreach ($candidate in ($candidates | Select-Object -Unique)) {
+        $found = Test-Python312Path $candidate
+        if ($found) {
+            return $found
+        }
     }
 
     return $null
 }
 
-function Ensure-Python312 {
-    $python = Resolve-Python312
+function Ensure-Python312([string]$RepoRoot) {
+    $python = Resolve-Python312 $RepoRoot
     if ($python) {
         Write-Host "[OK] Python 3.12: $python" -ForegroundColor Green
         return $python
     }
 
     if ($SkipPythonInstall) {
-        throw "Python 3.12 is missing and -SkipPythonInstall was supplied."
-    }
-
-    Write-Host "[SETUP] Python 3.12 was not found."
-    $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
-    if (-not $winget) {
         throw (
-            "Python 3.12 is required and winget is not available for automatic installation. " +
-            "Install Python 3.12 from https://www.python.org/downloads/ and run this script again."
+            "Python 3.12 could not be located. Checked the project .venv, python312, " +
+            "python3.12, python, py -3.12, common install folders, and Python registry entries."
         )
     }
 
-    Write-Host "[SETUP] Installing Python 3.12 with winget. This is a one-time step..."
-    & $winget.Source install --exact --id Python.Python.3.12 --silent --accept-package-agreements --accept-source-agreements
-    if ($LASTEXITCODE -ne 0) {
-        throw "winget could not install Python 3.12 (exit $LASTEXITCODE)."
+    Write-Host "[SETUP] Python 3.12 was not found after checking all known local locations."
+    Write-Host "[SETUP] Automatic installation will be attempted only now."
+
+    $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+    if ($winget) {
+        Write-Host "[SETUP] Trying Windows Package Manager (winget)..."
+        $wingetExit = 1
+        try {
+            & $winget.Source install --exact --id Python.Python.3.12 --silent --accept-package-agreements --accept-source-agreements
+            $wingetExit = $LASTEXITCODE
+        } catch {
+            Write-Host "[WARNING] winget raised an error: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+
+        # Do not trust the winget exit code by itself. It can report failure
+        # when Python is already installed or when its source state is broken.
+        # Rescan the machine first.
+        Start-Sleep -Seconds 2
+        $python = Resolve-Python312 $RepoRoot
+        if ($python) {
+            Write-Host "[OK] Python 3.12 located after winget attempt: $python" -ForegroundColor Green
+            return $python
+        }
+
+        Write-Host "[WARNING] winget did not provide a usable Python 3.12 (exit $wingetExit)." -ForegroundColor Yellow
+    } else {
+        Write-Host "[WARNING] winget is not available on this Windows installation." -ForegroundColor Yellow
     }
 
-    Start-Sleep -Seconds 2
-    $python = Resolve-Python312
-    if (-not $python) {
-        throw "Python 3.12 installation finished, but python.exe could not be located. Reboot Windows and run this script again."
-    }
-
-    Write-Host "[OK] Python 3.12 installed: $python" -ForegroundColor Green
-    return $python
+    throw (
+        "Python 3.12 is still unavailable. If Python 3.12 is already installed, open PowerShell and run " +
+        "'python312 --version', 'python3.12 --version', or 'py -3.12 --version' to see which command works. " +
+        "The launcher now recognizes all three forms, so rerunning after updating to this commit should normally fix it."
+    )
 }
 
 function Ensure-Venv([string]$RepoRoot, [string]$BootstrapPython) {
@@ -590,7 +688,7 @@ try {
     Stop-ExistingEmulatorServer $repoRoot
 
     Write-Step "Checking Python 3.12 and emulator dependencies"
-    $bootstrapPython = Ensure-Python312
+    $bootstrapPython = Ensure-Python312 $repoRoot
     $venvPython = Ensure-Venv $repoRoot $bootstrapPython
 
     Write-Step "Checking the exact supported game build"
