@@ -802,23 +802,29 @@ class DedicatedServerSpawner:
             a = self._allocations.get(room_id)
             if a is None or a.state == "RELEASED":
                 return {"room_id": room_id, "uin": uin, "found": False, "action": "NONE"}
-            a.match_players.discard(uin)
-            a.room_players.discard(uin)
-            if a.owner_id == uin and a.room_players:
+            remaining_room_players = set(a.room_players)
+            remaining_room_players.discard(uin)
+            if a.owner_id == uin and remaining_room_players:
                 if authoritative_new_owner is None:
                     raise SpawnerError(
                         f"room {room_id} owner left but no authoritative replacement was supplied"
                     )
-                old_owner = a.owner_id
                 new_owner = int(authoritative_new_owner)
-                if new_owner not in a.room_players:
+                if new_owner not in remaining_room_players:
                     raise SpawnerError(
                         f"room {room_id} authoritative new owner {new_owner} is not a remaining room player"
                     )
+            else:
+                new_owner = None
+
+            a.match_players.discard(uin)
+            a.room_players.discard(uin)
+            if a.owner_id == uin and a.room_players:
+                old_owner = a.owner_id
                 self._owner_to_room.pop(int(old_owner), None)
-                a.owner_id = new_owner
-                self._owner_to_room[new_owner] = room_id
-                transfer = (old_owner, new_owner)
+                a.owner_id = int(new_owner)
+                self._owner_to_room[int(new_owner)] = room_id
+                transfer = (old_owner, int(new_owner))
             room_remaining = len(a.room_players)
             match_remaining = len(a.match_players)
             if room_remaining == 0:
