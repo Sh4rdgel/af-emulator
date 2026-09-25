@@ -399,6 +399,57 @@ Only after **UNLOCKED** should you launch the game. The listener threads then re
 [ZONE] Listening on port 65006
 ```
 
+## Logging levels
+
+The console and the development log are intentionally separate.
+
+Choose what appears in the console with:
+
+```powershell
+$env:AF_LOG_LEVEL = "DEBUG"
+```
+
+Supported values:
+
+```text
+DEBUG    show DEBUG + INFO + WARNING + ERROR
+INFO     show INFO + WARNING + ERROR   (default)
+WARNING  show WARNING + ERROR
+ERROR    show ERROR only
+```
+
+**Important:** this setting only changes the console. The server log always keeps **DEBUG and above**, even when the console is set to `INFO`, `WARNING`, or `ERROR`.
+
+The default full development log is:
+
+```text
+server\af_server_live.log
+```
+
+You can change its location with:
+
+```powershell
+$env:AF_LOG_PATH = "D:\Logs\assaultfire-server.log"
+```
+
+At startup the server prints something similar to:
+
+```text
+[LOGGING] console=INFO file=DEBUG+ path=...\server\af_server_live.log
+```
+
+This means a user can keep a clean console while still preserving the detailed DEBUG trace needed for bug reports.
+
+Raw AUTH plaintext/ciphertext is an exception because it may contain credentials/authentication material. It is **not** automatically captured. Enable it only for a controlled local diagnostic session with:
+
+```powershell
+$env:AF_DEBUG_AUTH_HEX = "1"
+```
+
+Remove that variable again after the diagnostic.
+
+---
+
 ### If preflight says FAILED
 
 **Do not keep launching the client and do not click START.**
