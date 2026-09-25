@@ -106,6 +106,54 @@ class StartupPreflightTests(unittest.TestCase):
             self.assertFalse(report.ok)
             self.assertTrue(any("tauthproxy.levelupgames.ph" in e for e in report.errors))
 
+    def test_failed_preflight_is_written_to_server_log(self):
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            report = preflight.evaluate_preflight(
+                private_key_path=tmp / "PRIVATE.PEM",
+                env={},
+            )
+            lines = preflight.preflight_report_lines(report)
+            joined = "\n".join(lines)
+            self.assertIn("[PREFLIGHT] client root             : None", joined)
+            self.assertIn("[PREFLIGHT] TCLS validated build    : NO", joined)
+            self.assertIn("[PREFLIGHT] APClient exact bytes    : NO", joined)
+            self.assertIn("[PREFLIGHT] same RSA key            : NO", joined)
+            self.assertIn("[PREFLIGHT] game launch gate         : LOCKED", joined)
+
+            log_path = tmp / "af_server_live.log"
+            preflight.print_preflight_report(report, log_path=log_path)
+            logged = log_path.read_text(encoding="utf-8")
+            self.assertIn("[PREFLIGHT] client root             : None", logged)
+            self.assertIn("[PREFLIGHT] TCLS validated build    : NO", logged)
+            self.assertIn("[PREFLIGHT] APClient exact bytes    : NO", logged)
+            self.assertIn("[PREFLIGHT] same RSA key            : NO", logged)
+            self.assertIn("[PREFLIGHT] game launch gate         : LOCKED", logged)
+
+    def test_status_payload_contains_launch_gate_checks(self):
+        with tempfile.TemporaryDirectory() as td:
+            data = self.build_fixture(Path(td))
+            client_root, private_path, hosts_path, validated_hash, _ = data
+            report = preflight.evaluate_preflight(
+                private_key_path=private_path,
+                client_root=client_root,
+                hosts_path=hosts_path,
+                resolver=lambda _name: "127.0.0.1",
+                validated_tcls_sha256=validated_hash,
+            )
+            status_path = Path(td) / "runtime" / "preflight_status.json"
+            written = preflight.write_preflight_status(report, status_path)
+            self.assertEqual(written, status_path.resolve())
+
+            import json
+            status = json.loads(status_path.read_text(encoding="utf-8"))
+            self.assertTrue(status["passed"])
+            self.assertTrue(status["checks"]["client_root"])
+            self.assertTrue(status["checks"]["tcls_validated_build"])
+            self.assertTrue(status["checks"]["apclient_exact_bytes"])
+            self.assertTrue(status["checks"]["same_rsa_key"])
+            self.assertTrue(status["checks"]["hosts"])
+
     def test_server_calls_preflight_before_listener_threads(self):
         server = (ROOT / "server" / "assaultfire_server_v143b.py").read_text(
             encoding="utf-8", errors="replace"
