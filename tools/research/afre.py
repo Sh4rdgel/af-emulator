@@ -22,6 +22,7 @@ from typing import Any, Iterable
 HERE = Path(__file__).resolve().parent
 DEFAULT_CATALOG = HERE / "af_symbols_10024.json"
 DEFAULT_OBJECTS = HERE / "af_objects_10024.json"
+DEFAULT_PROTOCOL = HERE / "af_protocol_10024.json"
 
 
 class AfreError(RuntimeError):
@@ -117,6 +118,78 @@ def object_db_errors(db: dict[str, Any], catalog: dict[str, Any]) -> list[str]:
                     errors.append(
                         f"invalid {key}: {group}.{name}={meta[key]!r}"
                     )
+    return errors
+
+
+
+def load_protocol_db(path: Path = DEFAULT_PROTOCOL) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise AfreError(f"cannot load protocol database {path}: {exc}") from exc
+    if data.get("schema_version") != 1:
+        raise AfreError(
+            f"unsupported protocol database schema: {data.get('schema_version')!r}"
+        )
+    return data
+
+
+def normalize_packet_id(value: str) -> str:
+    token = value.strip().upper()
+    if token.startswith("0X"):
+        token = token[2:]
+    try:
+        number = int(token, 16)
+    except ValueError as exc:
+        raise AfreError(f"invalid packet id: {value!r}") from exc
+    return f"{number:04X}"
+
+
+def lookup_packet(db: dict[str, Any], query: str) -> tuple[str, dict[str, Any]]:
+    packets = db.get("packets", {})
+    try:
+        pid = normalize_packet_id(query)
+    except AfreError:
+        pid = ""
+    if pid in packets:
+        return pid, packets[pid]
+
+    needle = query.casefold()
+    matches = [
+        (packet_id, meta)
+        for packet_id, meta in packets.items()
+        if needle in str(meta.get("name", "")).casefold()
+    ]
+    if not matches:
+        raise AfreError(f"packet not found: {query}")
+    if len(matches) > 1:
+        names = ", ".join(f"{pid} {m.get('name', '')}" for pid, m in matches[:16])
+        raise AfreError(f"ambiguous packet {query!r}: {names}")
+    return matches[0]
+
+
+def protocol_db_errors(
+    db: dict[str, Any], catalog: dict[str, Any]
+) -> list[str]:
+    errors = []
+    if db.get("build", {}).get("tgame_sha256") != catalog.get("build", {}).get("sha256"):
+        errors.append("protocol DB TGame SHA does not match symbol catalog")
+    seen = set()
+    for packet_id, meta in db.get("packets", {}).items():
+        try:
+            canonical = normalize_packet_id(packet_id)
+        except AfreError:
+            errors.append(f"invalid packet id key: {packet_id!r}")
+            continue
+        if canonical != packet_id:
+            errors.append(f"packet id is not canonical: {packet_id!r} -> {canonical}")
+        if packet_id in seen:
+            errors.append(f"duplicate packet id: {packet_id}")
+        seen.add(packet_id)
+        if not meta.get("name"):
+            errors.append(f"packet has no name: {packet_id}")
+        if not meta.get("status"):
+            errors.append(f"packet has no status: {packet_id}")
     return errors
 
 
@@ -768,6 +841,55 @@ def cmd_audit_objects(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
     return 2
 
 
+
+def cmd_packets(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    del catalog
+    db = load_protocol_db(args.protocol_db)
+    needle = (args.filter or "").casefold()
+    count = 0
+    for packet_id, meta in db.get("packets", {}).items():
+        hay = f"{packet_id} {meta.get('name', '')} {meta.get('direction', '')}".casefold()
+        if needle and needle not in hay:
+            continue
+        print(
+            f"{packet_id} {meta.get('direction', '-'):6} "
+            f"{meta.get('name', '-'):34} {meta.get('status', '-')}"
+        )
+        count += 1
+    if not count:
+        raise AfreError(f"no packets match {args.filter!r}")
+    return 0
+
+
+def cmd_packet(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    del catalog
+    db = load_protocol_db(args.protocol_db)
+    packet_id, meta = lookup_packet(db, args.query)
+    print(f"[{packet_id} {meta.get('name', '-')}]")
+    print(json.dumps(meta, indent=2))
+    return 0
+
+
+def cmd_voice(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    del catalog
+    db = load_protocol_db(args.protocol_db)
+    print(json.dumps(db.get("voice", {}), indent=2))
+    return 0
+
+
+def cmd_audit_protocol(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    db = load_protocol_db(args.protocol_db)
+    errors = protocol_db_errors(db, catalog)
+    if not errors:
+        count = len(db.get("packets", {}))
+        print(f"[AFRE] protocol DB OK ({count} packets)")
+        return 0
+    for error in errors:
+        print(error)
+    print(f"[AFRE] {len(errors)} protocol DB error(s)")
+    return 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Read-only Assault Fire PH v1.0.0.24 RE helper"
@@ -783,6 +905,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=DEFAULT_OBJECTS,
         help="object database (default: beside this script)",
+    )
+    parser.add_argument(
+        "--protocol-db",
+        type=Path,
+        default=DEFAULT_PROTOCOL,
+        help="protocol database (default: beside this script)",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -864,6 +992,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("audit-objects", help="validate the object database")
     p.set_defaults(func=cmd_audit_objects)
+
+    p = sub.add_parser("packets", help="list known protocol packet IDs")
+    p.add_argument("--filter")
+    p.set_defaults(func=cmd_packets)
+
+    p = sub.add_parser("packet", help="show one packet definition")
+    p.add_argument("query")
+    p.set_defaults(func=cmd_packet)
+
+    p = sub.add_parser("voice", help="show current voice-chat protocol knowledge")
+    p.set_defaults(func=cmd_voice)
+
+    p = sub.add_parser("audit-protocol", help="validate the protocol database")
+    p.set_defaults(func=cmd_audit_protocol)
     return parser
 
 
