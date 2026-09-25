@@ -29,7 +29,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-$LAUNCHER_REVISION = "2026-09-25-oneclick-v9"
+$LAUNCHER_REVISION = "2026-09-25-oneclick-v10"
 $EXPECTED_TGAME_SHA256 = "B4273F2658CA94EEBC559A997FDFCD02D51E77CE75B892250C1DB7FB80C70B51"
 $TCLS_ORIGINAL_SHA256 = "13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1"
 $TCLS_PATCHED_SHA256  = "3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56"
@@ -402,29 +402,136 @@ function Ensure-Python312([string]$RepoRoot) {
     )
 }
 
+function Get-PythonVersionText([string]$Exe) {
+    try {
+        $line = (& $Exe --version 2>&1 | Select-Object -First 1)
+        if ($LASTEXITCODE -eq 0 -and $line) {
+            return ([string]$line).Trim()
+        }
+    } catch {}
+    return ""
+}
+
+function Test-VenvPython312([string]$VenvPython, [string]$VenvDir) {
+    if (-not (Test-Path -LiteralPath $VenvPython -PathType Leaf)) {
+        return $false
+    }
+
+    # Primary live check.
+    $validated = Test-Python312Path $VenvPython
+    if ($validated) {
+        return $true
+    }
+
+    # Secondary live check. Do not destroy a venv merely because one probe
+    # transiently failed.
+    $versionText = Get-PythonVersionText $VenvPython
+    if ($versionText -match "^Python\s+3\.12(?:\.|$)") {
+        return $true
+    }
+
+    # pyvenv.cfg is only supporting evidence. We still require python.exe to
+    # exist; this fallback handles unusual stdout/launcher behavior.
+    $cfg = Join-Path $VenvDir "pyvenv.cfg"
+    if (Test-Path -LiteralPath $cfg -PathType Leaf) {
+        try {
+            $cfgText = Get-Content -LiteralPath $cfg -Raw
+            if (
+                $cfgText -match "(?im)^\s*version\s*=\s*3\.12(?:\.|$)" -and
+                -not $versionText
+            ) {
+                Write-Host (
+                    "[WARNING] Existing .venv reports Python 3.12 in pyvenv.cfg, " +
+                    "but python.exe could not be probed. Refusing to delete it automatically."
+                ) -ForegroundColor Yellow
+                throw "Existing .venv could not be safely validated. Nothing was deleted."
+            }
+        } catch {
+            if ($_.Exception.Message -like "Existing .venv could not be safely validated*") {
+                throw
+            }
+        }
+    }
+
+    return $false
+}
+
+function Test-VenvDependencies([string]$VenvPython) {
+    # requirements.txt currently contains cryptography>=42,<47. This fast probe
+    # avoids a needless pip run when an existing environment already satisfies
+    # the requirement but predates our requirements-hash marker.
+    try {
+        & $VenvPython -c @"
+import sys
+try:
+    import cryptography
+    major = int(cryptography.__version__.split(".", 1)[0])
+except Exception:
+    raise SystemExit(1)
+raise SystemExit(0 if 42 <= major < 47 else 1)
+"@ 2>$null
+        return ($LASTEXITCODE -eq 0)
+    } catch {
+        return $false
+    }
+}
+
 function Ensure-Venv([string]$RepoRoot, [string]$BootstrapPython) {
     $venvDir = Join-Path $RepoRoot ".venv"
     $venvPython = Join-Path $venvDir "Scripts\python.exe"
     $requirements = Join-Path $RepoRoot "requirements.txt"
     $marker = Join-Path $venvDir ".af_requirements_sha256"
 
-    if (Test-Path -LiteralPath $venvPython -PathType Leaf) {
-        $validatedVenvPython = Test-Python312Path $venvPython
-        if (-not $validatedVenvPython) {
-            Write-Host "[REPAIR] Existing .venv is not Python 3.12; recreating it..." -ForegroundColor Yellow
-            Remove-Item -LiteralPath $venvDir -Recurse -Force
+    if (-not (Test-Path -LiteralPath $requirements -PathType Leaf)) {
+        throw "requirements.txt is missing from the emulator folder."
+    }
+
+    $venvExists = Test-Path -LiteralPath $venvDir -PathType Container
+    $venvPythonExists = Test-Path -LiteralPath $venvPython -PathType Leaf
+
+    if ($venvPythonExists) {
+        if (Test-VenvPython312 $venvPython $venvDir) {
+            Write-Host "[OK] Reusing existing Python 3.12 environment: $venvDir" -ForegroundColor Green
+        } else {
+            # Only replace it when we have positive evidence that it is the
+            # wrong Python version. Never repeatedly delete a valid/transiently
+            # unavailable environment.
+            $versionText = Get-PythonVersionText $venvPython
+            if ($versionText -and $versionText -notmatch "^Python\s+3\.12(?:\.|$)") {
+                $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                $backupDir = Join-Path $RepoRoot ".venv.incompatible.$stamp"
+                Write-Host (
+                    "[REPAIR] Existing environment is $versionText, not Python 3.12. " +
+                    "Preserving it as: $backupDir"
+                ) -ForegroundColor Yellow
+                Move-Item -LiteralPath $venvDir -Destination $backupDir
+                $venvExists = $false
+                $venvPythonExists = $false
+            } else {
+                throw (
+                    "Existing .venv could not be validated safely. It was NOT deleted. " +
+                    "Close programs using .venv and run the launcher again."
+                )
+            }
         }
+    } elseif ($venvExists) {
+        # A directory without Scripts\python.exe is incomplete. Preserve it for
+        # diagnosis rather than deleting user files.
+        $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
+        $backupDir = Join-Path $RepoRoot ".venv.incomplete.$stamp"
+        Write-Host "[REPAIR] Incomplete .venv preserved as: $backupDir" -ForegroundColor Yellow
+        Move-Item -LiteralPath $venvDir -Destination $backupDir
+        $venvExists = $false
     }
 
     if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
-        Write-Host "[SETUP] Creating Python environment..."
+        Write-Host "[SETUP] Creating Python environment (FIRST TIME ONLY)..."
         Invoke-Checked -Exe $BootstrapPython -Arguments @("-m", "venv", $venvDir) -Description "create .venv"
-    } else {
-        Write-Host "[OK] Python environment already exists and is Python 3.12." -ForegroundColor Green
-    }
 
-    if (-not (Test-Path -LiteralPath $requirements -PathType Leaf)) {
-        throw "requirements.txt is missing from the emulator folder."
+        if (-not (Test-VenvPython312 $venvPython $venvDir)) {
+            throw "New .venv was created but did not validate as Python 3.12."
+        }
+        Write-Host "[OK] Python 3.12 environment created." -ForegroundColor Green
     }
 
     $wantedHash = Get-Sha256 $requirements
@@ -433,13 +540,27 @@ function Ensure-Venv([string]$RepoRoot, [string]$BootstrapPython) {
         $currentHash = (Get-Content -LiteralPath $marker -Raw).Trim().ToUpperInvariant()
     }
 
-    if ($currentHash -ne $wantedHash) {
-        Write-Host "[SETUP] Installing/updating emulator Python dependencies..."
-        Invoke-Checked -Exe $venvPython -Arguments @("-m", "pip", "install", "--disable-pip-version-check", "-r", $requirements) -Description "install requirements"
-        Set-Content -LiteralPath $marker -Value $wantedHash -Encoding ASCII
-    } else {
+    if ($currentHash -eq $wantedHash) {
         Write-Host "[OK] Python dependencies are already installed." -ForegroundColor Green
+        return $venvPython
     }
+
+    # Older launcher revisions may have already installed requirements before
+    # the hash marker existed. Verify the dependency first instead of making
+    # users wait for pip again.
+    if (Test-VenvDependencies $venvPython) {
+        Set-Content -LiteralPath $marker -Value $wantedHash -Encoding ASCII
+        Write-Host "[OK] Existing Python dependencies verified; no pip install needed." -ForegroundColor Green
+        return $venvPython
+    }
+
+    Write-Host "[SETUP] Installing/updating emulator Python dependencies (FIRST TIME OR REQUIREMENTS CHANGED)..."
+    Invoke-Checked -Exe $venvPython -Arguments @(
+        "-m", "pip", "install",
+        "--disable-pip-version-check",
+        "-r", $requirements
+    ) -Description "install requirements"
+    Set-Content -LiteralPath $marker -Value $wantedHash -Encoding ASCII
 
     return $venvPython
 }
