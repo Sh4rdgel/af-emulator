@@ -18,6 +18,9 @@ class LaunchPreflightGateTests(unittest.TestCase):
             "schema": gate.PREFLIGHT_STATUS_SCHEMA,
             "server_pid": 12345,
             "passed": True,
+            "log_written": True,
+            "listeners_ready": True,
+            "launch_ready": True,
             "checks": {name: True for name in gate.REQUIRED_CHECKS},
             "client_root": r"C:\Games\Assault Fire PH",
             "tcls_path": r"C:\Games\Assault Fire PH\TCLS\Tenio\TCLS.dll",
@@ -32,7 +35,11 @@ class LaunchPreflightGateTests(unittest.TestCase):
     def test_pass_requires_all_checks_and_live_server(self):
         with tempfile.TemporaryDirectory() as td:
             path = self.write_status(Path(td), self.good_status())
-            data = gate.require_launch_ready(path, pid_alive=lambda pid: pid == 12345)
+            data = gate.require_launch_ready(
+                path,
+                pid_alive=lambda pid: pid == 12345,
+                listening_ports=lambda _pid: set(gate.REQUIRED_TCP_PORTS),
+            )
             self.assertTrue(data["passed"])
 
     def test_exact_reported_failures_keep_launch_locked(self):
@@ -56,7 +63,11 @@ class LaunchPreflightGateTests(unittest.TestCase):
             ]
             path = self.write_status(Path(td), data)
             with self.assertRaises(gate.LaunchGateError) as ctx:
-                gate.require_launch_ready(path, pid_alive=lambda _pid: True)
+                gate.require_launch_ready(
+                    path,
+                    pid_alive=lambda _pid: True,
+                    listening_ports=lambda _pid: set(gate.REQUIRED_TCP_PORTS),
+                )
             message = str(ctx.exception)
             self.assertIn("GAME LAUNCH BLOCKED", message)
             self.assertIn("client_root", message)
@@ -92,8 +103,35 @@ class LaunchPreflightGateTests(unittest.TestCase):
                 gate.require_launch_ready(
                     Path(td) / "missing.json",
                     pid_alive=lambda _pid: True,
+                    listening_ports=lambda _pid: set(gate.REQUIRED_TCP_PORTS),
                 )
             self.assertIn("preflight status is missing", str(ctx.exception))
+
+    def test_locked_listener_state_is_rejected(self):
+        with tempfile.TemporaryDirectory() as td:
+            data = self.good_status()
+            data["listeners_ready"] = False
+            data["launch_ready"] = False
+            path = self.write_status(Path(td), data)
+            with self.assertRaises(gate.LaunchGateError) as ctx:
+                gate.require_launch_ready(
+                    path,
+                    pid_alive=lambda _pid: True,
+                    listening_ports=lambda _pid: set(gate.REQUIRED_TCP_PORTS),
+                )
+            self.assertIn("game launch gate is LOCKED", str(ctx.exception))
+
+    def test_tgame_must_belong_to_preflight_client(self):
+        data = self.good_status()
+        gate.require_game_image_matches(
+            data,
+            r"C:\Games\Assault Fire PH\Binaries\Win32\TGame.exe",
+        )
+        with self.assertRaises(gate.LaunchGateError):
+            gate.require_game_image_matches(
+                data,
+                r"D:\OtherClient\Binaries\Win32\TGame.exe",
+            )
 
     def test_loaded_tcls_must_be_same_file_checked_by_server(self):
         data = self.good_status()
