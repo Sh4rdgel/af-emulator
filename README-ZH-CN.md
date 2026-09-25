@@ -58,6 +58,22 @@ TGame.exe is resumed
 
 如果工具报告 **TGame build/signature mismatch**，请停止，不要强制补丁。目前只支持/测试 Assault Fire PH **v1.0.0.24**。
 
+## 强制 preflight 启动门
+
+启动 helper 在允许游戏继续之前，服务器 preflight 必须先 **PASS**：
+
+```text
+[PREFLIGHT] client root             : <真实游戏目录>
+[PREFLIGHT] TCLS validated build    : YES
+[PREFLIGHT] APClient exact bytes    : YES
+[PREFLIGHT] same RSA key            : YES
+[PREFLIGHT] game launch gate         : UNLOCKED
+```
+
+如果出现任何 `NO`、`client root : None` 或 `game launch gate : LOCKED`，**不要点击 START**。服务器不会开放游戏服务监听端口，受支持的启动 helper 会直接显示 `GAME LAUNCH BLOCKED` 并停止。
+
+完整 preflight 报告会写入 `server\af_server_live.log`，机器可读的门状态写入 `runtime\preflight_status.json`。修复问题并重启服务器，只有看到 **UNLOCKED** 后才能继续。
+
 ---
 
 # 从这里开始
