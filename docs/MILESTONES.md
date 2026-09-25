@@ -29,7 +29,7 @@ Completed:
 - [x] TGame datetime runtime compatibility patch
 - [x] MIT license
 - [x] Working / partial / broken status documentation
-- [x] Historical pre-fix PvE sample retained for regression/reference
+- [x] Generic PvE lifecycle and map-selection regression tests
 
 ## Milestone 1 — Reproducible local setup 🟡
 
@@ -87,7 +87,7 @@ Completed:
 - [x] v48 resolves the selected installed `.udk` map and opens it with `PVEGame.TGSVGame`
 - [x] zero-DSKey/runtime verification gates `SESSION_READY`
 - [x] player-scoped shared-DS cleanup/rejoin behavior is retained
-- [x] Supported PvE maps use the same generic stock-selected map and lazy dedicated-server path
+- [x] PvE maps use the same generic stock-selected map and lazy dedicated-server path
 
 The broader enemy/objective/round-completion/result/reward lifecycle remains separate follow-up work under the full match lifecycle milestone.
 

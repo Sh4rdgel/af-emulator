@@ -1,6 +1,6 @@
 # Stable PvE Bridge and Server Spawner
 
-The current `main` branch carries the integrated local PvE handoff used by the stable **v143b** server. Supported installed PvE maps selected in the stock room UI flow through the same generic lazy DS path.
+The current `main` branch carries the integrated local PvE handoff used by the stable **v143b** server. Installed PvE maps selected in the stock room UI flow through the same generic lazy DS path.
 
 ## Current components
 

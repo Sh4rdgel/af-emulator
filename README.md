@@ -137,7 +137,7 @@ For the full walkthrough, use **[Getting Started](docs/GETTING_STARTED.md)**.
 
 ## PvE maps
 
-The stable PvE path is integrated on `main` and is map-generic. The stock room selection is carried into the lazy AFDEV startup, so supported PvE maps use the same dedicated-server lifecycle.
+The stable PvE path is integrated on `main` and is map-generic. The stock room selection is carried into the lazy AFDEV startup, so PvE maps use the same dedicated-server lifecycle.
 
 ```text
 Create room

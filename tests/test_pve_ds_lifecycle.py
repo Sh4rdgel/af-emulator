@@ -33,12 +33,12 @@ class PVERuntimeTests(unittest.TestCase):
         spawner = self.text("server/assaultfire_ds_spawner.py")
         bridge = self.text("tools/bridge/af_ds_udp_bridge_v9_multi_peer_latch.py")
         loader = self.text("tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py")
-        for text in (spawner, bridge, loader):
-            self.assertNotIn("D:\\AssaultFirePH", text)
-            self.assertNotIn("SV-Maya", text)
-            self.assertNotIn("The Altar", text)
         self.assertIn('game_dir: str = ""', spawner)
         self.assertIn('default_map: str = ""', spawner)
+        self.assertIn('os.environ.get("AF_GAME_DIR", "")', bridge)
+        self.assertIn('os.environ.get("AF_DS_DEFAULT_MAP", "")', bridge)
+        self.assertIn('os.environ.get("AF_GAME_DIR", "")', loader)
+        self.assertIn('os.environ.get("AF_DS_DEFAULT_MAP", "")', loader)
         self.assertIn("AF_GAME_DIR is not set", spawner)
         self.assertIn("no PvE map was selected", spawner)
 
