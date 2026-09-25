@@ -1,6 +1,6 @@
 # Assault Fire Server Emulator
 
-**Pinulongan:** [English](README.md) | [Tagalog](README-TL.md) | **Cebuano** | [简体中文](README-ZH-CN.md)
+**Pinulongan:** [English](README.md) | [Tagalog](README-TL.md) | **Cebuano** | [简体中文](README-ZH-CN.md) | [Ubang pinulongan](README-LANGUAGES.md)
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue)](https://www.python.org/)
 [![Engine](https://img.shields.io/badge/Engine-Unreal%20Engine%203-lightgrey)](#)
