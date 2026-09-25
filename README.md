@@ -11,6 +11,8 @@ The goal is simple: make the retired PH client usable in a local/isolated enviro
 
 > This project is not affiliated with, endorsed by, or sponsored by Tencent, Level Up! Games, or any original rights holder.
 
+> **Client compatibility:** this repository is currently developed, tested, and supported only with **Assault Fire PH v1.0.0.24**, the client build used by this project. Other client versions may use different binaries, offsets, packet behavior, launcher/TCLS behavior, or data layouts and are not currently validated.
+
 ## What works today
 
 The current public baseline is **v143b**.
