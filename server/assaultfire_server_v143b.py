@@ -306,6 +306,9 @@ def log(label, message, level=None):
     )
 
 
+log("BOOT", f"Persistent server log: {_SERVER_LOGGER.path}")
+
+
 # ---------------------------------------------------------------------------
 # Stable v143b dedicated-server spawner integration
 # ---------------------------------------------------------------------------
