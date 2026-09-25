@@ -100,19 +100,33 @@ powershell -ExecutionPolicy Bypass -File .\tools\setup\setup_assaultfire_hosts.p
 
 ### 5. Start the emulator
 
-For normal VERSION / AUTH / DIR / ROLE / ZONE testing:
+Run the server from the **repository root** and tell it which Assault Fire PH installation to validate:
 
 ```powershell
+$env:AF_CLIENT_ROOT = "<game-root>"
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
-For **PvE**, set the dedicated-server variables **before** starting the emulator. Point `AF_GAME_DIR` at the `Binaries\Win32` directory inside your own Assault Fire PH installation; the drive letter and install location do not matter:
+Before opening any network listener, v143b performs a strict startup preflight. It refuses to start unless:
+
+- the client uses the verified raw-PEM-compatible PH `TCLS.dll`;
+- `APClient.dat` is an **exact byte match** for the public key derived from `server\PRIVATE.PEM`;
+- `APClient.dat` and `PRIVATE.PEM` report **same RSA key = YES**;
+- the RSA/APClient format is the supported RSA-1024 / 272-byte PEM form;
+- `tversion.levelupgames.ph`, `tauthproxy.levelupgames.ph`, and `tdir.levelupgames.ph` are each mapped exactly to `127.0.0.1` in the Windows hosts file and resolve to localhost.
+
+If any check fails, **VERSION / AUTH / DIR / ROLE / ZONE listeners are not started**.
+
+For **PvE**, set the dedicated-server variables before starting the emulator:
 
 ```powershell
+$env:AF_CLIENT_ROOT = "<game-root>"
 $env:AF_GAME_DIR = "<full path to your Assault Fire PH Binaries\Win32 folder>"
 $env:AF_DS_SPAWNER_ENABLED = "1"
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
+
+For PvE, `AF_GAME_DIR=...\Binaries\Win32` can also be used to derive the client root if `AF_CLIENT_ROOT` is not set.
 
 The repository does **not** provide `TGame_AFDEV.exe`, maps, packages, or other original game files.
 
