@@ -26,6 +26,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
 from assaultfire_ds_spawner import (
+    AFDEV_MODE_IDS,
     DedicatedServerSpawner,
     DSCapacityError,
     DSStartupError,
@@ -2760,7 +2761,8 @@ TGAME_DS_KEY = b"\x00" * 16  # live AFDEV listen-server dynamic key; exactly 16 
 #
 # This restores the packet-observation/translation point that v132 accidentally
 # bypassed by advertising AFDEV:7777 directly in A11A.
-TGAME_PVE_MODE_ID = 0x00002001
+TGAME_PVE_MODE_ID = 0x00002001  # legacy compatibility alias
+TGAME_AFDEV_MODE_IDS = frozenset(AFDEV_MODE_IDS)
 TGAME_PVE_DIRECT_AFDEV = os.environ.get(
     "AF_PVE_DIRECT_AFDEV", "1"
 ).strip().lower() not in ("0", "false", "off", "no")
@@ -5550,7 +5552,7 @@ def _v132_send_pve_afdev_handoff(
     DS datagram to that bridge is what starts the v48 AFDEV loader.
     """
     mode_now = _v132_room_mode(role_state, mode_id)
-    if not TGAME_PVE_DIRECT_AFDEV or mode_now != TGAME_PVE_MODE_ID:
+    if not TGAME_PVE_DIRECT_AFDEV or mode_now not in TGAME_AFDEV_MODE_IDS:
         return False
 
     if role_state.get("v132_pve_afdev_handoff_sent"):
@@ -8217,24 +8219,17 @@ def handle_placeholder(conn, addr, label):
                                             )
 
                                             if not pve_handoff:
-                                                # Preserve the previous non-PVE experiment path.
-                                                ntf = _v87_build_ntf_start_match()
-                                                _v48_send_app(
-                                                    conn,
-                                                    active_tgame_key,
-                                                    ntf,
-                                                    label,
-                                                    "ZN2C_NTF_STARTMATCH legacy-non-PVE "
-                                                    "cmd=0xA11A result=0x8100 "
-                                                    f"ds=127.0.0.1:{TGAME_REAL_DS_PORT} "
-                                                    "ip_wire=0100007f "
-                                                    f"dskey={TGAME_DS_KEY.hex()} "
-                                                    "domain='' use_domain=0 capture=TCP+UDP",
-                                                )
+                                                # Fail closed.  The old experiment advertised the
+                                                # fixed 127.0.0.1:65008 endpoint even when no bridge
+                                                # was bound there, which makes the stock client show
+                                                # "Failed to connect DS!".  Unknown/non-AFDEV modes
+                                                # must not receive a fabricated A11A assignment.
+                                                mode_now = _v132_room_mode(role_state)
                                                 log(
-                                                    label,
-                                                    "legacy non-PVE A113 -> A114 + A11A completed; "
-                                                    f"endpoint=127.0.0.1:{TGAME_REAL_DS_PORT}",
+                                                    "DS-HANDOFF",
+                                                    "A113 has no verified dynamic AFDEV route; "
+                                                    f"mode=0x{mode_now:08x}; "
+                                                    "legacy fixed 65008 A11A suppressed",
                                                 )
 
                                         elif app["cmd"] == TGAME_ZN_REQ_SETINMATCH:
