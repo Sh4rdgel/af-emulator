@@ -71,6 +71,21 @@ class LaunchPreflightGateTests(unittest.TestCase):
                 gate.require_launch_ready(path, pid_alive=lambda _pid: False)
             self.assertIn("server process from preflight is not running", str(ctx.exception))
 
+    def test_missing_listener_ports_are_rejected_on_windows(self):
+        from unittest import mock
+
+        data = self.good_status()
+        with mock.patch.object(gate.os, "name", "nt"):
+            errors = gate.validate_status(
+                data,
+                pid_alive=lambda _pid: True,
+                listening_ports=lambda _pid: {9060, 8000, 9010, 65005},
+            )
+        self.assertTrue(
+            any("missing TCP port(s): 65006" in item for item in errors),
+            errors,
+        )
+
     def test_missing_status_is_rejected(self):
         with tempfile.TemporaryDirectory() as td:
             with self.assertRaises(gate.LaunchGateError) as ctx:
