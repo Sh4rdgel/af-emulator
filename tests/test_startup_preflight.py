@@ -3,6 +3,7 @@ import hashlib
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
@@ -201,6 +202,59 @@ class StartupPreflightTests(unittest.TestCase):
             before = json.loads(status_path.read_text(encoding="utf-8"))
             self.assertTrue(before["passed"])
             self.assertFalse(before["launch_ready"])
+
+    def test_preflight_log_falls_back_when_requested_path_is_unwritable(self):
+        with tempfile.TemporaryDirectory() as td:
+            requested = Path(td) / "bad" / "custom.log"
+            calls = []
+
+            def fake_append(lines, path):
+                calls.append(path)
+                if path == requested.resolve():
+                    raise OSError("simulated write failure")
+                return True
+
+            with mock.patch.object(preflight, "_append_lines_to_log", side_effect=fake_append):
+                written = preflight.persist_preflight_log(
+                    ["[PREFLIGHT] test"],
+                    log_path=requested,
+                )
+
+            self.assertIsNotNone(written)
+            self.assertEqual(written, Path(preflight.__file__).resolve().with_name("af_server_live.log"))
+            self.assertGreaterEqual(len(calls), 2)
+
+    def test_launch_gate_unlocks_only_after_listener_ready_update(self):
+        with tempfile.TemporaryDirectory() as td:
+            data = self.build_fixture(Path(td))
+            client_root, private_path, hosts_path, validated_hash, _ = data
+            report = preflight.evaluate_preflight(
+                private_key_path=private_path,
+                client_root=client_root,
+                hosts_path=hosts_path,
+                resolver=lambda _name: "127.0.0.1",
+                validated_tcls_sha256=validated_hash,
+            )
+            status_path = Path(td) / "preflight_status.json"
+            log_path = Path(td) / "server.log"
+            preflight.write_preflight_status(
+                report,
+                status_path,
+                listeners_ready=False,
+                log_written=True,
+                log_path=log_path,
+            )
+            self.assertTrue(
+                preflight.update_launch_gate_status(
+                    ready=True,
+                    status_path=status_path,
+                    log_path=log_path,
+                )
+            )
+            import json
+            status = json.loads(status_path.read_text(encoding="utf-8"))
+            self.assertTrue(status["listeners_ready"])
+            self.assertTrue(status["launch_ready"])
 
     def test_server_calls_preflight_before_listener_threads(self):
         server = (ROOT / "server" / "assaultfire_server_v143b.py").read_text(
