@@ -80,6 +80,7 @@ class AFLogger:
             if path is not None
             else default_log_path(self._env)
         )
+        self._file_error_reported = False
 
     def should_print(self, level: str) -> bool:
         level = _normalize_level(level)
@@ -109,9 +110,18 @@ class AFLogger:
         # Since FILE_CAPTURE_LEVEL is DEBUG, every normal logger call is kept.
         with _LOCK:
             if LEVELS[level_name] >= LEVELS[FILE_CAPTURE_LEVEL]:
-                self.path.parent.mkdir(parents=True, exist_ok=True)
-                with self.path.open("a", encoding="utf-8") as fp:
-                    fp.write(line + "\n")
+                try:
+                    self.path.parent.mkdir(parents=True, exist_ok=True)
+                    with self.path.open("a", encoding="utf-8") as fp:
+                        fp.write(line + "\n")
+                except OSError as exc:
+                    if not self._file_error_reported:
+                        self._file_error_reported = True
+                        print(
+                            f"[LOGGER] WARNING: could not write debug log "
+                            f"{self.path}: {exc}",
+                            flush=True,
+                        )
 
             if self.should_print(level_name):
                 print(line, flush=True)
