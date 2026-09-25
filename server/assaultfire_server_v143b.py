@@ -544,6 +544,43 @@ def _v143b_quit_match_player(role_state, room, reason):
     return V143B_DS_SPAWNER.quit_match_player(room_id, uin, reason=reason)
 
 
+def _v143b_clear_player_handoff_state(role_state):
+    """Clear per-player state that must be fresh for the next A11A handoff."""
+    if not isinstance(role_state, dict):
+        return
+    role_state.pop("v143b_ds_endpoint", None)
+    role_state.pop("v132_pve_afdev_handoff_sent", None)
+    role_state.pop("v132_pve_afdev_handoff_reason", None)
+    role_state.pop("v132_pve_afdev_handoff_at", None)
+    role_state.pop("v134_ready_ntf_sent", None)
+    role_state["v132_match_ready"] = False
+
+
+def _v143b_reset_room_after_round(room_id, reason):
+    """Reset logical room + all live member handoff guards after a round ends."""
+    room_id = int(room_id)
+    room = V150_ROOM_REGISTRY.reset_round_state(room_id)
+    _v150_sync_role_states(room)
+
+    member_uins = {int(m["uin"]) for m in (room.get("members") or [])}
+    with _V150_ZONE_LOCK:
+        sessions = [
+            dict(session)
+            for uin, session in _V150_ZONE_SESSIONS.items()
+            if int(uin) in member_uins
+        ]
+    for session in sessions:
+        _v143b_clear_player_handoff_state(session.get("role_state"))
+
+    log(
+        "DS-REJOIN",
+        f"round reset room={room_id} reason={reason}; "
+        f"members={sorted(member_uins)} started=False ready=False "
+        "handoff guards cleared",
+    )
+    return room
+
+
 def _v143b_remove_room_player(
     role_state,
     room,
@@ -8027,9 +8064,70 @@ def handle_placeholder(conn, addr, label):
 
                                         elif app["cmd"] == TGAME_ZN_REQ_SETMATCHROOMREADY:
                                             ready = bool(app["body"][0]) if app["body"] else True
+                                            requester_uin = _v150_role_uin(role_state)
+
+                                            # A player can return from UE3 gameplay directly to
+                                            # this same room without a usable A117 cleanup packet.
+                                            # If the previous A11A guard is still present, reconcile
+                                            # that stale round NOW, before accepting a new Ready.
+                                            # Otherwise the later A113 sees the old guard, suppresses
+                                            # the new A11A, and the stock client shows a timeout.
+                                            if ready and role_state.get("v132_pve_afdev_handoff_sent"):
+                                                room_for_ready = (
+                                                    V150_ROOM_REGISTRY.room_for_player(requester_uin)
+                                                    or role_state.get("v79_created_match_room")
+                                                    or {}
+                                                )
+                                                room_id_ready = room_for_ready.get("room_id")
+                                                reconcile_result = None
+                                                if room_id_ready is not None:
+                                                    try:
+                                                        reconcile_result = _v143b_quit_match_player(
+                                                            role_state,
+                                                            room_for_ready,
+                                                            reason=(
+                                                                "A110 Ready room-UI reconciliation "
+                                                                "(previous A11A still armed / missed A117)"
+                                                            ),
+                                                        )
+                                                    except SpawnerError as reconcile_e:
+                                                        log(
+                                                            "DS-REJOIN",
+                                                            f"A110 reconciliation warning room={room_id_ready} "
+                                                            f"uin={requester_uin}: {reconcile_e}",
+                                                        )
+
+                                                _v143b_clear_player_handoff_state(role_state)
+
+                                                if (
+                                                    room_id_ready is not None
+                                                    and isinstance(reconcile_result, dict)
+                                                    and (
+                                                        reconcile_result.get("ended_round")
+                                                        or reconcile_result.get("state") == "ROUND_ENDED"
+                                                    )
+                                                ):
+                                                    try:
+                                                        _v143b_reset_room_after_round(
+                                                            int(room_id_ready),
+                                                            "A110 Ready after returning from prior PvE round",
+                                                        )
+                                                    except RoomRegistryError as reset_e:
+                                                        log(
+                                                            "DS-REJOIN",
+                                                            f"A110 room reset warning room={room_id_ready}: {reset_e}",
+                                                        )
+
+                                                log(
+                                                    "DS-REJOIN",
+                                                    "A110 cleared stale previous-round handoff "
+                                                    f"uin={requester_uin} room={room_id_ready} "
+                                                    f"reconcile={reconcile_result}",
+                                                )
+
                                             role_state["v132_match_ready"] = ready
                                             ready_room_snapshot = V150_ROOM_REGISTRY.set_ready(
-                                                _v150_role_uin(role_state), ready
+                                                requester_uin, ready
                                             )
                                             if ready_room_snapshot is not None:
                                                 _v150_sync_role_states(ready_room_snapshot)
@@ -8350,17 +8448,22 @@ def handle_placeholder(conn, addr, label):
                                             )
                                             if (
                                                 isinstance(quit_result, dict)
-                                                and quit_result.get("ended_round")
+                                                and (
+                                                    quit_result.get("ended_round")
+                                                    or quit_result.get("state") == "ROUND_ENDED"
+                                                )
                                                 and isinstance(room, dict)
                                                 and room.get("room_id") is not None
                                             ):
-                                                V150_ROOM_REGISTRY.set_started(int(room["room_id"]), False)
+                                                _v143b_reset_room_after_round(
+                                                    int(room["room_id"]),
+                                                    "A117 QuitMatch completed previous PvE round",
+                                                )
                                             # Keep the logical room ID: if this was the last match
                                             # player the spawner enters ROUND_ENDED, and the same lobby
-                                            # can create a fresh DS on the next A113.  If others remain,
+                                            # can create a fresh DS on the next A113. If others remain,
                                             # this player can rejoin the still-running shared AFDEV.
-                                            role_state.pop("v143b_ds_endpoint", None)
-                                            role_state.pop("v132_pve_afdev_handoff_sent", None)
+                                            _v143b_clear_player_handoff_state(role_state)
                                             log(
                                                 "DS-CLEANUP",
                                                 "r10 A117 player-scoped cleanup "
