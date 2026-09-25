@@ -29,7 +29,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-$LAUNCHER_REVISION = "2026-09-25-oneclick-v7"
+$LAUNCHER_REVISION = "2026-09-25-oneclick-v8"
 $EXPECTED_TGAME_SHA256 = "B4273F2658CA94EEBC559A997FDFCD02D51E77CE75B892250C1DB7FB80C70B51"
 $TCLS_ORIGINAL_SHA256 = "13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1"
 $TCLS_PATCHED_SHA256  = "3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56"
@@ -776,7 +776,15 @@ function Wait-ForLaunchGate([string]$StatusPath, [int]$TimeoutSeconds = 45) {
 Write-Title "Assault Fire PH - ONE CLICK SETUP + PLAY"
 Write-Host "[AF-ONECLICK] Launcher revision: $LAUNCHER_REVISION"
 
-$consoleHelper = Join-Path (Split-Path -Parent $self) "tools\setup\af_console_nonblocking.ps1"
+$self = $MyInvocation.MyCommand.Path
+if (-not $self) {
+    Stop-WithMessage "Could not determine the launcher script path."
+}
+$self = (Resolve-Path -LiteralPath $self).Path
+
+# Use $PSScriptRoot for helpers so StrictMode never observes $self before it is
+# initialized.  $PSScriptRoot is available in Windows PowerShell 5.1.
+$consoleHelper = Join-Path $PSScriptRoot "tools\setup\af_console_nonblocking.ps1"
 if (Test-Path -LiteralPath $consoleHelper -PathType Leaf) {
     . $consoleHelper
     Disable-AFConsoleBlockingSelection
@@ -784,12 +792,6 @@ if (Test-Path -LiteralPath $consoleHelper -PathType Leaf) {
 } else {
     Write-Host "[AF-ONECLICK] WARNING: console non-blocking helper is missing." -ForegroundColor Yellow
 }
-
-$self = $MyInvocation.MyCommand.Path
-if (-not $self) {
-    Stop-WithMessage "Could not determine the launcher script path."
-}
-$self = (Resolve-Path -LiteralPath $self).Path
 
 # Stay in the user's normal PowerShell environment so Python launchers, aliases,
 # PATH entries, and per-user installations remain visible.  Administrator
