@@ -30,6 +30,7 @@ class PVERuntimeTests(unittest.TestCase):
             self.assertIn(marker, s)
 
     def test_active_pve_path_has_no_fixed_install_or_map_fallback(self):
+        server = self.text("server/assaultfire_server_v143b.py")
         spawner = self.text("server/assaultfire_ds_spawner.py")
         bridge = self.text("tools/bridge/af_ds_udp_bridge_v9_multi_peer_latch.py")
         loader = self.text("tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py")
@@ -40,7 +41,9 @@ class PVERuntimeTests(unittest.TestCase):
         self.assertIn('os.environ.get("AF_GAME_DIR", "")', loader)
         self.assertIn('os.environ.get("AF_DS_DEFAULT_MAP", "")', loader)
         self.assertIn("AF_GAME_DIR is not set", spawner)
-        self.assertIn("no PvE map was selected", spawner)
+        self.assertIn("no resolved AFDEV map for ", spawner)
+        self.assertNotIn("ZN2C_NTF_STARTMATCH legacy-non-PVE", server)
+        self.assertIn("legacy fixed 65008 A11A suppressed", server)
 
 if __name__ == "__main__":
     unittest.main()
