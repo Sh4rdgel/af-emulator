@@ -551,6 +551,7 @@ Do **not** upload `PRIVATE.PEM`, passwords, account credentials, or proprietary 
 | [Launcher Errors](docs/LAUNCHER_ERRORS.md) | known AP/TCLS/TGame errors |
 | [Architecture](docs/ARCHITECTURE.md) | ports, services, and data flow |
 | [Research Findings](docs/RESEARCH_FINDINGS.md) | verified protocol/runtime findings |
+| [RE Tooling](docs/RE_TOOLING.md) | reusable build validation, symbols, address annotation, and research workflow |
 | [FAQ](docs/FAQ.md) | common questions |
 | [Contributing](CONTRIBUTING.md) | contributing fixes and research |
 
