@@ -5,6 +5,7 @@ from __future__ import annotations
 import ctypes
 import json
 import os
+import subprocess
 from pathlib import Path
 from typing import Callable, Mapping
 
@@ -21,6 +22,7 @@ REQUIRED_CHECKS = (
 
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 STILL_ACTIVE = 259
+REQUIRED_TCP_PORTS = (9060, 8000, 9010, 65005, 65006)
 
 
 class LaunchGateError(RuntimeError):
@@ -91,10 +93,49 @@ def default_pid_alive(pid: int) -> bool:
     return True
 
 
+def default_listening_ports(pid: int) -> set[int]:
+    """Return TCP LISTENING ports owned by pid without opening probe connections."""
+    if os.name != "nt":
+        return set()
+    try:
+        proc = subprocess.run(
+            ["netstat", "-ano", "-p", "tcp"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except Exception:
+        return set()
+
+    out: set[int] = set()
+    for raw in proc.stdout.splitlines():
+        parts = raw.split()
+        if len(parts) < 5 or parts[0].upper() != "TCP":
+            continue
+        if parts[-2].upper() != "LISTENING":
+            continue
+        try:
+            owner = int(parts[-1])
+        except ValueError:
+            continue
+        if owner != int(pid):
+            continue
+        local = parts[1].rsplit(":", 1)
+        if len(local) != 2:
+            continue
+        try:
+            out.add(int(local[1]))
+        except ValueError:
+            continue
+    return out
+
+
 def validate_status(
     data: Mapping,
     *,
     pid_alive: Callable[[int], bool] = default_pid_alive,
+    listening_ports: Callable[[int], set[int]] = default_listening_ports,
 ) -> list[str]:
     errors: list[str] = []
 
@@ -121,10 +162,19 @@ def validate_status(
         server_pid = int(server_pid)
     except (TypeError, ValueError):
         server_pid = 0
-    if not server_pid or not pid_alive(server_pid):
+    server_alive = bool(server_pid and pid_alive(server_pid))
+    if not server_alive:
         errors.append(
             f"server process from preflight is not running (PID={server_pid or 'missing'})"
         )
+    elif os.name == "nt":
+        owned_ports = set(listening_ports(server_pid))
+        missing_ports = [port for port in REQUIRED_TCP_PORTS if port not in owned_ports]
+        if missing_ports:
+            errors.append(
+                "server core listeners are not ready under the preflight PID; "
+                "missing TCP port(s): " + ", ".join(str(p) for p in missing_ports)
+            )
 
     if not data.get("client_root"):
         errors.append("preflight client root is missing")
@@ -143,9 +193,14 @@ def require_launch_ready(
     path: Path | None = None,
     *,
     pid_alive: Callable[[int], bool] = default_pid_alive,
+    listening_ports: Callable[[int], set[int]] = default_listening_ports,
 ) -> dict:
     data, target = load_status(path)
-    errors = validate_status(data, pid_alive=pid_alive)
+    errors = validate_status(
+        data,
+        pid_alive=pid_alive,
+        listening_ports=listening_ports,
+    )
     if errors:
         detail = "\n".join(f"  - {item}" for item in errors)
         raise LaunchGateError(
