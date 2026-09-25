@@ -201,6 +201,22 @@ If the original `13EAD403...` build is detected, fully close `client.exe` / TCLS
 
 The helper verifies the exact source hash and instruction bytes, creates `TCLS.dll.bak`, applies only the recovered compatibility edits, and verifies the final known-good hash. **Do not force this patch onto an unknown TCLS build.**
 
+Before continuing, the diagnostic must show the supported TCLS class and both RSA checks passing:
+
+```text
+class              : validated raw-PEM-compatible PH TCLS build
+exact byte match   : YES
+same RSA key       : YES
+```
+
+Keep the same client root available to the server in this PowerShell session:
+
+```powershell
+$env:AF_CLIENT_ROOT = "<game-root>"
+```
+
+The server re-checks this exact client copy during startup. For PvE, a correctly configured `AF_GAME_DIR=...\Binaries\Win32` can also supply the client root.
+
 This is the step to check when the launcher reports **`AP client initialization failed.`** even though `server\PRIVATE.PEM` and `TCLS\config\APClient.dat` are a matching generated pair.
 
 ---
@@ -256,28 +272,39 @@ ipconfig /flushdns
 
 ## 6. Start the stable v143b emulator
 
-From the repository folder:
+Run it from the **repository root**:
 
 ```powershell
+$env:AF_CLIENT_ROOT = "<game-root>"
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
-The server now automatically looks for:
+If PowerShell says `.\.venv\Scripts\python.exe` is not recognized, `cd` back to the repository root first. The `.venv` directory is there, not inside `server\`.
+
+The server automatically looks for:
 
 ```text
 server\PRIVATE.PEM
 ```
 
-A good sign is:
+Before any listener opens, the startup preflight checks the client, RSA/APClient pair, and Windows hosts file. A successful start includes:
 
 ```text
-[BOOT] Loaded RSA private key from ...
+[PREFLIGHT] TCLS validated build    : YES
+[PREFLIGHT] APClient exact bytes    : YES
+[PREFLIGHT] same RSA key            : YES
+[PREFLIGHT] hosts tversion.levelupgames.ph   : YES
+[PREFLIGHT] hosts tauthproxy.levelupgames.ph : YES
+[PREFLIGHT] hosts tdir.levelupgames.ph       : YES
+[PREFLIGHT] PASS - all required checks succeeded.
 [VERSION] Listening on port 9060
 [AUTH] Listening on port 8000
 [DIR] Listening on port 9010
 ...
 [MAIN] All listeners running.
 ```
+
+If any preflight rule fails, v143b exits with code 2 and **does not start VERSION / AUTH / DIR / ROLE / ZONE**. Fix the reported client, RSA, or hosts problem and run it again.
 
 If your private key is stored somewhere else, you can point the server to it:
 
@@ -472,6 +499,7 @@ tools\bridge\af_ds_udp_bridge_v9_multi_peer_latch.py
 Set `AF_GAME_DIR` to the `Binaries\\Win32` directory of your Assault Fire PH installation (the drive letter/install location can be different), then start v143b:
 
 ```powershell
+$env:AF_CLIENT_ROOT = "<game-root>"
 $env:AF_GAME_DIR = "<full path to your Assault Fire PH Binaries\Win32 folder>"
 $env:AF_DS_SPAWNER_ENABLED = "1"
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
