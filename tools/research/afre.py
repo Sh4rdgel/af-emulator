@@ -707,7 +707,6 @@ def cmd_find_field(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
     for group, name, field_name, field_meta in rows:
         offset = field_meta.get("offset", "-")
         field_type = field_meta.get("type", "")
-        status = field_meta.get("status", meta.get("status", "-")) if False else ""
         print(f"{group}.{name}.{field_name:28} {offset:>8} {field_type}")
         bits = field_meta.get("bits")
         if isinstance(bits, dict):
