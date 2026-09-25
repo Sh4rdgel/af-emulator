@@ -248,6 +248,24 @@ class RoomRegistry:
             member["state"] = PLAYER_STATE_READY if ready else PLAYER_STATE_UNREADY
             return self._snapshot(room)
 
+    def reset_round_state(self, room_id: int) -> dict:
+        """Return a surviving logical room to the stock pre-round state.
+
+        A player can leave UE3 gameplay and return to the same room without
+        leaving/rejoining the room itself.  In that path the previous round's
+        started/ready flags must not leak into the next Ready/Start cycle.
+        """
+        room_id = int(room_id)
+        with self._lock:
+            room = self._rooms.get(room_id)
+            if room is None:
+                raise RoomRegistryError("room-not-found")
+            room["started"] = False
+            for member in room["members"].values():
+                member["ready"] = False
+                member["state"] = PLAYER_STATE_UNREADY
+            return self._snapshot(room)
+
     def move_member(self, uin: int, new_seat: int, camp: int):
         uin, new_seat = int(uin), int(new_seat)
         with self._lock:
