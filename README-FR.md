@@ -12,6 +12,47 @@ Le but est de rendre le client PH retiré à nouveau utilisable dans un environn
 
 ---
 
+# ⚠️ IMPORTANT — avant de cliquer sur START
+
+Pour le premier lancement le plus fiable, utilisez d'abord le **suspended TCLS launch patcher**.
+
+**Ne cliquez pas encore sur START** dans le launcher Assault Fire.
+
+Après avoir terminé la configuration ci-dessous, démarré l'emulator, vous être connecté via `client.exe` / TCLS et atteint l'écran normal **START**, exécutez depuis la racine du repository:
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\patches\patch_tcls_suspended_launch.py
+```
+
+Attendez l'affichage:
+
+```text
+TCLS ARMED
+Click START in the Assault Fire launcher now.
+```
+
+**Cliquez seulement ensuite sur START.**
+
+Le helper effectue automatiquement la séquence correcte:
+
+```text
+TCLS creates TGame.exe suspended
+        ↓
+TCLS finishes the shared-memory handoff
+        ↓
+required TGame datetime compatibility patch is applied
+        ↓
+TGame.exe is resumed
+```
+
+Cela aide à éviter un crash de démarrage connu de l'ancien TGame lorsque le jeu commence à s'exécuter avant que le compatibility patch soit actif.
+
+> Avec `patch_tcls_suspended_launch.py`, **n'exécutez pas aussi `patch_tgame_datetime.py` pour le même lancement**. Le suspended-launch helper applique déjà le datetime patch.
+
+Si **TGame build/signature mismatch** apparaît, arrêtez-vous et ne forcez pas le patch. Seul Assault Fire PH **v1.0.0.24** est actuellement pris en charge/testé.
+
+---
+
 # Commencez ici
 
 Si c'est votre première utilisation, suivez les étapes **dans l'ordre**.
