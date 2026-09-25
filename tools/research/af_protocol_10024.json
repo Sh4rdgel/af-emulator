@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "build": {
+    "name": "Assault Fire PH v1.0.0.24",
+    "tgame_sha256": "b4273f2658ca94eebc559a997fdfcd02d51e77ce75b892250c1db7fb80c70b51"
+  },
+  "packets": {
+    "A303": {
+      "name": "C2ZN_ReqFriendsStatus",
+      "direction": "C2ZN",
+      "status": "identified-backend-implemented-live-validation-pending",
+      "observed_body": "00000001",
+      "decoded_observation": {"Count": 0, "Type": 1}
+    },
+    "A304": {
+      "name": "ZN2C_ResFriendStatus",
+      "direction": "ZN2C",
+      "status": "identified-backend-implemented-live-validation-pending"
+    },
+    "A305": {
+      "name": "C2ZN_ReqAddFriend",
+      "direction": "C2ZN",
+      "status": "identified-backend-implemented-live-validation-pending"
+    },
+    "A306": {
+      "name": "ZN2C_ReqAddFriend",
+      "direction": "ZN2C",
+      "status": "identified-backend-implemented-live-validation-pending"
+    },
+    "A307": {
+      "name": "C2ZN_ResAddFriend",
+      "direction": "C2ZN",
+      "status": "identified-backend-implemented-live-validation-pending",
+      "notes": "Accept/reject path."
+    },
+    "A308": {
+      "name": "ZN2C_ResAddFriend",
+      "direction": "ZN2C",
+      "status": "identified-backend-implemented-live-validation-pending"
+    },
+    "A309": {
+      "name": "C2ZN_ReqDelFriend",
+      "direction": "C2ZN",
+      "status": "identified-backend-implemented-live-validation-pending"
+    },
+    "A30A": {
+      "name": "ZN2C_ResDelFriend",
+      "direction": "ZN2C",
+      "status": "identified-backend-implemented-live-validation-pending"
+    },
+    "A403": {
+      "name": "C2ZN_ReqChatBroadcast",
+      "direction": "C2ZN",
+      "status": "verified-live-capture",
+      "schema": [
+        {"name": "Type", "type": "uint16"},
+        {"name": "Content", "type": "uint32-length-prefixed NUL-terminated string"},
+        {"name": "ChatPkgCount", "type": "uint8"},
+        {"name": "TacticalCommandID", "type": "uint32"}
+      ],
+      "observations": [
+        {"context": "main-menu", "Type": "0x0002"},
+        {"context": "PVE-match", "Type": "0x0010"}
+      ],
+      "client_functions": [
+        "TGOnlineClient.OnlineRequest_ChatBroadcast",
+        "OnTGOnlineDelegate_ChatBroadcast"
+      ]
+    },
+    "A404": {
+      "name": "ZN2C_NtfChatBroadcast",
+      "direction": "ZN2C",
+      "status": "emulator-implemented-client-render-unverified",
+      "notes": "v149 echoes the preserved broadcast type; stock visual rendering still needs live validation."
+    },
+    "A405": {
+      "name": "C2ZN_ReqChatP2P",
+      "direction": "C2ZN",
+      "status": "client-id-recovered-backend-implemented-live-two-client-pending",
+      "client_functions": ["OnlineRequest_ChatP2P"],
+      "schema_status": "exact-body-not-live-captured"
+    },
+    "A406": {
+      "name": "ZN2C_NtfChatP2P",
+      "direction": "ZN2C",
+      "status": "client-id-recovered-backend-implemented-live-two-client-pending",
+      "schema_status": "exact-body-not-live-captured",
+      "notes": "v97 routes to the recipient ZONE socket when online or queues offline delivery."
+    },
+    "A407": {
+      "name": "C2ZN_REQ_TROMBA",
+      "direction": "C2ZN",
+      "status": "tentative",
+      "notes": "Likely speaker/megaphone path; not a verified voice packet."
+    },
+    "FF02": {
+      "name": "C2ZN_NTF_ANTIBOTMSG",
+      "direction": "C2ZN",
+      "status": "identified-not-voice",
+      "notes": "Historical post-login telemetry/reporting including [ANT] diagnostics. No response required by the emulator."
+    },
+    "00C9": {
+      "name": "ZN2DS_REQ_SYNC_PLAYER_INFO",
+      "direction": "ZN2DS",
+      "status": "identified-from-stock-PH-TDR"
+    },
+    "00CD": {
+      "name": "DS2ZN_RES_SYNC_PLAYER_INFO",
+      "direction": "DS2ZN",
+      "status": "identified-from-stock-PH-TDR"
+    }
+  },
+  "constants": {
+    "DSDSM_PROTOCOL_MAGIC": {"value": "0xB8A4", "status": "identified-from-stock-PH-TDR"},
+    "DSM_FORWARDING_PACKET": {"value": "0x0100", "status": "identified-from-stock-PH-TDR"}
+  },
+  "voice": {
+    "status": "unknown-needs-live-capture",
+    "confirmed_packet_ids": [],
+    "negative_findings": [
+      "FF02 is telemetry/anti-bot reporting, not voice.",
+      "A407 is not confirmed as voice.",
+      "No stock voice packet body or server implementation has been verified."
+    ],
+    "next_evidence_needed": "Two real clients in the same room with voice activity, capturing whether transport is ZONE or a separate UDP/TCP path."
+  },
+  "rules": [
+    "Do not promote emulator-only behavior to live-client verified.",
+    "Do not infer voice from a packet ID without a real voice-session capture.",
+    "Preserve packet direction and validation status with every new entry."
+  ]
+}
