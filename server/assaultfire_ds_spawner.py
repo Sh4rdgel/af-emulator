@@ -35,7 +35,6 @@ ROOM_TARGETS = {
     (0x00002001, 0x002F): ("SV-Maya_3_Main", "PVEGame.TGSVGame"),
     (0x00002001, 0x0007): ("SV-Factory_1_Main", "PVEGame.TGSVGame"),
     (0x00002002, 0x0010): ("IF-Factory_3_Main", "PVEGame.TGIFGame"),
-    (0x00000204, 0x0027): ("Bio-Capital_4_Main", "TGBioGame.TGBioMatch"),
 }
 # Backward-compatible name used by older AFDEV tooling.
 PVE_TARGETS = ROOM_TARGETS
