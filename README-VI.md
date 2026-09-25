@@ -51,6 +51,27 @@ TGame.exe is resumed
 
 Nếu helper báo **TGame build/signature mismatch**, hãy dừng lại và không ép patch. Hiện chỉ hỗ trợ/test Assault Fire PH **v1.0.0.24**.
 
+## Logging level
+
+Bạn có thể làm console gọn hơn mà vẫn giữ đầy đủ development log.
+
+```powershell
+$env:AF_LOG_LEVEL = "DEBUG"
+```
+
+Các level: `DEBUG`, `INFO` (mặc định), `WARNING`, `ERROR`.
+
+- `DEBUG` — hiện tất cả trên console.
+- `INFO` — ẩn DEBUG trên console.
+- `WARNING` — chỉ WARNING và ERROR.
+- `ERROR` — chỉ ERROR.
+
+**Ngay cả khi console không chọn DEBUG, `server\af_server_live.log` vẫn lưu DEBUG và mọi level cao hơn.** Điều này rất quan trọng cho bug report và development.
+
+Raw AUTH plaintext/ciphertext không được tự động lưu vì có thể chứa credential/auth material. Chỉ dùng khi diagnostic local có kiểm soát: `$env:AF_DEBUG_AUTH_HEX = "1"`.
+
+---
+
 ## Mandatory preflight launch gate
 
 Trước khi helper cho phép game tiếp tục, server preflight phải **PASS**:
