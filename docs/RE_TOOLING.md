@@ -67,6 +67,9 @@ It stores reflection layouts, gameplay objects, native TG classes, script classe
 .\.venv\Scripts\python.exe .\tools\research\afre.py objects --filter Player
 .\.venv\Scripts\python.exe .\tools\research\afre.py object PVEPlayerController
 .\.venv\Scripts\python.exe .\tools\research\afre.py field PVEPlayerController HUD
+.\.venv\Scripts\python.exe .\tools\research\afre.py find-field Connection
+.\.venv\Scripts\python.exe .\tools\research\afre.py names --core-only
+.\.venv\Scripts\python.exe .\tools\research\afre.py names --runtime-only
 .\.venv\Scripts\python.exe .\tools\research\afre.py audit-objects
 .\.venv\Scripts\python.exe .\tools\research\afre.py conflicts
 ```
@@ -75,7 +78,31 @@ The database deliberately records unresolved conflicts instead of silently choos
 
 Do not store live UObject instance addresses in this file; those are session-specific. Store stable class layouts, constructors, vtables, functions, relationships, and verified masks.
 
-## 4. Resolve crash and trace addresses
+## 4. Query protocol knowledge
+
+Packet and protocol research is kept separately in:
+
+```text
+tools/research/af_protocol_10024.json
+```
+
+Use AFRE instead of searching old packet logs manually:
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\research\afre.py packets
+.\.venv\Scripts\python.exe .\tools\research\afre.py packets --filter Chat
+.\.venv\Scripts\python.exe .\tools\research\afre.py packet A403
+.\.venv\Scripts\python.exe .\tools\research\afre.py packet C2ZN_ReqChatP2P
+.\.venv\Scripts\python.exe .\tools\research\afre.py voice
+.\.venv\Scripts\python.exe .\tools\research\afre.py audit-protocol
+```
+
+Every packet entry carries a validation status. Live captures, client-ID recovery, emulator-only implementations, tentative names, and unknown paths must remain distinguishable.
+
+Voice is intentionally recorded as unknown until a real two-client voice session identifies its transport and packet format. Do not reuse FF02 as a voice candidate; it is tracked as telemetry/anti-bot reporting.
+
+## 5. Resolve crash and trace addresses
+
 
 
 For one address:
@@ -92,7 +119,7 @@ For a whole text log:
 
 AFRE annotates addresses only when they are inside the validated TGame image and sufficiently close to a known symbol.
 
-## 5. Detect loader/catalog drift
+## 6. Detect loader/catalog drift
 
 The AFDEV loader still contains build-specific constants. Check that its important addresses agree with the central catalog:
 
@@ -102,7 +129,7 @@ The AFDEV loader still contains build-specific constants. Check that its importa
 
 If this reports a mismatch, investigate it before copying either value into another script.
 
-## 6. Diff structured captures
+## 7. Diff structured captures
 
 When research produces JSON before/after captures, compare them with:
 
