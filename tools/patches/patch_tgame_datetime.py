@@ -40,6 +40,15 @@ import sys
 import time
 from ctypes import wintypes
 
+try:
+    import launch_preflight_gate as launch_gate
+except Exception as exc:
+    raise SystemExit(
+        "Could not import tools/patches/launch_preflight_gate.py. "
+        "Keep the repository files together.\n"
+        f"Import error: {exc}"
+    )
+
 if os.name != "nt":
     raise SystemExit("This patcher must be run on Windows.")
 
@@ -432,6 +441,11 @@ def patch_process(pid, base):
 def main():
     timeout = 300.0
     start = time.time()
+
+    gate_status = launch_gate.require_launch_ready()
+    print("[LAUNCH-GATE] PASS - server preflight is UNLOCKED.")
+    print(f"[LAUNCH-GATE] client root: {gate_status.get('client_root')}")
+    print()
 
     print(f"Waiting for {PROCESS_NAME} ...")
     print("You can launch the game now.")
