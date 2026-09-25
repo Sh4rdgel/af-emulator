@@ -5892,8 +5892,21 @@ def apply_pve_game_settings(hproc, hthread, authority, mode_id, map_id, sub_mode
     sub_mode_id = int(sub_mode_id) & 0xFFFFFFFF
     room_flags = int(room_flags) & 0xFFFFFFFF
 
-    if mode_id != 0x00002001:
-        raise RuntimeError(f"PvE loader expected ModeId 0x2001, got 0x{mode_id:08X}")
+    # The v48 loader is shared by the verified AFDEV PvE families.  Earlier
+    # revisions accidentally hard-coded Survival (0x2001) here even though the
+    # spawner already routes Defense / Steel Forest as ModeId 0x2002 with
+    # PVEGame.TGIFGame.  That made the map finish loading, then killed the
+    # loader immediately before SESSION_READY.
+    supported_modes = {
+        0x00002001: "Survival",
+        0x00002002: "Defense",
+    }
+    mode_name = supported_modes.get(mode_id)
+    if mode_name is None:
+        raise RuntimeError(
+            f"unsupported AFDEV ModeId 0x{mode_id:08X}; "
+            "verified modes are 0x00002001 (Survival) and 0x00002002 (Defense)"
+        )
     if sub_mode_id not in (0x00001001, 0x00001002, 0x00001003):
         raise RuntimeError(f"unsupported PvE SubModeId 0x{sub_mode_id:08X}")
 
@@ -5901,7 +5914,8 @@ def apply_pve_game_settings(hproc, hthread, authority, mode_id, map_id, sub_mode
     diff_name = ("Easy", "Normal", "Hard")[difficulty]
     advanced_hero = bool(room_flags & 0x00040000)
     print(
-        f"[AFDEV-PVE-SETTINGS] APPLY mode=0x{mode_id:08X} map=0x{map_id:04X} "
+        f"[AFDEV-PVE-SETTINGS] APPLY family={mode_name} "
+        f"mode=0x{mode_id:08X} map=0x{map_id:04X} "
         f"submode=0x{sub_mode_id:08X} flags=0x{room_flags:08X} "
         f"difficulty={diff_name}({difficulty}) advanced_hero={advanced_hero}"
     )
@@ -5955,29 +5969,64 @@ def apply_pve_game_settings(hproc, hthread, authority, mode_id, map_id, sub_mode
         hproc, world_info + world_flags_prop["offset"], room_flags, 4, "WorldInfo.GameSettingFlags"
     )
 
+    # Survival has a verified PVEGameReplicationInfo.Difficulty field and
+    # depends on it for the stock GetDifficulty() path. Defense/TGIFGame is a
+    # different GameInfo family: keep the authoritative GameSettings/SubModeId
+    # write mandatory, but do not kill a valid Defense DS merely because its
+    # live GRI does not expose the Survival-specific Difficulty property.
+    difficulty_applied = False
     gri_prop = _pve_find_field(hproc, gi_hdr["class"], wanted["GameReplicationInfo"])
     if not gri_prop or gri_prop["element_size"] != 4:
-        raise RuntimeError(f"PvE settings: GameReplicationInfo property invalid: {gri_prop}")
-    gri = read_u32(hproc, game_info + gri_prop["offset"])
-    gri_hdr = _pve_object_header(hproc, gri)
-    if not gri_hdr:
-        raise RuntimeError("PvE settings: live GameReplicationInfo missing")
-    diff_prop = _pve_find_field(hproc, gri_hdr["class"], wanted["Difficulty"])
-    if not diff_prop or diff_prop["array_dim"] != 1 or diff_prop["element_size"] not in (1, 2, 4):
-        raise RuntimeError(f"PvE settings: PVE GRI Difficulty invalid: {diff_prop}")
-    _pve_write_int(
-        hproc, gri + diff_prop["offset"], difficulty, diff_prop["element_size"],
-        "PVEGameReplicationInfo.Difficulty",
-    )
+        if mode_id == 0x00002001:
+            raise RuntimeError(f"PvE settings: GameReplicationInfo property invalid: {gri_prop}")
+        print(
+            "[AFDEV-PVE-SETTINGS] Defense GRI difficulty write skipped: "
+            f"GameReplicationInfo property invalid: {gri_prop}"
+        )
+    else:
+        gri = read_u32(hproc, game_info + gri_prop["offset"])
+        gri_hdr = _pve_object_header(hproc, gri)
+        if not gri_hdr:
+            if mode_id == 0x00002001:
+                raise RuntimeError("PvE settings: live GameReplicationInfo missing")
+            print(
+                "[AFDEV-PVE-SETTINGS] Defense GRI difficulty write skipped: "
+                "live GameReplicationInfo not ready/exposed"
+            )
+        else:
+            diff_prop = _pve_find_field(hproc, gri_hdr["class"], wanted["Difficulty"])
+            if (
+                not diff_prop
+                or diff_prop["array_dim"] != 1
+                or diff_prop["element_size"] not in (1, 2, 4)
+            ):
+                if mode_id == 0x00002001:
+                    raise RuntimeError(f"PvE settings: PVE GRI Difficulty invalid: {diff_prop}")
+                print(
+                    "[AFDEV-PVE-SETTINGS] Defense GRI difficulty write skipped: "
+                    f"Difficulty property invalid: {diff_prop}"
+                )
+            else:
+                _pve_write_int(
+                    hproc,
+                    gri + diff_prop["offset"],
+                    difficulty,
+                    diff_prop["element_size"],
+                    "PVEGameReplicationInfo.Difficulty",
+                )
+                difficulty_applied = True
 
     print(
         "[AFDEV-PVE-SETTINGS] VERIFIED stock final state; "
-        "PVEGame.GetDifficulty() will now read the captured SubModeId."
+        f"family={mode_name} difficulty_write="
+        f"{'GRI+SubModeId' if difficulty_applied else 'SubModeId-only'}."
     )
     return {
         "difficulty": difficulty,
         "difficulty_name": diff_name,
+        "difficulty_applied": difficulty_applied,
         "advanced_hero": advanced_hero,
+        "mode_name": mode_name,
         "mode_id": mode_id,
         "map_id": map_id,
         "sub_mode_id": sub_mode_id,
@@ -6681,7 +6730,7 @@ def main():
                         pve_settings_last_error = exc
                         msg = str(exc)
                         permanent = (
-                            "expected ModeId" in msg
+                            "unsupported AFDEV ModeId" in msg
                             or "unsupported PvE SubModeId" in msg
                         )
                         if permanent or not process_alive(pi.hProcess):
@@ -6734,6 +6783,10 @@ def main():
                         "room_flags": int(args.room_flags),
                         "pve_difficulty": int(pve_settings_state["difficulty"]),
                         "pve_difficulty_name": str(pve_settings_state["difficulty_name"]),
+                        "pve_difficulty_applied": bool(
+                            pve_settings_state.get("difficulty_applied")
+                        ),
+                        "mode_name": str(pve_settings_state.get("mode_name") or ""),
                         "advanced_hero": bool(pve_settings_state["advanced_hero"]),
                         "gworld": int(final_gworld or 0),
                         "loadmap_stage": int(highest_stage),
