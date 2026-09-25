@@ -60,7 +60,7 @@ def load_object_db(path: Path = DEFAULT_OBJECTS) -> dict[str, Any]:
 def iter_objects(
     db: dict[str, Any]
 ) -> Iterable[tuple[str, str, dict[str, Any]]]:
-    for group in ("reflection", "objects", "native_classes", "script_classes"):
+    for group in ("structs", "reflection", "objects", "native_classes", "script_classes"):
         for name, meta in db.get(group, {}).items():
             yield group, name, meta
 
