@@ -63,6 +63,8 @@ TGame.exe is resumed
 [PREFLIGHT] game launch gate         : UNLOCKED
 ```
 
+من **الطبيعي** أن تظهر حالة gate مؤقتاً كـ `LOCKED` بعد نجاح client checks أثناء قيام السيرفر بربط جميع listeners المطلوبة. لا تشغّل اللعبة بعد. انتظر ظهور `game launch gate : UNLOCKED` و `[MAIN] All listeners running.`
+
 إذا ظهر أي `NO` أو `client root : None` أو `game launch gate : LOCKED`، **لا تضغط START**. لن تفتح server listeners، وستتوقف launch helpers المدعومة برسالة `GAME LAUNCH BLOCKED`.
 
 يتم حفظ تقرير preflight الكامل في `server\af_server_live.log`، وحالة gate القابلة للقراءة آلياً في `runtime\preflight_status.json`. أصلح المشكلة، أعد تشغيل السيرفر، واستمر فقط عندما تكون الحالة **UNLOCKED**.
