@@ -87,6 +87,69 @@
           "type": "native function pointer"
         }
       }
+    },
+    "UProperty": {
+      "parent": "UField",
+      "status": "verified-generation-layout",
+      "fields": {
+        "ArrayDim": {
+          "offset": "0x40",
+          "type": "int32"
+        },
+        "ElementSize": {
+          "offset": "0x44",
+          "type": "int32"
+        },
+        "PropertyFlagsLow": {
+          "offset": "0x48",
+          "type": "uint32"
+        },
+        "PropertyFlagsHigh": {
+          "offset": "0x4C",
+          "type": "uint32"
+        },
+        "RepOffset": {
+          "offset": "0x50",
+          "type": "uint16"
+        },
+        "CategoryNameIndex": {
+          "offset": "0x54",
+          "type": "int32"
+        },
+        "CategoryNameNumber": {
+          "offset": "0x58",
+          "type": "int32"
+        },
+        "PropertyLinkNext": {
+          "offset": "0x5C",
+          "type": "UProperty*"
+        },
+        "ConfigLinkNext": {
+          "offset": "0x60",
+          "type": "UProperty*"
+        },
+        "ConstructorLinkNext": {
+          "offset": "0x64",
+          "type": "UProperty*"
+        },
+        "Offset": {
+          "offset": "0x68",
+          "type": "int32"
+        }
+      },
+      "notes": [
+        "Recovered and reused across the PH PVE reflection probes."
+      ]
+    },
+    "UBoolProperty": {
+      "parent": "UProperty",
+      "status": "verified-generation-layout",
+      "fields": {
+        "BitMask": {
+          "offset": "0x6C",
+          "type": "uint32"
+        }
+      }
     }
   },
   "objects": {
@@ -194,8 +257,6 @@
     "PVEPlayerController": {
       "status": "verified",
       "vtable": "0x01E24C28",
-      "constructor": "0x01662F60",
-      "native_size": "0xA60",
       "fields": {
         "Pawn": {
           "offset": "0x1D8",
@@ -303,6 +364,86 @@
         "Socket": {
           "offset": "0x1A8",
           "type": "pointer"
+        },
+        "ClientConnections": {
+          "offset": "0x44",
+          "type": "TArray<UNetConnection*>",
+          "status": "live-validated-true-ds"
+        }
+      }
+    },
+    "UNetConnection": {
+      "status": "verified-true-ds",
+      "fields": {
+        "Driver": {
+          "offset": "0x60",
+          "type": "UNetDriver*"
+        },
+        "Channels": {
+          "offset": "0xF04",
+          "type": "UChannel*[]",
+          "notes": "Inline channel pointer slots indexed as base + ChannelIndex*4."
+        },
+        "OpenChannels": {
+          "offset": "0x4F0C",
+          "type": "TArray<UChannel*>"
+        }
+      }
+    },
+    "UChannel": {
+      "status": "verified-true-ds",
+      "fields": {
+        "Connection": {
+          "offset": "0x3C",
+          "type": "UNetConnection*"
+        },
+        "Flags": {
+          "offset": "0x40",
+          "type": "uint32",
+          "bits": {
+            "Closing": "0x00000002"
+          }
+        },
+        "ChannelIndex": {
+          "offset": "0x44",
+          "type": "int32"
+        },
+        "ChannelType": {
+          "offset": "0x50",
+          "type": "int32"
+        }
+      },
+      "notes": [
+        "Control channel requires ChannelIndex=0 and ChannelType=1 in the recovered stock acceptance path."
+      ]
+    },
+    "PVEGameInfo": {
+      "status": "live-validated",
+      "vtable": "0x01E28F28",
+      "notes": [
+        "Used by PVE ProcessEvent lifecycle tracing in the exact PH build."
+      ]
+    },
+    "PVEGameReplicationInfo": {
+      "parent": "GameReplicationInfo",
+      "status": "live-validated",
+      "vtable": "0x01E24800",
+      "fields": {
+        "Timers": {
+          "offset": "0xA4",
+          "type": "TArray<...>"
+        },
+        "ElapsedTime": {
+          "offset": "0x1E4",
+          "type": "int32"
+        },
+        "StateFlags": {
+          "offset": "0x318",
+          "type": "uint32",
+          "bits": {
+            "bGameBegun": "0x00000001",
+            "bSuspendGame": "0x00000004"
+          }
         }
       }
     }
@@ -344,6 +485,10 @@
       "constructor": "0x013EF920",
       "vtable": "0x01D5B350",
       "native_size": "0x1110",
+      "status": "recovered-from-exact-build"
+    },
+    "UTPlayerController": {
+      "vtable": "0x01D61428",
       "status": "recovered-from-exact-build"
     }
   },
@@ -431,6 +576,21 @@
           }
         }
       ]
+    },
+    {
+      "id": "TGTeamGame_vtable_identity",
+      "status": "unresolved",
+      "description": "Static native class recovery identified TGTeamGame vtable 0x01D62530, while AFDEV loader/runtime authority probes used or observed 0x01D68BD0 as the live GameInfo/TGTeamGame-family vtable. Keep both meanings separate until the concrete class identity at 0x01D68BD0 is re-established.",
+      "variants": [
+        {
+          "name": "static_recovered_TGTeamGame",
+          "vtable": "0x01D62530"
+        },
+        {
+          "name": "live_AFDEV_GameInfo_family",
+          "vtable": "0x01D68BD0"
+        }
+      ]
     }
   ],
   "rules": [
@@ -445,7 +605,12 @@
       "probe_pve_authoritative_gri_v51d.py",
       "probe_pve_gamestart_event_v55.py",
       "probe_pve_postload_delta_v4_fast.py",
-      "probe_pve_restartplayer_v6.py"
+      "probe_pve_restartplayer_v6.py",
+      "ASSAULT_FIRE_TRUE_DS_ASTRA_HANDOFF_2026-09-23.md",
+      "trace_pve_lifecycle_now.py",
+      "trace_pve_lifecycle_full_v3_spawnanchored.py",
+      "probe_pve_rpc_game_thread_clock_sync_v23.py",
+      "probe_pve_loading_complete_v48.py"
     ],
     "status_meanings": {
       "verified": "Repeatedly validated against the exact clean PH v1.0.0.24 binary and/or live runtime.",
@@ -455,5 +620,43 @@
       "verified-from-package": "Established from decoded PH UnrealScript/package metadata.",
       "verified-from-old-PH-UnrealScript": "Established from preserved old PH script source/bytecode context."
     }
+  },
+  "core_fname_indices": {
+    "status": "stable-core-entries-for-this-build",
+    "entries": {
+      "BoolProperty": "0x00000003",
+      "ObjectProperty": "0x00000005",
+      "ArrayProperty": "0x00000009",
+      "SequenceObjects": "0x0000034A"
+    },
+    "notes": [
+      "These are core/engine names used by prior structural reflection work.",
+      "Do not generalize this stability to game-package FName indices."
+    ]
+  },
+  "runtime_fname_observations": {
+    "status": "session-dependent-history-only",
+    "entries": {
+      "RestartPlayer": [
+        "0x00006DDF",
+        "0x00006DE5"
+      ],
+      "StartGame": [
+        "0x0000744F"
+      ],
+      "NotifyClientLoadingProcessComplete": [
+        "0x0000DF8D"
+      ],
+      "TriggerGlobalEventClass": [
+        "0x000077D2"
+      ],
+      "ClientRestart": [
+        "0x00004B0E"
+      ],
+      "TimerCheckStartGame": [
+        "0x00015C73"
+      ]
+    },
+    "warning": "Game/package FName indices can shift between fresh processes. Resolve or construct names live."
   }
 }
