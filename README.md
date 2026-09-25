@@ -105,7 +105,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\setup\setup_assaultfire_hosts.p
 For **PvE**, point `AF_GAME_DIR` at the `Binaries\\Win32` directory inside your own Assault Fire PH installation before starting the server. The drive letter and install location do not matter:
 
 ```powershell
-$env:AF_GAME_DIR = "D:\AssaultFirePH\Binaries\Win32"
+$env:AF_GAME_DIR = "<full path to your Assault Fire PH Binaries\Win32 folder>"
 $env:AF_DS_SPAWNER_ENABLED = "1"
 ```
 

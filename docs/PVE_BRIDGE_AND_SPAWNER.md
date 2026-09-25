@@ -67,7 +67,7 @@ The DS spawner tracks room membership separately from active match membership.
 Point `AF_GAME_DIR` to your own Assault Fire PH `Binaries\\Win32` directory (any drive/install location), then use the normal DS settings:
 
 ```powershell
-$env:AF_GAME_DIR = "D:\AssaultFirePH\Binaries\Win32"
+$env:AF_GAME_DIR = "<full path to your Assault Fire PH Binaries\Win32 folder>"
 $env:AF_DS_SPAWNER_ENABLED = "1"
 $env:AF_DS_MAX_INSTANCES = "4"
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
