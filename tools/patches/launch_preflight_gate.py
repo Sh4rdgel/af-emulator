@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 from typing import Callable, Mapping
 
-PREFLIGHT_STATUS_SCHEMA = 1
+PREFLIGHT_STATUS_SCHEMA = 2
 REQUIRED_CHECKS = (
     "client_root",
     "tcls_validated_build",
@@ -159,6 +159,12 @@ def validate_status(
 
     if data.get("passed") is not True:
         errors.append("server preflight result is FAILED")
+    if data.get("log_written") is not True:
+        errors.append("server preflight report was not persisted to the server log")
+    if data.get("listeners_ready") is not True:
+        errors.append("server listener startup is not complete")
+    if data.get("launch_ready") is not True:
+        errors.append("game launch gate is LOCKED")
 
     server_pid = data.get("server_pid")
     try:
@@ -265,4 +271,24 @@ def require_loaded_tcls_matches(status: Mapping, loaded_tcls_path: str) -> None:
             f"  loaded   : {loaded_tcls_path}\n"
             "Set AF_CLIENT_ROOT to the client you are actually launching, "
             "restart the server, and wait for preflight PASS."
+        )
+
+
+def expected_tgame_path(status: Mapping) -> str:
+    root = status.get("client_root")
+    if not root:
+        raise LaunchGateError("GAME LAUNCH BLOCKED: preflight client root is missing")
+    return os.fspath(Path(str(root)) / "Binaries" / "Win32" / "TGame.exe")
+
+
+def require_game_image_matches(status: Mapping, loaded_tgame_path: str) -> None:
+    expected = expected_tgame_path(status)
+    if _normalized_windows_path(expected) != _normalized_windows_path(loaded_tgame_path):
+        raise LaunchGateError(
+            "GAME LAUNCH BLOCKED: TGame.exe belongs to a different client than "
+            "the one that passed server preflight.\n"
+            f"  expected : {expected}\n"
+            f"  loaded   : {loaded_tgame_path}\n"
+            "Close the other TGame/client copy, set AF_CLIENT_ROOT to the client "
+            "you are actually launching, restart the server, and retry."
         )
