@@ -12,60 +12,233 @@
   },
   "symbols": {
     "globals": {
-      "GIsEditor": {"va": "0x01FD69AC", "kind": "int32", "status": "verified"},
-      "GIsClient": {"va": "0x01FD69C8", "kind": "int32", "status": "verified"},
-      "GIsServer": {"va": "0x01FD69CC", "kind": "int32", "status": "verified"},
-      "GLog": {"va": "0x01F9D420", "kind": "pointer", "status": "verified"},
-      "GEngine": {"va": "0x02063820", "kind": "pointer", "status": "verified"},
-      "GWorld": {"va": "0x02066BF8", "kind": "pointer", "status": "verified"},
-      "IsBootFromTCLS": {"va": "0x020D4B80", "kind": "int32", "status": "verified"}
+      "GIsEditor": {
+        "va": "0x01FD69AC",
+        "kind": "int32",
+        "status": "verified"
+      },
+      "GIsClient": {
+        "va": "0x01FD69C8",
+        "kind": "int32",
+        "status": "verified"
+      },
+      "GIsServer": {
+        "va": "0x01FD69CC",
+        "kind": "int32",
+        "status": "verified"
+      },
+      "GLog": {
+        "va": "0x01F9D420",
+        "kind": "pointer",
+        "status": "verified"
+      },
+      "GEngine": {
+        "va": "0x02063820",
+        "kind": "pointer",
+        "status": "verified"
+      },
+      "GWorld": {
+        "va": "0x02066BF8",
+        "kind": "pointer",
+        "status": "verified"
+      },
+      "IsBootFromTCLS": {
+        "va": "0x020D4B80",
+        "kind": "int32",
+        "status": "verified"
+      },
+      "GNames": {
+        "va": "0x02041B68",
+        "kind": "pointer",
+        "status": "verified"
+      }
     },
     "functions": {
-      "AES_SetKey": {"va": "0x004039C0", "status": "verified"},
-      "StopLoadingMovie": {"va": "0x0095B1C0", "status": "verified"},
-      "UWorld_GetWorldInfo": {"va": "0x00D9C1A0", "status": "verified"},
-      "UWorld_SetGameInfo": {"va": "0x00DA2760", "status": "verified"},
-      "AF_ShowLoadingMovie": {"va": "0x01257FB0", "status": "verified"},
-      "UTGameEngine_Exec": {"va": "0x015B8980", "status": "verified"},
-      "TGTenio_DevLogin": {"va": "0x01494FF0", "status": "verified"}
+      "AES_SetKey": {
+        "va": "0x004039C0",
+        "status": "verified"
+      },
+      "StopLoadingMovie": {
+        "va": "0x0095B1C0",
+        "status": "verified"
+      },
+      "UWorld_GetWorldInfo": {
+        "va": "0x00D9C1A0",
+        "status": "verified"
+      },
+      "UWorld_SetGameInfo": {
+        "va": "0x00DA2760",
+        "status": "verified"
+      },
+      "AF_ShowLoadingMovie": {
+        "va": "0x01257FB0",
+        "status": "verified"
+      },
+      "UTGameEngine_Exec": {
+        "va": "0x015B8980",
+        "status": "verified"
+      },
+      "TGTenio_DevLogin": {
+        "va": "0x01494FF0",
+        "status": "verified"
+      },
+      "UObject_ProcessEvent": {
+        "va": "0x00483440",
+        "status": "verified"
+      },
+      "FName_FromTCHAR": {
+        "va": "0x004D78D0",
+        "status": "verified"
+      },
+      "GenericScriptNativeThunk": {
+        "va": "0x0048DB10",
+        "status": "repeatedly-observed"
+      },
+      "TGGame_ctor": {
+        "va": "0x013F9980",
+        "status": "recovered-from-exact-build"
+      },
+      "TGTeamGame_ctor": {
+        "va": "0x013F9A10",
+        "status": "recovered-from-exact-build"
+      },
+      "TGPlayerController_ctor": {
+        "va": "0x013F9BA0",
+        "status": "recovered-from-exact-build"
+      },
+      "TGPVPPlayerController_ctor": {
+        "va": "0x013F9C00",
+        "status": "recovered-from-exact-build"
+      },
+      "TGTeamPlayerController_ctor": {
+        "va": "0x013F9C30",
+        "status": "recovered-from-exact-build"
+      },
+      "TGPawn_ctor": {
+        "va": "0x013EF8C0",
+        "status": "recovered-from-exact-build"
+      },
+      "TGTeamPawn_ctor": {
+        "va": "0x013EF920",
+        "status": "recovered-from-exact-build"
+      }
     },
     "vtables": {
-      "TGDsDsmNetHandler": {"va": "0x01D8EE60", "status": "verified"},
-      "PVEPlayerController": {"va": "0x01E24C28", "status": "verified"},
-      "ULocalPlayer": {"va": "0x01D59830", "status": "verified"}
+      "TGDsDsmNetHandler": {
+        "va": "0x01D8EE60",
+        "status": "verified"
+      },
+      "PVEPlayerController": {
+        "va": "0x01E24C28",
+        "status": "verified"
+      },
+      "ULocalPlayer": {
+        "va": "0x01D59830",
+        "status": "verified"
+      },
+      "TGGame": {
+        "va": "0x01D61948",
+        "status": "recovered-from-exact-build"
+      },
+      "TGTeamGame": {
+        "va": "0x01D62530",
+        "status": "recovered-from-exact-build"
+      },
+      "TGPlayerController": {
+        "va": "0x01D64720",
+        "status": "recovered-from-exact-build"
+      },
+      "TGPVPPlayerController": {
+        "va": "0x01D651D8",
+        "status": "recovered-from-exact-build"
+      },
+      "TGTeamPlayerController": {
+        "va": "0x01D65728",
+        "status": "recovered-from-exact-build"
+      },
+      "TGPawn": {
+        "va": "0x01D5A830",
+        "status": "recovered-from-exact-build"
+      },
+      "TGTeamPawn": {
+        "va": "0x01D5B350",
+        "status": "recovered-from-exact-build"
+      }
     },
     "patch_sites": {
-      "LoginInfoFail": {"va": "0x014972F1", "expected": "A1 20 D4 F9 01", "status": "verified"},
-      "GIsClientFinalWrite": {"va": "0x013494D8", "expected": "89 35 C8 69 FD 01", "status": "verified"},
-      "GIsServerFinalReset": {"va": "0x013494DE", "expected": "89 1D CC 69 FD 01", "status": "verified"}
+      "LoginInfoFail": {
+        "va": "0x014972F1",
+        "expected": "A1 20 D4 F9 01",
+        "status": "verified"
+      },
+      "GIsClientFinalWrite": {
+        "va": "0x013494D8",
+        "expected": "89 35 C8 69 FD 01",
+        "status": "verified"
+      },
+      "GIsServerFinalReset": {
+        "va": "0x013494DE",
+        "expected": "89 1D CC 69 FD 01",
+        "status": "verified"
+      }
     }
   },
   "layouts": {
     "UGameEngine": {
-      "GamePlayers": {"offset": "0x47C", "type": "TArray<ULocalPlayer*>"}
+      "GamePlayers": {
+        "offset": "0x47C",
+        "type": "TArray<ULocalPlayer*>"
+      }
     },
     "ULocalPlayer": {
-      "PlayerController": {"offset": "0x40", "type": "pointer"}
+      "PlayerController": {
+        "offset": "0x40",
+        "type": "pointer"
+      }
     },
     "UWorld": {
-      "NetDriver": {"offset": "0xD8", "type": "pointer"}
+      "NetDriver": {
+        "offset": "0xD8",
+        "type": "pointer"
+      }
     },
     "WorldInfo": {
-      "GameInfo": {"offset": "0x414", "type": "pointer"}
+      "GameInfo": {
+        "offset": "0x414",
+        "type": "pointer"
+      }
     },
     "AController": {
-      "Pawn": {"offset": "0x190", "type": "pointer"}
+      "Pawn": {
+        "offset": "0x190",
+        "type": "pointer"
+      }
     },
     "APlayerController": {
-      "Player": {"offset": "0x66C", "type": "pointer"},
-      "PlayerCamera": {"offset": "0x670", "type": "pointer"},
-      "AcknowledgedPawn": {"offset": "0x688", "type": "pointer"}
+      "Player": {
+        "offset": "0x66C",
+        "type": "pointer"
+      },
+      "PlayerCamera": {
+        "offset": "0x670",
+        "type": "pointer"
+      },
+      "AcknowledgedPawn": {
+        "offset": "0x688",
+        "type": "pointer"
+      }
     },
     "PVEPlayerController": {
-      "PlayerReplicationInfo": {"offset": "0x1DC", "type": "pointer"}
+      "PlayerReplicationInfo": {
+        "offset": "0x1DC",
+        "type": "pointer"
+      }
     },
     "UNetDriver": {
-      "Socket": {"offset": "0x1A8", "type": "pointer"}
+      "Socket": {
+        "offset": "0x1A8",
+        "type": "pointer"
+      }
     }
   }
 }
