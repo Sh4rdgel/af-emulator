@@ -113,7 +113,10 @@ def default_listening_ports(pid: int) -> set[int]:
         parts = raw.split()
         if len(parts) < 5 or parts[0].upper() != "TCP":
             continue
-        if parts[-2].upper() != "LISTENING":
+        # Do not depend on the localized Windows state word ("LISTENING").
+        # A TCP listening row has an unspecified foreign endpoint with port 0.
+        foreign = parts[2]
+        if not foreign.endswith(":0"):
             continue
         try:
             owner = int(parts[-1])
