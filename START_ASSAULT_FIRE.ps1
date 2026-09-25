@@ -29,7 +29,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-$LAUNCHER_REVISION = "2026-09-25-python-detect-v3"
+$LAUNCHER_REVISION = "2026-09-25-python-detect-v4"
 $EXPECTED_TGAME_SHA256 = "B4273F2658CA94EEBC559A997FDFCD02D51E77CE75B892250C1DB7FB80C70B51"
 $TCLS_ORIGINAL_SHA256 = "13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1"
 $TCLS_PATCHED_SHA256  = "3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56"
@@ -119,9 +119,14 @@ function Test-Python312Path([string]$Candidate) {
     }
 
     try {
-        # Resolve command names/shims as well as literal executable paths.
-        $command = Get-Command $Candidate -ErrorAction SilentlyContinue
-        $exe = if ($command) { $command.Source } else { $Candidate }
+        # Prefer literal executable paths first. Get-Command can behave
+        # differently for per-user Python installs and App Execution Aliases.
+        if (Test-Path -LiteralPath $Candidate -PathType Leaf) {
+            $exe = (Resolve-Path -LiteralPath $Candidate).Path
+        } else {
+            $command = Get-Command $Candidate -ErrorAction SilentlyContinue
+            $exe = if ($command) { $command.Source } else { $null }
+        }
 
         if (-not $exe -or -not (Test-Path -LiteralPath $exe -PathType Leaf)) {
             return $null
@@ -194,6 +199,17 @@ function Resolve-Python312([string]$RepoRoot = "") {
     }
 
     if ($pyLauncher) {
+        # If plain "py" already launches Python 3.12, use the launcher itself
+        # as the bootstrap executable. This is intentionally accepted because
+        # "py -m venv" will use that same default 3.12 runtime.
+        try {
+            $pyVersion = (& $pyLauncher.Source --version 2>&1 | Select-Object -First 1)
+            if ($LASTEXITCODE -eq 0 -and ([string]$pyVersion) -match "^Python\s+3\.12(?:\.|$)") {
+                Write-Host "[PY-DETECT] Python Launcher default is 3.12: $($pyLauncher.Source)"
+                return $pyLauncher.Source
+            }
+        } catch {}
+
         # Support both the classic launcher syntax (-3.12) and the newer
         # Python install manager selector syntax (-V:3.12).
         foreach ($selector in @("-3.12", "-V:3.12")) {
@@ -243,9 +259,21 @@ function Resolve-Python312([string]$RepoRoot = "") {
                         [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
                     )
                     if ($match.Success) {
-                        $found = Test-Python312Path $match.Groups[1].Value.Trim()
+                        $runtimePath = $match.Groups[1].Value.Trim()
+                        $found = Test-Python312Path $runtimePath
                         if ($found) {
                             return $found
+                        }
+
+                        # Diagnostic fallback: a path listed by py for 3.12 is
+                        # still useful even if command discovery is unusual.
+                        if (Test-Path -LiteralPath $runtimePath -PathType Leaf) {
+                            try {
+                                $runtimeVersion = (& $runtimePath --version 2>&1 | Select-Object -First 1)
+                                if ($LASTEXITCODE -eq 0 -and ([string]$runtimeVersion) -match "^Python\s+3\.12(?:\.|$)") {
+                                    return (Resolve-Path -LiteralPath $runtimePath).Path
+                                }
+                            } catch {}
                         }
                     }
                 }
