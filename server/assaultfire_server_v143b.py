@@ -9650,6 +9650,21 @@ if __name__ == "__main__":
     if not run_server_preflight(Path(PRIVATE_KEY_PATH)):
         raise SystemExit(2)
 
+    # Always show this one line even when the selected console threshold is
+    # WARNING/ERROR so users know where the full development trace is going.
+    print(
+        "[LOGGING] "
+        f"console={_SERVER_LOGGER.console_level_name} "
+        f"file=DEBUG+ path={_SERVER_LOGGER.path}",
+        flush=True,
+    )
+    log(
+        "BOOT",
+        f"logging initialized console={_SERVER_LOGGER.console_level_name} "
+        f"file=DEBUG+ path={_SERVER_LOGGER.path}",
+        level="DEBUG",
+    )
+
     # Mutable DS runtime state is created only after preflight succeeds.
     _v143b_init_spawner()
 
