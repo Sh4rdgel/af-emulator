@@ -1,0 +1,87 @@
+from pathlib import Path
+import importlib.util
+import json
+import struct
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+AFRE_PATH = ROOT / "tools" / "research" / "afre.py"
+CATALOG_PATH = ROOT / "tools" / "research" / "af_symbols_10024.json"
+
+spec = importlib.util.spec_from_file_location("afre", AFRE_PATH)
+afre = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(afre)
+
+
+def make_minimal_pe(path: Path) -> None:
+    pe_off = 0x80
+    opt_size = 0xE0
+    data = bytearray(0x400)
+    data[:2] = b"MZ"
+    struct.pack_into("<I", data, 0x3C, pe_off)
+    data[pe_off:pe_off + 4] = b"PE\0\0"
+    struct.pack_into(
+        "<HHIIIHH", data, pe_off + 4, 0x14C, 1, 0, 0, 0, opt_size, 0x010F
+    )
+    opt = pe_off + 24
+    struct.pack_into("<H", data, opt, 0x10B)
+    struct.pack_into("<I", data, opt + 16, 0x1234)
+    struct.pack_into("<I", data, opt + 28, 0x00400000)
+    struct.pack_into("<I", data, opt + 56, 0x00300000)
+    sec = opt + opt_size
+    data[sec:sec + 8] = b".text\0\0\0"
+    struct.pack_into("<IIII", data, sec + 8, 0x2000, 0x1000, 0x600, 0x200)
+    struct.pack_into("<I", data, sec + 36, 0x60000020)
+    path.write_bytes(data)
+
+
+class AfreTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.catalog = afre.load_catalog(CATALOG_PATH)
+
+    def test_catalog_build_identity(self):
+        self.assertEqual(self.catalog["schema_version"], 1)
+        self.assertEqual(
+            self.catalog["build"]["sha256"],
+            "b4273f2658ca94eebc559a997fdfcd02"
+            "d51e77ce75b892250c1db7fb80c70b51",
+        )
+
+    def test_lookup_known_symbol(self):
+        group, name, meta = afre.lookup_symbol(self.catalog, "GWorld")
+        self.assertEqual((group, name), ("globals", "GWorld"))
+        self.assertEqual(afre.parse_int(meta["va"]), 0x02066BF8)
+
+    def test_nearest_symbol(self):
+        group, name, _, delta = afre.nearest_symbol(self.catalog, 0x00DA2765)
+        self.assertEqual(
+            (group, name, delta), ("functions", "UWorld_SetGameInfo", 5)
+        )
+
+    def test_layout_known_offset(self):
+        value = self.catalog["layouts"]["APlayerController"]["Player"]["offset"]
+        self.assertEqual(afre.parse_int(value), 0x66C)
+
+    def test_parse_minimal_pe(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "test.exe"
+            make_minimal_pe(path)
+            pe = afre.parse_pe(path)
+        self.assertEqual(pe["machine"], 0x14C)
+        self.assertEqual(pe["image_base"], 0x00400000)
+        self.assertEqual(pe["entry_rva"], 0x1234)
+        self.assertEqual(pe["number_of_sections"], 1)
+        self.assertEqual(pe["sections"][0]["name"], ".text")
+        self.assertEqual(pe["sections"][0]["va"], 0x00401000)
+
+    def test_catalog_is_plain_json(self):
+        data = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+        self.assertIn("symbols", data)
+        self.assertIn("layouts", data)
+
+
+if __name__ == "__main__":
+    unittest.main()
