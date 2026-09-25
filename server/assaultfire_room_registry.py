@@ -97,6 +97,20 @@ class RoomRegistry:
             room_id = self._player_room.get(int(uin))
             return self._snapshot(self._rooms.get(room_id)) if room_id is not None else None
 
+    def require_owner(self, room_id: int, uin: int) -> dict:
+        room_id, uin = int(room_id), int(uin)
+        with self._lock:
+            room = self._rooms.get(room_id)
+            if room is None:
+                raise RoomRegistryError("room-not-found")
+            if uin not in room["members"]:
+                raise RoomRegistryError("not-in-room")
+            if int(room["owner_uin"]) != uin:
+                raise RoomRegistryError(
+                    f"not-room-owner:owner={int(room['owner_uin'])}:requester={uin}"
+                )
+            return self._snapshot(room)
+
     def list_rooms(self, include_started: bool = False) -> list[dict]:
         with self._lock:
             rooms = [
@@ -163,6 +177,25 @@ class RoomRegistry:
             room["members"][uin] = member
             self._player_room[uin] = room_id
             return self._snapshot(room), copy.deepcopy(member), existing
+
+    def rollback_join(self, uin: int, room_id: int) -> bool:
+        """Undo only a newly inserted non-owner join after downstream failure."""
+        uin, room_id = int(uin), int(room_id)
+        with self._lock:
+            if self._player_room.get(uin) != room_id:
+                return False
+            room = self._rooms.get(room_id)
+            if room is None:
+                self._player_room.pop(uin, None)
+                return False
+            if int(room.get("owner_uin", 0)) == uin:
+                raise RoomRegistryError("refusing-to-rollback-room-owner")
+            if uin not in room["members"]:
+                self._player_room.pop(uin, None)
+                return False
+            room["members"].pop(uin, None)
+            self._player_room.pop(uin, None)
+            return True
 
     def leave_room(self, uin: int) -> dict | None:
         uin = int(uin)
