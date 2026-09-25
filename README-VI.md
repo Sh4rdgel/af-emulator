@@ -51,6 +51,22 @@ TGame.exe is resumed
 
 Nếu helper báo **TGame build/signature mismatch**, hãy dừng lại và không ép patch. Hiện chỉ hỗ trợ/test Assault Fire PH **v1.0.0.24**.
 
+## Mandatory preflight launch gate
+
+Trước khi helper cho phép game tiếp tục, server preflight phải **PASS**:
+
+```text
+[PREFLIGHT] client root             : <thư mục game thật>
+[PREFLIGHT] TCLS validated build    : YES
+[PREFLIGHT] APClient exact bytes    : YES
+[PREFLIGHT] same RSA key            : YES
+[PREFLIGHT] game launch gate         : UNLOCKED
+```
+
+Nếu có bất kỳ `NO`, `client root : None` hoặc `game launch gate : LOCKED`, **không bấm START**. Server sẽ không mở listener và các launch helper được hỗ trợ sẽ dừng với `GAME LAUNCH BLOCKED`.
+
+Toàn bộ preflight report được ghi vào `server\af_server_live.log`; trạng thái gate machine-readable nằm trong `runtime\preflight_status.json`. Sửa lỗi, restart server và chỉ tiếp tục khi thấy **UNLOCKED**.
+
 ---
 
 # Bắt đầu tại đây
