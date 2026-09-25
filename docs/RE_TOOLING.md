@@ -39,6 +39,19 @@ AFRE validates the SHA-256, image base, image size, and original entry point bef
 
 When a new address or structure offset is verified, add it to `af_symbols_10024.json` so future tools share the finding.
 
+Check the catalog itself before doing a longer RE session:
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\research\afre.py audit-catalog
+```
+
+You can also export all known absolute symbols as an IDA IDC script or CSV:
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\research\afre.py export-labels --format idc --out af_10024_labels.idc
+.\.venv\Scripts\python.exe .\tools\research\afre.py export-labels --format csv --out af_10024_labels.csv
+```
+
 ## 3. Resolve crash and trace addresses
 
 For one address:
