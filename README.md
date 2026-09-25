@@ -23,6 +23,53 @@ The goal is to make the retired PH client usable in a local/isolated environment
 
 For the most reliable first launch, use the **suspended TCLS launch patcher**.
 
+## The server preflight MUST pass first
+
+Before the launch helper will arm TCLS, the server must show a valid client and matching local security material. At minimum, these lines must be good:
+
+```text
+[PREFLIGHT] client root             : <your real Assault Fire PH folder>
+[PREFLIGHT] TCLS validated build    : YES
+[PREFLIGHT] APClient exact bytes    : YES
+[PREFLIGHT] same RSA key            : YES
+[PREFLIGHT] hosts tversion.levelupgames.ph   : YES
+[PREFLIGHT] hosts tauthproxy.levelupgames.ph : YES
+[PREFLIGHT] hosts tdir.levelupgames.ph       : YES
+[PREFLIGHT] game launch gate         : UNLOCKED
+```
+
+If you instead see something like:
+
+```text
+[PREFLIGHT] client root             : None
+[PREFLIGHT] TCLS validated build    : NO
+[PREFLIGHT] APClient exact bytes    : NO
+[PREFLIGHT] same RSA key            : NO
+[PREFLIGHT] game launch gate         : LOCKED
+```
+
+**stop there. Do not click START.**
+
+The server does not open its game-service listeners when preflight fails, and the supported launch helpers now refuse to continue with:
+
+```text
+GAME LAUNCH BLOCKED: server preflight has not passed.
+```
+
+The server stores the complete preflight block in:
+
+```text
+server\af_server_live.log
+```
+
+and writes the machine-readable launch-gate state to:
+
+```text
+runtime\preflight_status.json
+```
+
+The launch helper also verifies that the server process is still running, the required backend TCP listeners belong to that same server process, and the TCLS loaded by `client.exe` is the same TCLS copy that passed preflight.
+
 Do **not** click the Assault Fire **START** button yet.
 
 After you have completed the setup below, started the emulator, opened `client.exe` / TCLS, logged in, and reached the normal **START** screen, go to the repository root and run:
@@ -325,7 +372,8 @@ A healthy startup should include:
 [PREFLIGHT] hosts tversion.levelupgames.ph    : YES
 [PREFLIGHT] hosts tauthproxy.levelupgames.ph  : YES
 [PREFLIGHT] hosts tdir.levelupgames.ph        : YES
-[PREFLIGHT] PASS - all required checks succeeded.
+[PREFLIGHT] game launch gate         : UNLOCKED
+[PREFLIGHT] PASS - all required checks succeeded; supported game launch helpers are UNLOCKED.
 ```
 
 Only after that should the listeners start:
@@ -340,7 +388,11 @@ Only after that should the listeners start:
 
 ### If preflight says FAILED
 
-**Do not keep launching the client.**
+**Do not keep launching the client and do not click START.**
+
+A failed preflight now keeps the game launch gate **LOCKED**. The server listeners do not start, and both documented compatibility helpers refuse to proceed until you restart the server and get a clean PASS.
+
+The exact preflight failure is also appended to `server\af_server_live.log`, so ask users to send that block when reporting setup problems.
 
 Read the failed line and fix that exact problem.
 
