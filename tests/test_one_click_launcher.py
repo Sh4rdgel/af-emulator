@@ -32,7 +32,7 @@ class OneClickLauncherTests(unittest.TestCase):
         self.assertIn('"python312.exe"', s)
         self.assertIn('"python312"', s)
         self.assertIn('"python3.12.exe"', s)
-        self.assertIn('py.exe', s)
+        self.assertIn('@("py.exe", "py")', s)
         self.assertIn('.venv\\Scripts\\python.exe', s)
         self.assertIn('PythonCore\\3.12\\InstallPath', s)
         self.assertLess(
@@ -43,6 +43,11 @@ class OneClickLauncherTests(unittest.TestCase):
             'Do not trust the winget exit code by itself',
             s,
         )
+
+    def test_launcher_prints_revision_for_stale_zip_diagnosis(self):
+        s = self.text(SCRIPT)
+        self.assertIn('2026-09-25-python-detect-v2', s)
+        self.assertIn('Launcher revision: $LAUNCHER_REVISION', s)
 
     def test_permanent_tcls_patch_is_prompted_and_hash_guarded(self):
         s = self.text(SCRIPT)
