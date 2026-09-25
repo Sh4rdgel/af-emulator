@@ -206,11 +206,12 @@ def winerr(prefix):
     return RuntimeError(f"{prefix} failed: WinError {err}: {ctypes.FormatError(err).strip()}")
 
 
-def find_process(exe_name):
+def find_processes(exe_name):
     snap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
     if snap == INVALID_HANDLE_VALUE:
         raise winerr("CreateToolhelp32Snapshot(PROCESS)")
 
+    out = []
     try:
         pe = PROCESSENTRY32W()
         pe.dwSize = ctypes.sizeof(pe)
@@ -218,16 +219,15 @@ def find_process(exe_name):
         ok = kernel32.Process32FirstW(snap, ctypes.byref(pe))
         while ok:
             if pe.szExeFile.lower() == exe_name.lower():
-                return int(pe.th32ProcessID)
-
+                out.append(int(pe.th32ProcessID))
             ok = kernel32.Process32NextW(snap, ctypes.byref(pe))
     finally:
         kernel32.CloseHandle(snap)
 
-    return None
+    return out
 
 
-def find_module_base(pid, module_name):
+def find_module_info(pid, module_name):
     flags = TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32
     snap = kernel32.CreateToolhelp32Snapshot(flags, pid)
     if snap == INVALID_HANDLE_VALUE:
@@ -240,13 +240,16 @@ def find_module_base(pid, module_name):
         ok = kernel32.Module32FirstW(snap, ctypes.byref(me))
         while ok:
             if me.szModule.lower() == module_name.lower():
-                return ctypes.cast(me.modBaseAddr, ctypes.c_void_p).value
+                return (
+                    ctypes.cast(me.modBaseAddr, ctypes.c_void_p).value,
+                    str(me.szExePath),
+                )
 
             ok = kernel32.Module32NextW(snap, ctypes.byref(me))
     finally:
         kernel32.CloseHandle(snap)
 
-    return None
+    return None, None
 
 
 def read_memory(process, address, size):
@@ -447,11 +450,18 @@ def main():
     print(f"[LAUNCH-GATE] client root: {gate_status.get('client_root')}")
     print()
 
-    print(f"Waiting for {PROCESS_NAME} ...")
+    existing_pids = set(find_processes(PROCESS_NAME))
+    if existing_pids:
+        print(
+            "Existing TGame PID(s) will be ignored: "
+            + ", ".join(str(x) for x in sorted(existing_pids))
+        )
+
+    print(f"Waiting for a new {PROCESS_NAME} from the preflight-approved client ...")
     print("You can launch the game now.")
     print()
 
-    last_pid = None
+    announced = set()
 
     while True:
         if time.time() - start > timeout:
@@ -459,21 +469,38 @@ def main():
                 f"Timed out after {int(timeout)} seconds waiting for {PROCESS_NAME}."
             )
 
-        pid = find_process(PROCESS_NAME)
+        candidates = [
+            pid for pid in find_processes(PROCESS_NAME)
+            if pid not in existing_pids
+        ]
+        matched = None
+        for pid in candidates:
+            base, image_path = find_module_info(pid, PROCESS_NAME)
+            if not base or not image_path:
+                continue
+            if pid not in announced:
+                print(
+                    f"Found {PROCESS_NAME} PID={pid}; image={image_path}"
+                )
+                announced.add(pid)
+            try:
+                gate_status = launch_gate.require_launch_ready()
+                launch_gate.require_game_image_matches(gate_status, image_path)
+            except launch_gate.LaunchGateError:
+                continue
+            matched = (pid, base, image_path)
+            break
 
-        if pid is None:
-            time.sleep(0.25)
-            continue
-
-        if pid != last_pid:
-            print(f"Found {PROCESS_NAME} PID={pid}; waiting for module base ...")
-            last_pid = pid
-
-        base = find_module_base(pid, PROCESS_NAME)
-        if not base:
+        if matched is None:
             time.sleep(0.10)
             continue
 
+        pid, base, image_path = matched
+        # Revalidate immediately before the memory write so a backend failure
+        # during the wait cannot leave a stale PASS in effect.
+        gate_status = launch_gate.require_launch_ready()
+        launch_gate.require_game_image_matches(gate_status, image_path)
+        print("[LAUNCH-GATE] PASS - matching TGame and live backend confirmed.")
         patch_process(pid, base)
         return
 
