@@ -27,6 +27,23 @@ class OneClickLauncherTests(unittest.TestCase):
         self.assertIn('"-m", "venv"', s)
         self.assertIn('"pip", "install"', s)
 
+    def test_existing_python312_is_detected_before_winget(self):
+        s = self.text(SCRIPT)
+        self.assertIn('"python312.exe"', s)
+        self.assertIn('"python312"', s)
+        self.assertIn('"python3.12.exe"', s)
+        self.assertIn('py.exe', s)
+        self.assertIn('.venv\\Scripts\\python.exe', s)
+        self.assertIn('PythonCore\\3.12\\InstallPath', s)
+        self.assertLess(
+            s.index('foreach ($name in @('),
+            s.index('Trying Windows Package Manager (winget)'),
+        )
+        self.assertIn(
+            'Do not trust the winget exit code by itself',
+            s,
+        )
+
     def test_permanent_tcls_patch_is_prompted_and_hash_guarded(self):
         s = self.text(SCRIPT)
         self.assertIn(
