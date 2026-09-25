@@ -107,6 +107,25 @@ class AfreTests(unittest.TestCase):
         self.assertEqual(constants["GIS_CLIENT_VA"], 0x01FD69C8)
 
 
+
+    def test_catalog_audit(self):
+        self.assertEqual(afre.catalog_errors(self.catalog), [])
+
+    def test_idc_label_export(self):
+        output = afre.render_labels(self.catalog, "idc")
+        self.assertIn(
+            'set_name(0x02066BF8, "globals__GWorld", SN_NOWARN);',
+            output,
+        )
+
+    def test_csv_label_export(self):
+        output = afre.render_labels(self.catalog, "csv")
+        self.assertIn(
+            "0x02066BF8,globals,GWorld,globals__GWorld,verified",
+            output,
+        )
+
+
     def test_catalog_is_plain_json(self):
         data = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
         self.assertIn("symbols", data)
