@@ -142,6 +142,10 @@ def print_diagnosis(classification: str, check: KeyCheck) -> None:
         print("  PRIVATE.PEM and APClient.dat do not represent the same RSA public key.")
         print("  Fix the key pair before debugging the AUTH protocol.")
         return
+    if not check.exact_bytes_match:
+        print("  The RSA key is mathematically the same, but APClient.dat is not an exact byte match.")
+        print("  Reinstall the generated APClient.dat before starting the server.")
+        return
     if classification == "original-needs-raw-pem-patch":
         print("  The RSA pair matches. Regenerating the keys is not the fix.")
         print("  This is the verified original/pre-patch TCLS build.")
@@ -187,7 +191,13 @@ def main() -> int:
         return 2
     print_key_result(check, apclient_path, private_key_path)
     print_diagnosis(classification, check)
-    return 0 if check.same_rsa_key else 2
+    strict_ok = (
+        classification == "validated-raw-pem-patched"
+        and check.exact_bytes_match
+        and check.same_rsa_key
+        and check.apclient_length == 272
+    )
+    return 0 if strict_ok else 2
 
 
 if __name__ == "__main__":
