@@ -51,6 +51,22 @@ Isso ajuda a evitar um crash conhecido do TGame antigo quando o jogo começa a e
 
 Se aparecer **TGame build/signature mismatch**, pare e não force o patch. Atualmente somente Assault Fire PH **v1.0.0.24** é suportado/testado.
 
+## Mandatory preflight launch gate
+
+Antes de o helper permitir que o jogo continue, o server preflight precisa estar em **PASS**:
+
+```text
+[PREFLIGHT] client root             : <pasta real do jogo>
+[PREFLIGHT] TCLS validated build    : YES
+[PREFLIGHT] APClient exact bytes    : YES
+[PREFLIGHT] same RSA key            : YES
+[PREFLIGHT] game launch gate         : UNLOCKED
+```
+
+Se aparecer qualquer `NO`, `client root : None` ou `game launch gate : LOCKED`, **não clique em START**. Os listeners do servidor não abrem e os launch helpers suportados param com `GAME LAUNCH BLOCKED`.
+
+O preflight completo é salvo em `server\af_server_live.log` e o estado machine-readable do gate em `runtime\preflight_status.json`. Corrija o problema, reinicie o servidor e prossiga somente quando estiver **UNLOCKED**.
+
 ---
 
 # Comece aqui
