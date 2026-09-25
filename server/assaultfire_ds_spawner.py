@@ -27,6 +27,38 @@ import time
 from typing import Dict, Optional
 
 
+# Verified room target registry recovered from the PH client/config and prior
+# live AFDEV validation.  The stock client can legitimately send an empty
+# MatchSettings.MapString; in that case ModeId + MapId is the authoritative
+# fallback for the cooked world and UE3 GameInfo class.
+ROOM_TARGETS = {
+    (0x00002001, 0x002F): ("SV-Maya_3_Main", "PVEGame.TGSVGame"),
+    (0x00002001, 0x0007): ("SV-Factory_1_Main", "PVEGame.TGSVGame"),
+    (0x00002002, 0x0010): ("IF-Factory_3_Main", "PVEGame.TGIFGame"),
+    (0x00000204, 0x0027): ("Bio-Capital_4_Main", "TGBioGame.TGBioMatch"),
+}
+# Backward-compatible name used by older AFDEV tooling.
+PVE_TARGETS = ROOM_TARGETS
+AFDEV_MODE_IDS = frozenset(mode_id for mode_id, _map_id in ROOM_TARGETS)
+
+
+def room_target_for(mode_id: int, map_id: int):
+    key = (int(mode_id) & 0xFFFFFFFF, int(map_id) & 0xFFFF)
+    return ROOM_TARGETS.get(key)
+
+
+def resolve_room_target(
+    mode_id: int,
+    map_id: int,
+    fallback_map: str = "",
+    fallback_game: str = "PVEGame.TGSVGame",
+):
+    target = room_target_for(mode_id, map_id)
+    if target is not None:
+        return target
+    return str(fallback_map or "").strip(), str(fallback_game or "").strip()
+
+
 class SpawnerError(RuntimeError):
     pass
 
@@ -103,6 +135,7 @@ class DSAllocation:
     target_host: str
     target_port: int
     map_name: str
+    game_class: str
     max_players: int
     instance_id: str
     room_id: int
@@ -234,7 +267,17 @@ class DedicatedServerSpawner:
             slot = self._choose_slot_locked()
             room_id = self._next_room_id
             self._next_room_id += 1
+            normalized_mode = int(mode_id) & 0xFFFFFFFF
+            normalized_map_id = int(map_id) & 0xFFFF
             desired_map = str(map_name or self.config.default_map or "").strip()
+            desired_game = str(self.config.game_class or "").strip()
+            verified_target = room_target_for(normalized_mode, normalized_map_id)
+            if verified_target is not None:
+                verified_map, verified_game = verified_target
+                if not desired_map:
+                    desired_map = verified_map
+                desired_game = verified_game
+
             allocation = DSAllocation(
                 slot=slot,
                 public_host=self.config.public_host,
@@ -242,12 +285,13 @@ class DedicatedServerSpawner:
                 target_host=self.config.target_host,
                 target_port=self.config.target_port_base + slot,
                 map_name=desired_map,
+                game_class=desired_game,
                 max_players=max(2, int(max_players)),
                 instance_id=f"room-{room_id}-slot-{slot}",
                 room_id=room_id,
                 owner_id=owner_id,
-                mode_id=int(mode_id) & 0xFFFFFFFF,
-                map_id=int(map_id) & 0xFFFF,
+                mode_id=normalized_mode,
+                map_id=normalized_map_id,
                 sub_mode_id=int(sub_mode_id) & 0xFFFFFFFF,
                 room_flags=int(room_flags) & 0xFFFFFFFF,
                 state="RESERVED",
@@ -262,6 +306,7 @@ class DedicatedServerSpawner:
                 f"reserved room={room_id} owner={owner_id} slot={slot} "
                 f"public={allocation.public_host}:{allocation.public_port} "
                 f"afdev={allocation.target_host}:{allocation.target_port} map={allocation.map_name!r} "
+                f"game={allocation.game_class!r} "
                 f"mode=0x{allocation.mode_id:08x} map_id=0x{allocation.map_id:04x} "
                 f"submode=0x{allocation.sub_mode_id:08x} flags=0x{allocation.room_flags:08x}; "
                 "AFDEV=OFF bridge=OFF"
@@ -348,17 +393,37 @@ class DedicatedServerSpawner:
                 raise SpawnerError(
                     f"cannot change room {room_id} settings while state={allocation.state}"
                 )
+            normalized_mode = int(mode_id) & 0xFFFFFFFF
+            normalized_map_id = int(map_id) & 0xFFFF
             desired_map = str(map_name or "").strip()
-            if desired_map:
+            same_target = (
+                normalized_mode == allocation.mode_id
+                and normalized_map_id == allocation.map_id
+            )
+            verified_target = room_target_for(normalized_mode, normalized_map_id)
+            if verified_target is not None:
+                verified_map, verified_game = verified_target
+                allocation.map_name = desired_map or verified_map
+                allocation.game_class = verified_game
+            elif desired_map:
                 allocation.map_name = desired_map
-            allocation.mode_id = int(mode_id) & 0xFFFFFFFF
-            allocation.map_id = int(map_id) & 0xFFFF
+                if not same_target:
+                    allocation.game_class = self.config.game_class
+            elif not same_target:
+                # Do not carry a stale cooked world into a different, unresolved
+                # ModeId/MapId pair.  arm_lobby() will fail closed with a precise
+                # diagnostic instead of advertising a dead DS endpoint.
+                allocation.map_name = ""
+                allocation.game_class = self.config.game_class
+
+            allocation.mode_id = normalized_mode
+            allocation.map_id = normalized_map_id
             allocation.sub_mode_id = int(sub_mode_id) & 0xFFFFFFFF
             allocation.room_flags = int(room_flags) & 0xFFFFFFFF
             self._write_snapshot_locked()
             self._log(
                 f"settings updated room={room_id} state={allocation.state} "
-                f"map_name={allocation.map_name!r} "
+                f"map_name={allocation.map_name!r} game={allocation.game_class!r} "
                 f"mode=0x{allocation.mode_id:08x} map_id=0x{allocation.map_id:04x} "
                 f"submode=0x{allocation.sub_mode_id:08x} flags=0x{allocation.room_flags:08x}"
             )
@@ -426,6 +491,7 @@ class DedicatedServerSpawner:
                     target_host=self.config.target_host,
                     target_port=self.config.target_port_base + slot,
                     map_name=old.map_name,
+                    game_class=old.game_class,
                     max_players=old.max_players,
                     instance_id=f"room-{room_id}-slot-{slot}-round-{old.round_generation + 1}-{int(time.time() * 1000)}",
                     room_id=room_id,
@@ -466,7 +532,14 @@ class DedicatedServerSpawner:
                 raise DSStartupError(f"AF_GAME_DIR does not exist or is not a directory: {game_dir}")
             if not str(allocation.map_name or "").strip():
                 raise DSStartupError(
-                    "no PvE map was selected; use the stock room map selection or set AF_DS_DEFAULT_MAP"
+                    "no resolved AFDEV map for "
+                    f"mode=0x{allocation.mode_id:08x} map_id=0x{allocation.map_id:04x}; "
+                    "client MapString was empty and no verified ROOM_TARGETS/default map matched"
+                )
+            if not str(allocation.game_class or "").strip():
+                raise DSStartupError(
+                    "no resolved AFDEV GameInfo class for "
+                    f"mode=0x{allocation.mode_id:08x} map_id=0x{allocation.map_id:04x}"
                 )
 
             p = self._instance_paths(allocation)
@@ -495,7 +568,7 @@ class DedicatedServerSpawner:
                 "--loader-script", str(self.config.loader_script),
                 "--game-dir", game_dir,
                 "--map", allocation.map_name,
-                "--game", self.config.game_class,
+                "--game", allocation.game_class,
                 "--max-players", str(allocation.max_players),
                 "--mode-id", str(allocation.mode_id),
                 "--map-id", str(allocation.map_id),
@@ -984,6 +1057,7 @@ class DedicatedServerSpawner:
             "target_host": a.target_host,
             "target_port": a.target_port,
             "map_name": a.map_name,
+            "game_class": a.game_class,
             "max_players": a.max_players,
             "mode_id": a.mode_id,
             "map_id": a.map_id,
