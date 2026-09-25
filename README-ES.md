@@ -63,6 +63,8 @@ Antes de que el helper permita continuar con el juego, el preflight del servidor
 [PREFLIGHT] game launch gate         : UNLOCKED
 ```
 
+Es **normal** que el gate aparezca temporalmente como `LOCKED` después de pasar los client checks mientras el servidor hace bind de todos los listeners requeridos. No lances todavía. Espera `game launch gate : UNLOCKED` y `[MAIN] All listeners running.`
+
 Si aparece cualquier `NO`, `client root : None` o `game launch gate : LOCKED`, **no pulses START**. Los listeners del servidor no se abren y los launch helpers soportados se detienen con `GAME LAUNCH BLOCKED`.
 
 El preflight completo se guarda en `server\af_server_live.log` y el estado machine-readable del gate en `runtime\preflight_status.json`. Corrige el problema, reinicia el servidor y continúa solo cuando diga **UNLOCKED**.
