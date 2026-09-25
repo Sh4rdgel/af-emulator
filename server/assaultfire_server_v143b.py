@@ -7499,15 +7499,23 @@ def handle_placeholder(conn, addr, label):
                                                 # compatibility sync failed, remove that registry
                                                 # mutation as part of the same transaction.
                                                 try:
-                                                    rollback_leave = V150_ROOM_REGISTRY.leave_room(
+                                                    rollback_room = V150_ROOM_REGISTRY.room_for_player(
                                                         owner_uin
                                                     )
-                                                    if rollback_leave:
-                                                        log(
-                                                            "ROOM",
-                                                            f"A10A registry rollback removed owner={owner_uin} "
-                                                            f"room={rollback_leave['room_id']}",
+                                                    expected_room_id = int(created_room["room_id"])
+                                                    if (
+                                                        rollback_room is not None
+                                                        and int(rollback_room["room_id"]) == expected_room_id
+                                                    ):
+                                                        rollback_leave = V150_ROOM_REGISTRY.leave_room(
+                                                            owner_uin
                                                         )
+                                                        if rollback_leave:
+                                                            log(
+                                                                "ROOM",
+                                                                f"A10A registry rollback removed owner={owner_uin} "
+                                                                f"room={rollback_leave['room_id']}",
+                                                            )
                                                 except Exception as rollback_e:
                                                     log(
                                                         "ROOM",
