@@ -63,6 +63,8 @@ TGame.exe is resumed
 [PREFLIGHT] game launch gate         : UNLOCKED
 ```
 
+หลังจาก client checks ผ่านแล้ว gate อาจแสดง `LOCKED` ชั่วคราวระหว่างที่ server bind listeners ที่จำเป็นทั้งหมด ซึ่งเป็น **ปกติ** อย่าเพิ่ง launch เกม ให้รอ `game launch gate : UNLOCKED` และ `[MAIN] All listeners running.`
+
 ถ้ามี `NO`, `client root : None` หรือ `game launch gate : LOCKED` **อย่ากด START** Server จะไม่เปิด listeners และ supported launch helpers จะหยุดด้วย `GAME LAUNCH BLOCKED`.
 
 Preflight report ทั้งหมดถูกเขียนไว้ที่ `server\af_server_live.log` และ machine-readable gate state อยู่ที่ `runtime\preflight_status.json`. แก้ปัญหา restart server และไปต่อเฉพาะเมื่อเห็น **UNLOCKED**.
