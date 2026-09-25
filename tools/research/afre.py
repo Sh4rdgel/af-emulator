@@ -21,6 +21,7 @@ from typing import Any, Iterable
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_CATALOG = HERE / "af_symbols_10024.json"
+DEFAULT_OBJECTS = HERE / "af_objects_10024.json"
 
 
 class AfreError(RuntimeError):
@@ -41,6 +42,82 @@ def load_catalog(path: Path = DEFAULT_CATALOG) -> dict[str, Any]:
     if data.get("schema_version") != 1:
         raise AfreError(f"unsupported catalog schema: {data.get('schema_version')!r}")
     return data
+
+
+
+def load_object_db(path: Path = DEFAULT_OBJECTS) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise AfreError(f"cannot load object database {path}: {exc}") from exc
+    if data.get("schema_version") != 1:
+        raise AfreError(
+            f"unsupported object database schema: {data.get('schema_version')!r}"
+        )
+    return data
+
+
+def iter_objects(
+    db: dict[str, Any]
+) -> Iterable[tuple[str, str, dict[str, Any]]]:
+    for group in ("reflection", "objects", "native_classes", "script_classes"):
+        for name, meta in db.get(group, {}).items():
+            yield group, name, meta
+
+
+def lookup_object(
+    db: dict[str, Any], query: str
+) -> tuple[str, str, dict[str, Any]]:
+    needle = query.casefold()
+    exact = []
+    partial = []
+    for group, name, meta in iter_objects(db):
+        full = f"{group}.{name}"
+        if needle in {name.casefold(), full.casefold()}:
+            exact.append((group, name, meta))
+        elif needle in name.casefold() or needle in full.casefold():
+            partial.append((group, name, meta))
+    if len(exact) == 1:
+        return exact[0]
+    matches = exact or partial
+    if not matches:
+        raise AfreError(f"object/class not found: {query}")
+    if len(matches) > 1:
+        names = ", ".join(f"{g}.{n}" for g, n, _ in matches[:16])
+        raise AfreError(f"ambiguous object/class {query!r}: {names}")
+    return matches[0]
+
+
+def object_db_errors(db: dict[str, Any], catalog: dict[str, Any]) -> list[str]:
+    errors = []
+    if db.get("build", {}).get("sha256") != catalog.get("build", {}).get("sha256"):
+        errors.append("object DB build SHA does not match symbol catalog")
+    for group, name, meta in iter_objects(db):
+        fields = meta.get("fields", {})
+        for field_name, field_meta in fields.items():
+            if not isinstance(field_meta, dict) or "offset" not in field_meta:
+                continue
+            try:
+                offset = parse_int(field_meta["offset"])
+            except (TypeError, ValueError):
+                errors.append(
+                    f"invalid offset: {group}.{name}.{field_name}="
+                    f"{field_meta.get('offset')!r}"
+                )
+                continue
+            if offset < 0 or offset > 0x100000:
+                errors.append(
+                    f"implausible offset: {group}.{name}.{field_name}=0x{offset:X}"
+                )
+        for key in ("constructor", "vtable"):
+            if key in meta:
+                try:
+                    parse_int(meta[key])
+                except (TypeError, ValueError):
+                    errors.append(
+                        f"invalid {key}: {group}.{name}={meta[key]!r}"
+                    )
+    return errors
 
 
 def iter_symbols(catalog: dict[str, Any]) -> Iterable[tuple[str, str, dict[str, Any]]]:
@@ -560,6 +637,90 @@ def cmd_export_labels(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
     return 0
 
 
+
+def cmd_objects(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    del catalog
+    db = load_object_db(args.objects_db)
+    needle = (args.filter or "").casefold()
+    count = 0
+    for group, name, meta in iter_objects(db):
+        hay = f"{group}.{name}".casefold()
+        if needle and needle not in hay:
+            continue
+        status = meta.get("status", "-")
+        extras = []
+        if "vtable" in meta:
+            extras.append(f"vt={meta['vtable']}")
+        if "constructor" in meta:
+            extras.append(f"ctor={meta['constructor']}")
+        if "native_size" in meta:
+            extras.append(f"size={meta['native_size']}")
+        tail = (" " + " ".join(extras)) if extras else ""
+        print(f"{group}.{name:30} {status}{tail}")
+        count += 1
+    if not count:
+        raise AfreError(f"no objects/classes match {args.filter!r}")
+    return 0
+
+
+def cmd_object(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    del catalog
+    db = load_object_db(args.objects_db)
+    group, name, meta = lookup_object(db, args.name)
+    print(f"[{group}.{name}]")
+    print(json.dumps(meta, indent=2))
+    return 0
+
+
+def cmd_field(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    del catalog
+    db = load_object_db(args.objects_db)
+    group, name, meta = lookup_object(db, args.object_name)
+    fields = meta.get("fields", {})
+    needle = args.field.casefold()
+    matches = [
+        (field_name, field_meta)
+        for field_name, field_meta in fields.items()
+        if needle == field_name.casefold() or needle in field_name.casefold()
+    ]
+    if not matches:
+        raise AfreError(f"field not found: {name}.{args.field}")
+    for field_name, field_meta in matches:
+        print(f"{group}.{name}.{field_name}")
+        print(json.dumps(field_meta, indent=2))
+    return 0
+
+
+def cmd_conflicts(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    del catalog
+    db = load_object_db(args.objects_db)
+    conflicts = db.get("conflicts", [])
+    if not conflicts:
+        print("[AFRE] no recorded object-layout conflicts")
+        return 0
+    for item in conflicts:
+        print(f"[{item.get('id', 'conflict')}] {item.get('status', '-')}")
+        print(item.get("description", ""))
+        for variant in item.get("variants", []):
+            print(f"  {variant.get('name', 'variant')}:")
+            for field, offset in variant.get("fields", {}).items():
+                print(f"    {field:24} {offset}")
+    return 0
+
+
+def cmd_audit_objects(args: argparse.Namespace, catalog: dict[str, Any]) -> int:
+    db = load_object_db(args.objects_db)
+    errors = object_db_errors(db, catalog)
+    if not errors:
+        count = sum(1 for _ in iter_objects(db))
+        print(f"[AFRE] object DB OK ({count} objects/classes)")
+        return 0
+    for error in errors:
+        print(error)
+    print(f"[AFRE] {len(errors)} object DB error(s)")
+    return 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Read-only Assault Fire PH v1.0.0.24 RE helper"
@@ -569,6 +730,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=DEFAULT_CATALOG,
         help="symbol catalog (default: beside this script)",
+    )
+    parser.add_argument(
+        "--objects-db",
+        type=Path,
+        default=DEFAULT_OBJECTS,
+        help="object database (default: beside this script)",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -621,6 +788,25 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--format", choices=("idc", "csv"), default="idc")
     p.add_argument("--out")
     p.set_defaults(func=cmd_export_labels)
+
+    p = sub.add_parser("objects", help="list known UE3/game objects and classes")
+    p.add_argument("--filter")
+    p.set_defaults(func=cmd_objects)
+
+    p = sub.add_parser("object", help="show one object/class definition")
+    p.add_argument("name")
+    p.set_defaults(func=cmd_object)
+
+    p = sub.add_parser("field", help="show a known field on an object/class")
+    p.add_argument("object_name")
+    p.add_argument("field")
+    p.set_defaults(func=cmd_field)
+
+    p = sub.add_parser("conflicts", help="show unresolved object-layout conflicts")
+    p.set_defaults(func=cmd_conflicts)
+
+    p = sub.add_parser("audit-objects", help="validate the object database")
+    p.set_defaults(func=cmd_audit_objects)
     return parser
 
 
