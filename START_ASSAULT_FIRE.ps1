@@ -29,7 +29,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
-$LAUNCHER_REVISION = "2026-09-25-python-detect-v4"
+$LAUNCHER_REVISION = "2026-09-25-oneclick-v5"
 $EXPECTED_TGAME_SHA256 = "B4273F2658CA94EEBC559A997FDFCD02D51E77CE75B892250C1DB7FB80C70B51"
 $TCLS_ORIGINAL_SHA256 = "13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1"
 $TCLS_PATCHED_SHA256  = "3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56"
@@ -82,9 +82,18 @@ function Backup-IfExists([string]$Path, [string]$Reason) {
 
 function Invoke-Checked([string]$Exe, [string[]]$Arguments, [string]$Description) {
     Write-Host "[RUN] $Description"
-    & $Exe @Arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "$Description failed with exit code $LASTEXITCODE"
+
+    # IMPORTANT: native command stdout must NOT escape onto PowerShell's
+    # success-output pipeline. Callers assign function return values, so leaked
+    # pip/python output would be captured together with paths such as
+    # .venv\Scripts\python.exe and later treated as one giant command name.
+    & $Exe @Arguments 2>&1 | ForEach-Object {
+        Write-Host ([string]$_)
+    }
+    $exitCode = $LASTEXITCODE
+
+    if ($exitCode -ne 0) {
+        throw "$Description failed with exit code $exitCode"
     }
 }
 
@@ -394,15 +403,24 @@ function Ensure-Python312([string]$RepoRoot) {
 }
 
 function Ensure-Venv([string]$RepoRoot, [string]$BootstrapPython) {
-    $venvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
+    $venvDir = Join-Path $RepoRoot ".venv"
+    $venvPython = Join-Path $venvDir "Scripts\python.exe"
     $requirements = Join-Path $RepoRoot "requirements.txt"
-    $marker = Join-Path $RepoRoot ".venv\.af_requirements_sha256"
+    $marker = Join-Path $venvDir ".af_requirements_sha256"
+
+    if (Test-Path -LiteralPath $venvPython -PathType Leaf) {
+        $validatedVenvPython = Test-Python312Path $venvPython
+        if (-not $validatedVenvPython) {
+            Write-Host "[REPAIR] Existing .venv is not Python 3.12; recreating it..." -ForegroundColor Yellow
+            Remove-Item -LiteralPath $venvDir -Recurse -Force
+        }
+    }
 
     if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
         Write-Host "[SETUP] Creating Python environment..."
-        Invoke-Checked -Exe $BootstrapPython -Arguments @("-m", "venv", (Join-Path $RepoRoot ".venv")) -Description "create .venv"
+        Invoke-Checked -Exe $BootstrapPython -Arguments @("-m", "venv", $venvDir) -Description "create .venv"
     } else {
-        Write-Host "[OK] Python environment already exists." -ForegroundColor Green
+        Write-Host "[OK] Python environment already exists and is Python 3.12." -ForegroundColor Green
     }
 
     if (-not (Test-Path -LiteralPath $requirements -PathType Leaf)) {
