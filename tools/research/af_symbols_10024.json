@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "build": {
+    "name": "Assault Fire PH v1.0.0.24 clean TGame / AFDEV",
+    "sha256": "b4273f2658ca94eebc559a997fdfcd02d51e77ce75b892250c1db7fb80c70b51",
+    "machine": "i386",
+    "image_base": "0x00400000",
+    "size_of_image": "0x021BE000",
+    "oep_rva": "0x01410501",
+    "oep_va": "0x01810501",
+    "notes": "Use only with the validated clean six-section PH build."
+  },
+  "symbols": {
+    "globals": {
+      "GIsEditor": {"va": "0x01FD69AC", "kind": "int32", "status": "verified"},
+      "GIsClient": {"va": "0x01FD69C8", "kind": "int32", "status": "verified"},
+      "GIsServer": {"va": "0x01FD69CC", "kind": "int32", "status": "verified"},
+      "GLog": {"va": "0x01F9D420", "kind": "pointer", "status": "verified"},
+      "GEngine": {"va": "0x02063820", "kind": "pointer", "status": "verified"},
+      "GWorld": {"va": "0x02066BF8", "kind": "pointer", "status": "verified"},
+      "IsBootFromTCLS": {"va": "0x020D4B80", "kind": "int32", "status": "verified"}
+    },
+    "functions": {
+      "AES_SetKey": {"va": "0x004039C0", "status": "verified"},
+      "StopLoadingMovie": {"va": "0x0095B1C0", "status": "verified"},
+      "UWorld_GetWorldInfo": {"va": "0x00D9C1A0", "status": "verified"},
+      "UWorld_SetGameInfo": {"va": "0x00DA2760", "status": "verified"},
+      "AF_ShowLoadingMovie": {"va": "0x01257FB0", "status": "verified"},
+      "UTGameEngine_Exec": {"va": "0x015B8980", "status": "verified"},
+      "TGTenio_DevLogin": {"va": "0x01494FF0", "status": "verified"}
+    },
+    "vtables": {
+      "TGDsDsmNetHandler": {"va": "0x01D8EE60", "status": "verified"},
+      "PVEPlayerController": {"va": "0x01E24C28", "status": "verified"},
+      "ULocalPlayer": {"va": "0x01D59830", "status": "verified"}
+    },
+    "patch_sites": {
+      "LoginInfoFail": {"va": "0x014972F1", "expected": "A1 20 D4 F9 01", "status": "verified"},
+      "GIsClientFinalWrite": {"va": "0x013494D8", "expected": "89 35 C8 69 FD 01", "status": "verified"},
+      "GIsServerFinalReset": {"va": "0x013494DE", "expected": "89 1D CC 69 FD 01", "status": "verified"}
+    }
+  },
+  "layouts": {
+    "UGameEngine": {
+      "GamePlayers": {"offset": "0x47C", "type": "TArray<ULocalPlayer*>"}
+    },
+    "ULocalPlayer": {
+      "PlayerController": {"offset": "0x40", "type": "pointer"}
+    },
+    "UWorld": {
+      "NetDriver": {"offset": "0xD8", "type": "pointer"}
+    },
+    "WorldInfo": {
+      "GameInfo": {"offset": "0x414", "type": "pointer"}
+    },
+    "AController": {
+      "Pawn": {"offset": "0x190", "type": "pointer"}
+    },
+    "APlayerController": {
+      "Player": {"offset": "0x66C", "type": "pointer"},
+      "PlayerCamera": {"offset": "0x670", "type": "pointer"},
+      "AcknowledgedPawn": {"offset": "0x688", "type": "pointer"}
+    },
+    "PVEPlayerController": {
+      "PlayerReplicationInfo": {"offset": "0x1DC", "type": "pointer"}
+    },
+    "UNetDriver": {
+      "Socket": {"offset": "0x1A8", "type": "pointer"}
+    }
+  }
+}
