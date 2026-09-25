@@ -107,6 +107,30 @@ class RoomRegistryConsistencyTests(unittest.TestCase):
             self.assertEqual(result["owner_id"], 30000)
             self.assertEqual(spawner.allocation_for_room(1).owner_id, 30000)
 
+    def test_round_reset_preserves_room_and_clears_ready_started_state(self):
+        registry = RoomRegistry()
+        self.make_room(registry, owner=10000)
+        registry.join_room(
+            uin=20000,
+            nickname="P20000",
+            room_id=1,
+            password="",
+            observer=False,
+        )
+        registry.set_ready(10000, True)
+        registry.set_ready(20000, True)
+        registry.set_started(1, True)
+
+        room = registry.reset_round_state(1)
+
+        self.assertFalse(room["started"])
+        self.assertEqual(len(room["members"]), 2)
+        for member in room["members"]:
+            self.assertFalse(member["ready"])
+            self.assertEqual(member["state"], 8)
+        self.assertIsNotNone(registry.room_for_player(10000))
+        self.assertIsNotNone(registry.room_for_player(20000))
+
     def test_spawner_refuses_to_guess_owner_transfer(self):
         with tempfile.TemporaryDirectory() as td:
             cfg = SpawnerConfig(
@@ -148,6 +172,33 @@ class ServerStaticSafetyTests(unittest.TestCase):
         self.assertIn("player-already-in-room", block)
         self.assertIn("V143B_DS_SPAWNER.release_lobby", block)
         self.assertIn("A10A registry/create rollback", block)
+
+    def test_return_to_room_ready_reconciles_stale_pve_handoff(self):
+        server = (ROOT / "server" / "assaultfire_server_v143b.py").read_text(
+            encoding="utf-8", errors="replace"
+        )
+        start = server.index('elif app["cmd"] == TGAME_ZN_REQ_SETMATCHROOMREADY:')
+        end = server.index('elif app["cmd"] == TGAME_ZN_REQ_SETGAMESETTINGS:', start)
+        block = server[start:end]
+        self.assertIn("v132_pve_afdev_handoff_sent", block)
+        self.assertIn("_v143b_quit_match_player", block)
+        self.assertIn("_v143b_clear_player_handoff_state", block)
+        self.assertIn("_v143b_reset_room_after_round", block)
+        self.assertIn("DS-REJOIN", block)
+
+    def test_a117_resets_surviving_room_for_next_round(self):
+        server = (ROOT / "server" / "assaultfire_server_v143b.py").read_text(
+            encoding="utf-8", errors="replace"
+        )
+        start = server.index('elif app["cmd"] == TGAME_ZN_REQ_QUITMATCH:')
+        end = server.index('elif app["cmd"] == TGAME_ZN_REQ_ZONECHANNEL_LIST:', start)
+        block = server[start:end]
+        self.assertIn("_v143b_reset_room_after_round", block)
+        self.assertIn("_v143b_clear_player_handoff_state", block)
+        self.assertNotIn(
+            'role_state.pop("v132_pve_afdev_handoff_sent", None)',
+            block,
+        )
 
     def test_owner_checks_guard_settings_and_start_paths(self):
         server = (ROOT / "server" / "assaultfire_server_v143b.py").read_text(
