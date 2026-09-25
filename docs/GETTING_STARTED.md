@@ -14,7 +14,7 @@ You will do the basic backend setup, then verify the client launch handoff:
 3. Generate a local RSA key pair
 4. Verify/patch TCLS raw-PEM APClient.dat compatibility
 5. Redirect the old Assault Fire PH hostnames to 127.0.0.1
-6. Start the v143b server and require preflight PASS / launch gate UNLOCKED
+6. Start the v143b server and require preflight PASS / launch gate UNLOCKED (a brief LOCKED state while listeners bind is normal)
 7. Launch client.exe / TCLS and log in until START is available
 8. Choose ONE compatibility path (both are blocked if preflight did not pass):
    - normal launch: patch_tgame_datetime.py
@@ -304,6 +304,8 @@ Before any listener opens, the startup preflight checks the client, RSA/APClient
 ...
 [MAIN] All listeners running.
 ```
+
+A healthy run can print `game launch gate : LOCKED` immediately after the client checks pass. That temporary state only means the server is still pre-binding its required listeners. Wait for the later `game launch gate : UNLOCKED` and `[MAIN] All listeners running.` before starting either launch helper.
 
 If any preflight rule fails, v143b exits with code 2 and **does not start VERSION / AUTH / DIR / ROLE / ZONE**. It also records `game launch gate : LOCKED`. The supported launch helpers refuse to arm/patch/resume the game until a later server run passes every required check.
 
