@@ -38,6 +38,8 @@ from assaultfire_room_registry import (
     RoomRegistryError,
 )
 
+from assaultfire_preflight import run_server_preflight
+
 # v24: v20 success framing plus BOTH PublicData bitmap and PrivateData tail probes.
 QUIET_ROLE_HEX = True
 
@@ -9433,6 +9435,9 @@ print(
 )
 
 if __name__ == "__main__":
+    if not run_server_preflight(Path(PRIVATE_KEY_PATH)):
+        raise SystemExit(2)
+
     print(
         f"[BOOT] VERSION response: "
         f"{len(VERSION_RESPONSE)}B",
