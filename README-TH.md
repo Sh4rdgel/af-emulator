@@ -12,6 +12,47 @@
 
 ---
 
+# ⚠️ สำคัญ — ก่อนกด START
+
+เพื่อให้การเปิดเกมครั้งแรกเสถียรที่สุด ให้ใช้ **suspended TCLS launch patcher** ก่อน
+
+**อย่าเพิ่งกด START** ใน Assault Fire launcher
+
+หลังจากทำ setup ด้านล่างเสร็จ เปิด emulator แล้ว login ผ่าน `client.exe` / TCLS และอยู่ที่หน้าจอ **START** ให้รันจาก repository root:
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\patches\patch_tcls_suspended_launch.py
+```
+
+รอจนเห็น:
+
+```text
+TCLS ARMED
+Click START in the Assault Fire launcher now.
+```
+
+**จากนั้นจึงกด START**
+
+Helper จะทำ launch sequence ที่ถูกต้องอัตโนมัติ:
+
+```text
+TCLS creates TGame.exe suspended
+        ↓
+TCLS finishes the shared-memory handoff
+        ↓
+required TGame datetime compatibility patch is applied
+        ↓
+TGame.exe is resumed
+```
+
+วิธีนี้ช่วยหลีกเลี่ยง known legacy TGame startup crash ที่อาจเกิดขึ้นหากเกมเริ่มทำงานก่อน compatibility patch ถูกใช้งาน
+
+> เมื่อใช้ `patch_tcls_suspended_launch.py` **อย่ารัน `patch_tgame_datetime.py` เพิ่มใน launch เดียวกัน** เพราะ suspended-launch helper ทำ datetime patch ให้อยู่แล้ว
+
+ถ้า helper แจ้ง **TGame build/signature mismatch** ให้หยุดและอย่าฝืน patch ปัจจุบันรองรับ/ทดสอบเฉพาะ Assault Fire PH **v1.0.0.24**
+
+---
+
 # เริ่มที่นี่
 
 ถ้าใช้โปรเจกต์นี้ครั้งแรก ให้ทำตามขั้นตอน **ตามลำดับ**
