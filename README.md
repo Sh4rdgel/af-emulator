@@ -3,6 +3,7 @@
 **Language:** **English** | [Tagalog](README-TL.md) | [Cebuano](README-CEB.md) | [简体中文](README-ZH-CN.md) | [More languages](README-LANGUAGES.md)
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue)](https://www.python.org/)
+[![CI](https://github.com/armangido/af-emulator/actions/workflows/ci.yml/badge.svg)](https://github.com/armangido/af-emulator/actions/workflows/ci.yml)
 [![Engine](https://img.shields.io/badge/Engine-Unreal%20Engine%203-lightgrey)](#)
 [![Status](https://img.shields.io/badge/status-preservation%20research-orange)](docs/STATUS.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
