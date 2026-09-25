@@ -479,7 +479,8 @@ def wait_for_new_game(existing_pids: set[int], parent_pid: int, timeout: float):
         ]
         if candidates:
             children = [row for row in candidates if row["ppid"] == parent_pid]
-            return (children or candidates)[0]
+            if children:
+                return children[0]
         time.sleep(0.05)
     return None
 
@@ -618,8 +619,9 @@ def main():
                 "was not mapped. Leave the launcher at START and retry."
             )
 
+        gate_status = launch_gate.require_launch_ready()
         launch_gate.require_loaded_tcls_matches(gate_status, tcls_path)
-        print("[LAUNCH-GATE] PASS - loaded TCLS.dll matches server preflight.")
+        print("[LAUNCH-GATE] PASS - loaded TCLS.dll matches current server preflight.")
         patch_site = tcls_base + TCLS_CREATE_FLAGS_RVA
         print(f"[TCLS] client PID={client_pid}")
         print(f"[TCLS] base=0x{tcls_base:08X}")
@@ -662,6 +664,10 @@ def main():
             f"[CHILD] {GAME_PROCESS} PID={game_pid} PPID={child['ppid']} "
             f"(launcher PID={client_pid})"
         )
+
+        # Fail closed while the child is still suspended if the backend died
+        # or its listener/gate state changed while the user was clicking START.
+        gate_status = launch_gate.require_launch_ready()
 
         write_code(
             hclient,
@@ -707,10 +713,14 @@ def main():
             )
         print(f"[TGAME] base=0x{game_base:08X}")
         print(f"[TGAME] path={game_path}")
+        gate_status = launch_gate.require_launch_ready()
+        launch_gate.require_game_image_matches(gate_status, game_path)
+        print("[LAUNCH-GATE] PASS - TGame.exe belongs to the preflight-approved client.")
     finally:
         kernel32.CloseHandle(hgame)
 
     try:
+        gate_status = launch_gate.require_launch_ready()
         datetime_patch.patch_process(game_pid, game_base)
     except Exception:
         print()
@@ -726,6 +736,8 @@ def main():
         print(f"       PID={game_pid}")
         return
 
+    # Final fail-closed check immediately before the suspended child can run.
+    launch_gate.require_launch_ready()
     resume_primary_thread(game_pid)
     print()
     print("DONE")
