@@ -1264,24 +1264,22 @@ def handle_auth(conn, addr):
             )
             return
 
-        log(
-            "AUTH",
-            f"AP RX encrypted "
-            f"{len(ciphertext)}B: "
-            f"{ciphertext.hex()}"
-        )
+        if DEBUG_AUTH_HEX:
+            log(
+                "AUTH-DEBUG",
+                f"AP RX encrypted {len(ciphertext)}B: {ciphertext.hex()}"
+            )
 
         plaintext = ap_decrypt(
             aes_key,
             ciphertext
         )
 
-        log(
-            "AUTH",
-            f"AP RX plaintext "
-            f"{len(plaintext)}B: "
-            f"{plaintext.hex()}"
-        )
+        if DEBUG_AUTH_HEX:
+            log(
+                "AUTH-DEBUG",
+                f"AP RX plaintext {len(plaintext)}B: {plaintext.hex()}"
+            )
 
         hdr = parse_tdr_header(
             plaintext
@@ -1337,19 +1335,17 @@ def handle_auth(conn, addr):
             result_plain
         )
 
-        log(
-            "AUTH",
-            f"AP TX cmd=4 plaintext "
-            f"{len(result_plain)}B: "
-            f"{result_plain.hex()}"
-        )
-
-        log(
-            "AUTH",
-            f"AP TX cmd=4 frame "
-            f"{len(result_frame)}B: "
-            f"{result_frame.hex()}"
-        )
+        if DEBUG_AUTH_HEX:
+            log(
+                "AUTH-DEBUG",
+                f"AP TX cmd=4 plaintext {len(result_plain)}B: {result_plain.hex()}"
+            )
+            log(
+                "AUTH-DEBUG",
+                f"AP TX cmd=4 frame {len(result_frame)}B: {result_frame.hex()}"
+            )
+        else:
+            log("AUTH", f"AP TX cmd=4 frame {len(result_frame)}B")
 
         conn.sendall(
             result_frame
@@ -1368,24 +1364,22 @@ def handle_auth(conn, addr):
             ack_ciphertext = None
 
         if ack_ciphertext:
-            log(
-                "AUTH",
-                f"AP RX second encrypted "
-                f"{len(ack_ciphertext)}B: "
-                f"{ack_ciphertext.hex()}"
-            )
+            if DEBUG_AUTH_HEX:
+                log(
+                    "AUTH-DEBUG",
+                    f"AP RX second encrypted {len(ack_ciphertext)}B: {ack_ciphertext.hex()}"
+                )
 
             ack_plaintext = ap_decrypt(
                 aes_key,
                 ack_ciphertext
             )
 
-            log(
-                "AUTH",
-                f"AP RX second plaintext "
-                f"{len(ack_plaintext)}B: "
-                f"{ack_plaintext.hex()}"
-            )
+            if DEBUG_AUTH_HEX:
+                log(
+                    "AUTH-DEBUG",
+                    f"AP RX second plaintext {len(ack_plaintext)}B: {ack_plaintext.hex()}"
+                )
 
             if len(ack_plaintext) >= 10:
                 ack_hdr = parse_tdr_header(
