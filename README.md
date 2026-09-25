@@ -5,243 +5,585 @@
 [![Status](https://img.shields.io/badge/status-preservation%20research-orange)](docs/STATUS.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-An unofficial, community-driven **Assault Fire PH** preservation and server-emulation project.
+An unofficial **Assault Fire PH** preservation and server-emulation project.
 
-The goal is simple: make the retired PH client usable in a local/isolated environment for preservation, interoperability, research, and nostalgia.
+The goal is to make the retired PH client usable in a local/isolated environment for preservation, interoperability research, testing, and nostalgia.
+
+> **Supported client:** Assault Fire PH **v1.0.0.24 only**.
+>
+> Other versions may have different binaries, hashes, packet layouts, TCLS behavior, or offsets and are not currently supported.
 
 > This project is not affiliated with, endorsed by, or sponsored by Tencent, Level Up! Games, or any original rights holder.
 
-> **Client compatibility:** this repository is currently developed, tested, and supported only with **Assault Fire PH v1.0.0.24**, the client build used by this project. Other client versions may use different binaries, offsets, packet behavior, launcher/TCLS behavior, or data layouts and are not currently validated.
+---
 
-## What works today
+# Start here
 
-The current public baseline is **v143b**.
+If this is your first time using the project, follow the steps below **in order**.
 
-- VERSION / AUTH / DIR / ROLE / ZONE local backend flow
-- existing/local profile login path
-- dynamic PvE room and dedicated-server lifecycle with stock-selected map support
-- lazy AFDEV startup instead of spawning a server when a lobby is merely created
-- v48 AFDEV loader + v9 multi-peer UDP bridge
-- zero-DSKey readiness gate before the UE3 session is released
+Do not skip a failed step. If a command says **FAILED**, fix that problem before continuing.
 
-The first-time nickname/new-account flow and several social/progression features are still separate work. See **[Project Status](docs/STATUS.md)** for the detailed matrix.
+## What you need
 
-## Important: legacy kernel anti-cheat
+You need:
 
-Before troubleshooting the emulator, make sure the original PH client's **legacy kernel anti-cheat / security driver is not blocking the client from starting correctly**.
+- Windows 10/11
+- Python 3.12
+- Git
+- your own Assault Fire PH **v1.0.0.24** installation
+- this repository
 
-This component was built for an older Windows environment and can cause crashes, driver initialization failures, or startup problems on modern systems before the emulator is ever contacted.
+The repository does **not** include the original game client, maps, packages, executables, or other proprietary game files.
 
-This project does **not** provide bypass, disabling, kernel-modification, or security-circumvention instructions.
+## Important: know your two folders
 
-**Diagnostic hint:** if the client fails before you see normal VERSION / AUTH traffic in the emulator logs, or Windows/client messages point to a driver/security initialization problem, you are still dealing with the **client/OS compatibility layer**, not a server-protocol bug. Resolve that environment compatibility independently in an isolated preservation setup before debugging the emulator.
+You will use two different folders.
 
-See **[Vital Setup Notes](docs/VITAL_SETUP_NOTES.md)** and **[Issue #4](https://github.com/armangido/af-emulator/issues/4)** for the known symptoms and project scope.
+### Repository folder
 
-## Quick start
+This is the folder containing this README and directories such as:
 
-### 1. Clone and install
+```text
+af-emulator
+├─ server
+├─ tools
+├─ docs
+├─ tests
+└─ README.md
+```
+
+Run repository commands from this folder.
+
+Your PowerShell prompt should look similar to:
+
+```text
+PS D:\Something\af-emulator>
+```
+
+**Do not run the commands from inside `server\`.**
+
+### Game root
+
+Your Assault Fire PH folder is called `<game-root>` throughout the documentation.
+
+For example:
+
+```text
+D:\AssaultFirePH
+├─ TCLS
+│  ├─ Tenio
+│  │  └─ TCLS.dll
+│  └─ config
+│     └─ APClient.dat
+└─ Binaries
+   └─ Win32
+```
+
+In that example:
+
+```text
+<game-root> = D:\AssaultFirePH
+```
+
+**Do not literally type `<game-root>`. Replace it with your real game folder.**
+
+---
+
+# Quick start
+
+## 1. Download the emulator
+
+Open PowerShell:
 
 ```powershell
 git clone https://github.com/armangido/af-emulator.git
 cd af-emulator
+```
 
+If you downloaded a ZIP instead, extract it and `cd` into the extracted repository folder.
+
+## 2. Create the Python environment
+
+Still from the repository root:
+
+```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-### 2. Generate the local RSA key
+### Checkpoint
 
-Point the helper at your own Assault Fire PH `TCLS\config` directory:
+This file must now exist:
+
+```text
+.venv\Scripts\python.exe
+```
+
+If PowerShell says:
+
+```text
+.\.venv\Scripts\python.exe is not recognized
+```
+
+you are usually in the wrong folder.
+
+Run:
+
+```powershell
+cd ..
+```
+
+until your prompt is back at the repository root, then try again.
+
+---
+
+## 3. Generate the local RSA key pair
+
+Replace `<game-root>` with your real Assault Fire PH folder:
 
 ```powershell
 .\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "<game-root>\TCLS\config"
 ```
 
-This creates the local server key and matching `APClient.dat`.
+Example:
 
-**Never commit or upload `server\PRIVATE.PEM`.**
+```powershell
+.\.venv\Scripts\python.exe .\tools\setup\generate_local_rsa_keypair.py --client-config-dir "D:\AssaultFirePH\TCLS\config"
+```
 
-### 3. Check TCLS raw-PEM compatibility
+This creates:
 
-Before launching, verify the exact `TCLS.dll` that your client uses:
+```text
+server\PRIVATE.PEM
+<game-root>\TCLS\config\APClient.dat
+```
+
+> **Never upload or commit `server\PRIVATE.PEM`.**
+
+---
+
+## 4. Verify TCLS and APClient.dat
+
+Run:
 
 ```powershell
 .\.venv\Scripts\python.exe .\tools\patches\diagnose_tcls_apclient.py --client-root "<game-root>"
 ```
 
-For the known PH build, the diagnostic will identify one of these states:
+Example:
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\patches\diagnose_tcls_apclient.py --client-root "D:\AssaultFirePH"
+```
+
+### You want to see
+
+```text
+class              : validated raw-PEM-compatible PH TCLS build
+exact byte match   : YES
+same RSA key       : YES
+```
+
+If all three are correct, continue to step 5.
+
+### If TCLS is the original/pre-patch build
+
+If the diagnostic reports this SHA256:
 
 ```text
 13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1
-  -> original/pre-patch TCLS; raw APClient.dat compatibility patch is required
-
-3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56
-  -> verified patched TCLS; no APClient loader patch is needed
 ```
 
-If the original `13EAD403...` build is detected, fully close `client.exe` / TCLS and run:
+fully close `client.exe` and TCLS, then run:
 
 ```powershell
 .\.venv\Scripts\python.exe .\tools\patches\patch_tcls_apclient_raw_pem.py "<game-root>\TCLS\Tenio\TCLS.dll" --apply
 ```
 
-The helper verifies the exact source hash and instruction bytes, creates `TCLS.dll.bak`, applies only the recovered compatibility edits, and requires the final DLL hash to match the verified working build. **Do not force this patch onto an unknown TCLS hash.**
+The known patched SHA256 is:
 
-This step is important when the launcher shows **`AP client initialization failed.`** even though `PRIVATE.PEM` and `APClient.dat` already match.
+```text
+3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56
+```
 
-### 4. Redirect the retired PH services to localhost
+The patcher creates:
 
-Run from **Administrator PowerShell**:
+```text
+TCLS.dll.bak
+```
+
+and refuses unknown builds.
+
+After patching, **run the diagnostic again**.
+
+Do not continue until it reports:
+
+```text
+exact byte match   : YES
+same RSA key       : YES
+```
+
+---
+
+## 5. Redirect the retired PH services to localhost
+
+Open **PowerShell as Administrator**.
+
+Go back to the repository folder and run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\setup\setup_assaultfire_hosts.ps1
 ```
 
-### 5. Start the emulator
+The required names are:
 
-Run the server from the **repository root** and tell it which Assault Fire PH installation to validate:
+```text
+127.0.0.1 tversion.levelupgames.ph
+127.0.0.1 tauthproxy.levelupgames.ph
+127.0.0.1 tdir.levelupgames.ph
+```
+
+You normally do not need to edit the hosts file manually; use the helper above.
+
+---
+
+## 6. Start the emulator
+
+Open a normal PowerShell window and return to the repository root.
+
+Set your game folder:
 
 ```powershell
 $env:AF_CLIENT_ROOT = "<game-root>"
+```
+
+Example:
+
+```powershell
+$env:AF_CLIENT_ROOT = "D:\AssaultFirePH"
+```
+
+Then start the server:
+
+```powershell
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
-Before opening any network listener, v143b performs a strict startup preflight. It refuses to start unless:
+### The server checks everything before opening ports
 
-- the client uses the verified raw-PEM-compatible PH `TCLS.dll`;
-- `APClient.dat` is an **exact byte match** for the public key derived from `server\PRIVATE.PEM`;
-- `APClient.dat` and `PRIVATE.PEM` report **same RSA key = YES**;
-- the RSA/APClient format is the supported RSA-1024 / 272-byte PEM form;
-- `tversion.levelupgames.ph`, `tauthproxy.levelupgames.ph`, and `tdir.levelupgames.ph` are each mapped exactly to `127.0.0.1` in the Windows hosts file and resolve to localhost.
+Startup is blocked unless all required checks pass.
 
-If any check fails, **VERSION / AUTH / DIR / ROLE / ZONE listeners are not started**.
+A healthy startup should include:
 
-For **PvE**, set the dedicated-server variables before starting the emulator:
+```text
+[PREFLIGHT] TCLS validated build    : YES
+[PREFLIGHT] APClient exact bytes    : YES
+[PREFLIGHT] same RSA key            : YES
+[PREFLIGHT] hosts tversion.levelupgames.ph    : YES
+[PREFLIGHT] hosts tauthproxy.levelupgames.ph  : YES
+[PREFLIGHT] hosts tdir.levelupgames.ph        : YES
+[PREFLIGHT] PASS - all required checks succeeded.
+```
+
+Only after that should the listeners start:
+
+```text
+[VERSION] Listening on port 9060
+[AUTH] Listening on port 8000
+[DIR] Listening on port 9010
+[ROLE] Listening on port 65005
+[ZONE] Listening on port 65006
+```
+
+### If preflight says FAILED
+
+**Do not keep launching the client.**
+
+Read the failed line and fix that exact problem.
+
+Common examples:
+
+| Failure | What to do |
+| --- | --- |
+| `client root is unknown` | Set `$env:AF_CLIENT_ROOT = "<game-root>"` |
+| `TCLS validated build: NO` | Run step 4 again |
+| `APClient exact bytes: NO` | Regenerate/reinstall the matching `APClient.dat` |
+| `same RSA key: NO` | Regenerate the local RSA pair from step 3 |
+| hosts check = `NO` | Run step 5 again from Administrator PowerShell |
+| `PRIVATE.PEM not found` | Confirm `server\PRIVATE.PEM` exists |
+
+---
+
+# PvE setup
+
+If you want PvE/dedicated-server gameplay, set these variables **before** starting v143b:
 
 ```powershell
 $env:AF_CLIENT_ROOT = "<game-root>"
-$env:AF_GAME_DIR = "<full path to your Assault Fire PH Binaries\Win32 folder>"
+$env:AF_GAME_DIR = "<game-root>\Binaries\Win32"
 $env:AF_DS_SPAWNER_ENABLED = "1"
+
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
-For PvE, `AF_GAME_DIR=...\Binaries\Win32` can also be used to derive the client root if `AF_CLIENT_ROOT` is not set.
+Example:
 
-The repository does **not** provide `TGame_AFDEV.exe`, maps, packages, or other original game files.
+```powershell
+$env:AF_CLIENT_ROOT = "D:\AssaultFirePH"
+$env:AF_GAME_DIR = "D:\AssaultFirePH\Binaries\Win32"
+$env:AF_DS_SPAWNER_ENABLED = "1"
 
-### 6. Launch the PH client
+.\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
+```
 
-For the validated PH build, use **one** compatibility path:
+The drive letter does not matter. Point `AF_GAME_DIR` at **your actual `Binaries\Win32` folder**.
 
-**Normal TCLS launch**
+The stable PvE flow is:
+
+```text
+Create room
+   ↓
+reserve DS capacity
+   ↓
+press Start
+   ↓
+start the room bridge
+   ↓
+first valid gameplay packet
+   ↓
+start AFDEV
+   ↓
+SESSION_READY
+   ↓
+enter UE3 gameplay
+```
+
+The selected stock PvE map/settings are passed into the dedicated-server lifecycle.
+
+More detail: **[PvE Runtime](docs/PVE_RUNTIME.md)**.
+
+---
+
+# 7. Launch Assault Fire PH
+
+Keep the emulator PowerShell window open.
+
+Use **one** of the following launch compatibility paths.
+
+## Option A — normal TCLS launch
+
+Run:
 
 ```powershell
 .\.venv\Scripts\python.exe .\tools\patches\patch_tgame_datetime.py
 ```
 
-Then launch normally through `client.exe / TCLS`.
+Then launch normally through `client.exe` / TCLS.
 
-**Suspended TCLS handoff**
+## Option B — suspended TCLS handoff
 
-Log in through TCLS and stop at the normal **START** screen, then run:
+Launch TCLS, log in, and stop at the normal **START** screen.
+
+Then run:
 
 ```powershell
 .\.venv\Scripts\python.exe .\tools\patches\patch_tcls_suspended_launch.py
 ```
 
-The suspended-launch helper already applies the datetime compatibility patch, so **do not run both helpers for the same launch**.
+> The suspended-launch helper already applies the datetime compatibility patch.
+>
+> **Do not use both launch helpers for the same launch.**
 
-For the full walkthrough, use **[Getting Started](docs/GETTING_STARTED.md)**.
+---
 
-## PvE maps
+# Very common mistakes
 
-The stable PvE path is integrated on `main` and is map-generic. The stock room selection is carried into the lazy AFDEV startup, so PvE maps use the same dedicated-server lifecycle.
+Before opening an issue, check these first.
+
+### “.venv python is not recognized”
+
+You are probably inside the wrong folder.
+
+Wrong:
 
 ```text
-Create room
-   ↓
-reserve DS capacity only
-   ↓
-Start Match
-   ↓
-arm per-room bridge + return DS assignment
-   ↓
-first valid client DS UDP packet
-   ↓
-lazy-start v48 AFDEV
-   ↓
-verify world / movement / zero DS key
-   ↓
-SESSION_READY
-   ↓
-release latched packet through v9 bridge
-   ↓
-UE3 gameplay session
+PS D:\Something\af-emulator\server>
 ```
 
-Room settings sent through A11E are applied before the lazy AFDEV spawn, including the selected map, mode, submode/difficulty, and flags.
+Correct:
 
-A PH-client HUD label can still display the wrong text in some cases; that is tracked separately from the authoritative server/AFDEV difficulty state.
+```text
+PS D:\Something\af-emulator>
+```
 
-See **[PvE Runtime](docs/PVE_RUNTIME.md)** for implementation details.
+### “AP client initialization failed.”
 
-## If something fails
+Run step 4 again:
 
-Start with the symptom instead of changing random files:
+```powershell
+.\.venv\Scripts\python.exe .\tools\patches\diagnose_tcls_apclient.py --client-root "<game-root>"
+```
 
-- **`AP client initialization failed.`** → repeat Quick start step 3 and confirm the loaded TCLS hash; see [Launcher / AP / TGame errors](docs/LAUNCHER_ERRORS.md) and [Issue #7](https://github.com/armangido/af-emulator/issues/7).
-- **TCLS launches but TGame does not hand off correctly** → [Vital Launch Requirements](docs/LAUNCH_REQUIREMENTS.md)
-- **TGame crashes around datetime/startup** → use one of the compatibility helpers above
-- **legacy security-driver / modern Windows startup problems** → [Vital Setup Notes](docs/VITAL_SETUP_NOTES.md) and [Issue #4](https://github.com/armangido/af-emulator/issues/4)
-- **not sure whether a feature is implemented** → [Project Status](docs/STATUS.md)
+Do not guess. Check the TCLS hash, exact-byte result, and RSA result.
 
-When reporting a problem, include the exact error text and the last server/client log lines before the failure.
+### Server starts but client never reaches AUTH
 
-## Documentation
+Confirm:
 
-You do not need to read everything before trying the project.
+```text
+TCLS validated build = YES
+APClient exact bytes = YES
+same RSA key = YES
+hosts checks = YES
+```
 
-| Guide | Use it for |
+Then check **[Launcher Errors](docs/LAUNCHER_ERRORS.md)**.
+
+### I copied `<game-root>` exactly
+
+That is a placeholder.
+
+Replace:
+
+```text
+<game-root>
+```
+
+with something like:
+
+```text
+D:\AssaultFirePH
+```
+
+### I changed random DLLs/config files and now nothing works
+
+Restore your known-good client copy and repeat the setup from step 3.
+
+Do not apply patches intended for a different TCLS/client hash.
+
+### I am using another Assault Fire version
+
+This repository is currently tested only with:
+
+```text
+Assault Fire PH v1.0.0.24
+```
+
+Other versions are not expected to work without additional research.
+
+---
+
+# Legacy security-driver note
+
+The original PH client includes a legacy kernel-level security/anti-cheat component designed for an older Windows environment.
+
+On modern Windows it may cause startup failures, crashes, or driver initialization problems **before the emulator is contacted**.
+
+If the client fails before normal VERSION/AUTH traffic appears, the problem may be in the client/OS compatibility layer rather than the emulator.
+
+This project does **not** provide bypass, disabling, kernel-modification, or active security-circumvention instructions.
+
+See **[Vital Setup Notes](docs/VITAL_SETUP_NOTES.md)** for known symptoms and project scope.
+
+---
+
+# What works
+
+The current public baseline is **v143b**.
+
+Working or integrated areas include:
+
+- VERSION / AUTH / DIR / ROLE / ZONE local backend flow
+- existing/local profile login path
+- dynamic room support
+- shared-room multiplayer work
+- PvE dedicated-server allocation and lifecycle
+- stock-selected PvE map/settings propagation
+- lazy AFDEV startup
+- v48 AFDEV loader
+- v9 multi-peer UDP bridge
+- zero-DSKey readiness path
+- inventory/shop/profile preservation work
+
+Some features remain partial or under validation, including first-time nickname/account flow and parts of social/progression systems.
+
+See **[Project Status](docs/STATUS.md)** for the current matrix.
+
+---
+
+# Troubleshooting
+
+Use the symptom that actually matches your problem.
+
+| Problem | Read this |
 | --- | --- |
-| [Getting Started](docs/GETTING_STARTED.md) | first setup and local launch |
-| [Project Status](docs/STATUS.md) | what works, what is partial, what is still planned |
-| [PvE Runtime](docs/PVE_RUNTIME.md) | current v143b / v48 / v9 generic PvE path and map selection |
-| [Launch Requirements](docs/LAUNCH_REQUIREMENTS.md) | TCLS → TGame handoff and compatibility |
-| [Launcher Errors](docs/LAUNCHER_ERRORS.md) | known launcher/AP/TGame messages |
-| [Architecture](docs/ARCHITECTURE.md) | ports, components, and data flow |
-| [Research Findings](docs/RESEARCH_FINDINGS.md) | verified protocol/runtime findings and clearly marked research leads |
-| [FAQ](docs/FAQ.md) | common questions |
-| [Contributing](CONTRIBUTING.md) | submitting fixes, tests, and research |
+| First setup / unsure what to run | [Getting Started](docs/GETTING_STARTED.md) |
+| AP/TCLS/TGame launcher error | [Launcher Errors](docs/LAUNCHER_ERRORS.md) |
+| TCLS → TGame handoff problem | [Launch Requirements](docs/LAUNCH_REQUIREMENTS.md) |
+| PvE / AFDEV / dedicated server | [PvE Runtime](docs/PVE_RUNTIME.md) |
+| Legacy driver / modern Windows issue | [Vital Setup Notes](docs/VITAL_SETUP_NOTES.md) |
+| Not sure whether a feature exists | [Project Status](docs/STATUS.md) |
+| Common question | [FAQ](docs/FAQ.md) |
 
-## Repository layout
+When reporting a bug, include:
+
+- the exact error text
+- what step you were on
+- the command you ran
+- the last relevant server/client log lines
+- your client version
+- relevant hashes when the issue involves TCLS/TGame
+
+Do **not** upload `PRIVATE.PEM`, passwords, account credentials, or proprietary game binaries.
+
+---
+
+# Documentation
+
+| Document | Purpose |
+| --- | --- |
+| [Getting Started](docs/GETTING_STARTED.md) | full first-time setup |
+| [Project Status](docs/STATUS.md) | implemented / partial / planned features |
+| [PvE Runtime](docs/PVE_RUNTIME.md) | PvE and dedicated-server flow |
+| [Launch Requirements](docs/LAUNCH_REQUIREMENTS.md) | TCLS → TGame requirements |
+| [Launcher Errors](docs/LAUNCHER_ERRORS.md) | known AP/TCLS/TGame errors |
+| [Architecture](docs/ARCHITECTURE.md) | ports, services, and data flow |
+| [Research Findings](docs/RESEARCH_FINDINGS.md) | verified protocol/runtime findings |
+| [FAQ](docs/FAQ.md) | common questions |
+| [Contributing](CONTRIBUTING.md) | contributing fixes and research |
+
+---
+
+# Repository layout
 
 ```text
 server/      emulator/backend and DS lifecycle
-tools/       setup, compatibility, bridge, loader, and research utilities
-docs/        setup, protocol, architecture, and troubleshooting
-tests/       reproducible regression tests
+tools/       setup, compatibility, bridge, loader, and research tools
+docs/        setup, architecture, protocol notes, and troubleshooting
+tests/       regression tests
 .github/     issue and contribution templates
 ```
 
+---
 
-## Project scope
+# Project scope
 
 This repository contains original emulator code, documentation, and research tooling.
 
 Please do **not** commit:
 
 - original game executables or DLLs
-- `.upk`, `.udk`, maps, audio, textures, or other proprietary assets
-- private keys, credentials, or account data
+- maps, `.upk`, `.udk`, audio, textures, or other proprietary assets
+- private keys
+- passwords, tokens, cookies, or account credentials
 - raw memory dumps containing proprietary or personal data
 - files you do not have permission to redistribute
 
 Users must obtain any required original game files independently and lawfully.
 
-The project does not provide tooling or instructions for defeating active anti-cheat or operating-system security protections.
+---
 
-## Contributing
+# Contributing
 
 Contributions are welcome, especially:
 
@@ -252,11 +594,11 @@ Contributions are welcome, especially:
 - regression tests
 - documentation corrections
 
-Please read **[CONTRIBUTING.md](CONTRIBUTING.md)** before opening a PR.
+Read **[CONTRIBUTING.md](CONTRIBUTING.md)** before opening a pull request.
 
-For protocol reports, include the client build, opcode/direction, sanitized packet or decoded fields, expected behavior, observed behavior, and relevant logs.
+---
 
-## License
+# License
 
 Original code and documentation in this repository are licensed under the [MIT License](LICENSE).
 
