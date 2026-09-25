@@ -1,0 +1,78 @@
+from pathlib import Path
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = ROOT / "START_ASSAULT_FIRE.ps1"
+README = ROOT / "README.md"
+
+
+class OneClickLauncherTests(unittest.TestCase):
+    def text(self, path):
+        return path.read_text(encoding="utf-8", errors="replace")
+
+    def test_one_click_entrypoint_exists(self):
+        self.assertTrue(SCRIPT.is_file())
+
+    def test_script_detects_game_beside_or_around_repo(self):
+        s = self.text(SCRIPT)
+        self.assertIn('TCLS\\client.exe', s)
+        self.assertIn('TCLS\\Tenio\\TCLS.dll', s)
+        self.assertIn('Binaries\\Win32\\TGame.exe', s)
+        self.assertIn('Find-GameRoot', s)
+
+    def test_script_bootstraps_python_and_requirements(self):
+        s = self.text(SCRIPT)
+        self.assertIn('Python.Python.3.12', s)
+        self.assertIn('"requirements.txt"', s)
+        self.assertIn('"-m", "venv"', s)
+        self.assertIn('"pip", "install"', s)
+
+    def test_permanent_tcls_patch_is_prompted_and_hash_guarded(self):
+        s = self.text(SCRIPT)
+        self.assertIn(
+            '13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1',
+            s,
+        )
+        self.assertIn(
+            '3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56',
+            s,
+        )
+        self.assertIn('patch_tcls_apclient_raw_pem.py', s)
+        self.assertIn('Patch TCLS.dll permanently', s)
+
+    def test_script_prepares_local_afdev_from_owned_tgame(self):
+        s = self.text(SCRIPT)
+        expected = 'B4273F2658CA94EEBC559A997FDFCD02D51E77CE75B892250C1DB7FB80C70B51'
+        self.assertIn(expected, s)
+        self.assertIn('TGame_AFDEV.exe', s)
+        self.assertIn(
+            'Copy-Item -LiteralPath $tgame -Destination $afdev -Force',
+            s,
+        )
+        self.assertNotIn('Invoke-WebRequest', s)
+
+    def test_script_handles_keys_hosts_server_helper_and_client(self):
+        s = self.text(SCRIPT)
+        for marker in (
+            'generate_local_rsa_keypair.py',
+            'diagnose_tcls_apclient.py',
+            'setup_assaultfire_hosts.ps1',
+            'assaultfire_server_v143b.py',
+            'patch_tcls_suspended_launch.py',
+            'AF_CLIENT_ROOT',
+            'AF_GAME_DIR',
+            'AF_DS_SPAWNER_ENABLED',
+            'preflight_status.json',
+            'Start-Process -FilePath $clientExe',
+        ):
+            self.assertIn(marker, s)
+
+    def test_readme_promotes_one_click_path(self):
+        s = self.text(README)
+        self.assertIn('Easiest way — use the one-click script', s)
+        self.assertIn('START_ASSAULT_FIRE.ps1', s)
+        self.assertIn('TGame_AFDEV.exe', s)
+
+
+if __name__ == "__main__":
+    unittest.main()
