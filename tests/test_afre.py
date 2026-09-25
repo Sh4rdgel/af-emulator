@@ -202,10 +202,17 @@ class AfreTests(unittest.TestCase):
     def test_fname_stability_is_explicit(self):
         db = afre.load_object_db(ROOT / "tools" / "research" / "af_objects_10024.json")
         self.assertEqual(db["core_fname_indices"]["entries"]["BoolProperty"], "0x00000003")
-        restart = db["runtime_fname_observations"]["entries"]["RestartPlayer"]
+
+        observations = db["runtime_fname_observations"]
+        self.assertEqual(observations["status"], "session-dependent-history-only")
+
+        restart = observations["entries"]["RestartPlayer"]
         self.assertIn("0x00006DDF", restart)
         self.assertIn("0x00006DE5", restart)
-        self.assertIn("session", db["runtime_fname_observations"]["warning"].lower())
+
+        warning = observations["warning"].lower()
+        self.assertIn("fresh processes", warning)
+        self.assertIn("resolve or construct names live", warning)
 
     def test_true_ds_symbols_promoted(self):
         group, name, meta = afre.lookup_symbol(self.catalog, "UNetConnection_CreateChannel")
