@@ -6,6 +6,45 @@ The emulator can have VERSION/AUTH/DIR/ROLE working correctly and the game can s
 
 > These notes are for the validated **Assault Fire PH v1.0.0.24** preservation setup only. They are build-specific. Do not blindly apply RVAs or patch bytes to another client build.
 
+## Mandatory server preflight launch gate
+
+Before either documented TGame compatibility helper will proceed, the current server run must have passed the strict client preflight.
+
+Required state includes:
+
+```text
+[PREFLIGHT] client root             : <real game root>
+[PREFLIGHT] TCLS validated build    : YES
+[PREFLIGHT] APClient exact bytes    : YES
+[PREFLIGHT] same RSA key            : YES
+[PREFLIGHT] hosts tversion.levelupgames.ph   : YES
+[PREFLIGHT] hosts tauthproxy.levelupgames.ph : YES
+[PREFLIGHT] hosts tdir.levelupgames.ph       : YES
+[PREFLIGHT] game launch gate         : UNLOCKED
+```
+
+If any required check fails, the server exits before opening game-service listeners and writes:
+
+```text
+[PREFLIGHT] game launch gate         : LOCKED
+```
+
+The complete block is appended to `server\af_server_live.log`. A machine-readable copy is written to `runtime\preflight_status.json`.
+
+Both `patch_tcls_suspended_launch.py` and the standalone `patch_tgame_datetime.py` read this gate. They reject missing/failed status and a dead server process. On Windows they also verify the core TCP listener ports are actually owned by that same server PID. The suspended helper additionally checks that the TCLS loaded in `client.exe` is the same TCLS copy that passed preflight.
+
+A typical blocked setup is:
+
+```text
+[PREFLIGHT] client root             : None
+[PREFLIGHT] TCLS validated build    : NO
+[PREFLIGHT] APClient exact bytes    : NO
+[PREFLIGHT] same RSA key            : NO
+[PREFLIGHT] game launch gate         : LOCKED
+```
+
+Do not click START in that state. Fix the reported setup problem, restart the server, and wait for **UNLOCKED**.
+
 ## What a successful launch actually looks like
 
 The expected local path is:
@@ -133,6 +172,8 @@ If your existing local setup already launches TGame reliably, **do not add this 
 
 ### Automated helper — recommended when this path is needed
 
+The helper first enforces the server preflight launch gate. It will not modify TCLS or allow the supported launch sequence to continue while the gate is locked.
+
 The repository includes:
 
 ```text
@@ -229,6 +270,8 @@ The repository includes the standalone patcher:
 ```text
 tools/patches/patch_tgame_datetime.py
 ```
+
+The standalone patcher now enforces the same server preflight gate before it begins waiting for TGame.
 
 The combined `patch_tcls_suspended_launch.py` helper imports and applies this same verified datetime patch while TGame is suspended, so users of the combined path do not need to run it separately.
 
