@@ -8,39 +8,84 @@
     "UObject": {
       "status": "verified",
       "fields": {
-        "Outer": {"offset": "0x28", "type": "UObject*"},
-        "NameIndex": {"offset": "0x2C", "type": "int32"},
-        "NameNumber": {"offset": "0x30", "type": "int32"},
-        "Class": {"offset": "0x34", "type": "UClass*"}
+        "Outer": {
+          "offset": "0x28",
+          "type": "UObject*"
+        },
+        "NameIndex": {
+          "offset": "0x2C",
+          "type": "int32"
+        },
+        "NameNumber": {
+          "offset": "0x30",
+          "type": "int32"
+        },
+        "Class": {
+          "offset": "0x34",
+          "type": "UClass*"
+        }
       }
     },
     "UField": {
       "parent": "UObject",
       "status": "verified",
       "fields": {
-        "Next": {"offset": "0x3C", "type": "UField*"}
+        "Next": {
+          "offset": "0x3C",
+          "type": "UField*"
+        }
       }
     },
     "UStruct": {
       "parent": "UField",
       "status": "verified",
       "fields": {
-        "Super": {"offset": "0x48", "type": "UStruct*"},
-        "Children": {"offset": "0x4C", "type": "UField*"},
-        "PropertiesSize": {"offset": "0x50", "type": "int32"}
+        "Super": {
+          "offset": "0x48",
+          "type": "UStruct*"
+        },
+        "Children": {
+          "offset": "0x4C",
+          "type": "UField*"
+        },
+        "PropertiesSize": {
+          "offset": "0x50",
+          "type": "int32"
+        }
       }
     },
     "UFunction": {
       "parent": "UStruct",
       "status": "verified",
       "fields": {
-        "Script.Data": {"offset": "0x54", "type": "uint8*"},
-        "Script.Num": {"offset": "0x58", "type": "int32"},
-        "Script.Max": {"offset": "0x5C", "type": "int32"},
-        "FunctionFlags": {"offset": "0xAC", "type": "uint32"},
-        "ParmsSize": {"offset": "0xBE", "type": "uint16"},
-        "ReturnOffset": {"offset": "0xC0", "type": "uint16"},
-        "Func": {"offset": "0xC8", "type": "native function pointer"}
+        "Script.Data": {
+          "offset": "0x54",
+          "type": "uint8*"
+        },
+        "Script.Num": {
+          "offset": "0x58",
+          "type": "int32"
+        },
+        "Script.Max": {
+          "offset": "0x5C",
+          "type": "int32"
+        },
+        "FunctionFlags": {
+          "offset": "0xAC",
+          "type": "uint32"
+        },
+        "ParmsSize": {
+          "offset": "0xBE",
+          "type": "uint16"
+        },
+        "ReturnOffset": {
+          "offset": "0xC0",
+          "type": "uint16"
+        },
+        "Func": {
+          "offset": "0xC8",
+          "type": "native function pointer"
+        }
       }
     }
   },
@@ -48,55 +93,94 @@
     "UGameEngine": {
       "status": "verified",
       "fields": {
-        "GamePlayers.Data": {"offset": "0x47C", "type": "ULocalPlayer**"},
-        "GamePlayers.Count": {"offset": "0x480", "type": "int32"},
-        "GamePlayers.Max": {"offset": "0x484", "type": "int32"}
+        "GamePlayers.Data": {
+          "offset": "0x47C",
+          "type": "ULocalPlayer**"
+        },
+        "GamePlayers.Count": {
+          "offset": "0x480",
+          "type": "int32"
+        },
+        "GamePlayers.Max": {
+          "offset": "0x484",
+          "type": "int32"
+        }
       }
     },
     "ULocalPlayer": {
       "status": "verified",
       "vtable": "0x01D59830",
       "fields": {
-        "PlayerController": {"offset": "0x40", "type": "APlayerController*"}
+        "PlayerController": {
+          "offset": "0x40",
+          "type": "APlayerController*"
+        }
       }
     },
     "UWorld": {
       "status": "verified",
       "fields": {
-        "PersistentLevel": {"offset": "0x50", "type": "ULevel*"},
-        "NetDriver": {"offset": "0xD8", "type": "UNetDriver*"}
+        "PersistentLevel": {
+          "offset": "0x50",
+          "type": "ULevel*"
+        },
+        "NetDriver": {
+          "offset": "0xD8",
+          "type": "UNetDriver*"
+        }
       }
     },
     "ULevel": {
       "status": "verified",
       "fields": {
-        "Actors": {"offset": "0x3C", "type": "TArray<AActor*>"},
-        "GameSequences": {"offset": "0xA0", "type": "TArray<USequence*>"}
+        "Actors": {
+          "offset": "0x3C",
+          "type": "TArray<AActor*>"
+        },
+        "GameSequences": {
+          "offset": "0xA0",
+          "type": "TArray<USequence*>"
+        }
       }
     },
     "ULevelStreaming": {
       "status": "observed",
       "fields": {
-        "PackageName": {"offset": "0x3C", "type": "FName"},
-        "LoadedLevel": {"offset": "0x44", "type": "ULevel*"}
+        "PackageName": {
+          "offset": "0x3C",
+          "type": "FName"
+        },
+        "LoadedLevel": {
+          "offset": "0x44",
+          "type": "ULevel*"
+        }
       }
     },
     "WorldInfo": {
       "status": "verified",
       "fields": {
-        "Game": {"offset": "0x414", "type": "GameInfo*"}
+        "Game": {
+          "offset": "0x414",
+          "type": "GameInfo*"
+        }
       }
     },
     "GameInfo": {
       "status": "verified",
       "fields": {
-        "GameReplicationInfo": {"offset": "0x2A8", "type": "GameReplicationInfo*"}
+        "GameReplicationInfo": {
+          "offset": "0x2A8",
+          "type": "GameReplicationInfo*"
+        }
       }
     },
     "GameReplicationInfo": {
       "status": "verified",
       "fields": {
-        "ElapsedTime": {"offset": "0x1E4", "type": "int32"},
+        "ElapsedTime": {
+          "offset": "0x1E4",
+          "type": "int32"
+        },
         "StateFlags": {
           "offset": "0x318",
           "type": "uint32",
@@ -113,18 +197,46 @@
       "constructor": "0x01662F60",
       "native_size": "0xA60",
       "fields": {
-        "Pawn": {"offset": "0x1D8", "type": "APawn*"},
-        "PlayerReplicationInfo": {"offset": "0x1DC", "type": "PlayerReplicationInfo*"},
-        "Player": {"offset": "0x370", "type": "UPlayer*", "provenance": "live PVE lifecycle probes"},
-        "PlayerCamera": {"offset": "0x374", "type": "APlayerCamera*","provenance": "live PVE lifecycle probes"},
-        "AcknowledgedPawn": {"offset": "0x390", "type": "APawn*"},
-        "ViewTarget": {"offset": "0x39C", "type": "AActor*"},
-        "HUD": {"offset": "0x3D8", "type": "AHUD*"},
-        "PlayerInput": {"offset": "0x478", "type": "UPlayerInput*"},
+        "Pawn": {
+          "offset": "0x1D8",
+          "type": "APawn*"
+        },
+        "PlayerReplicationInfo": {
+          "offset": "0x1DC",
+          "type": "PlayerReplicationInfo*"
+        },
+        "Player": {
+          "offset": "0x370",
+          "type": "UPlayer*",
+          "provenance": "live PVE lifecycle probes"
+        },
+        "PlayerCamera": {
+          "offset": "0x374",
+          "type": "APlayerCamera*",
+          "provenance": "live PVE lifecycle probes"
+        },
+        "AcknowledgedPawn": {
+          "offset": "0x390",
+          "type": "APawn*"
+        },
+        "ViewTarget": {
+          "offset": "0x39C",
+          "type": "AActor*"
+        },
+        "HUD": {
+          "offset": "0x3D8",
+          "type": "AHUD*"
+        },
+        "PlayerInput": {
+          "offset": "0x478",
+          "type": "UPlayerInput*"
+        },
         "LoadingGate": {
           "offset": "0x884",
           "type": "bitfield",
-          "bits": {"bWaitingLoadingProcessComplete": "0x00000001"}
+          "bits": {
+            "bWaitingLoadingProcessComplete": "0x00000001"
+          }
         }
       },
       "notes": [
@@ -138,7 +250,9 @@
         "Flags": {
           "offset": "0x3C0",
           "type": "uint32",
-          "bits": {"bAlwaysObserver_or_PVE_start_gate": "0x00000004"}
+          "bits": {
+            "bAlwaysObserver_or_PVE_start_gate": "0x00000004"
+          }
         }
       }
     },
@@ -148,25 +262,48 @@
         "bLoadingProcessComplete": {
           "offset": "0x1EB0",
           "type": "bitfield",
-          "bits": {"bit0": "0x00000001"}
+          "bits": {
+            "bit0": "0x00000001"
+          }
         },
-        "HUDRound": {"offset": "0x1F68", "type": "UObject*"}
+        "HUDRound": {
+          "offset": "0x1F68",
+          "type": "UObject*"
+        }
       }
     },
     "SequenceEvent": {
       "status": "verified-pve",
       "fields": {
-        "ActivationTime": {"offset": "0xE4", "type": "float"},
-        "TriggerCount": {"offset": "0xE8", "type": "int32"},
-        "MaxTriggerCount": {"offset": "0xEC", "type": "int32"},
-        "ReTriggerDelay": {"offset": "0xF0", "type": "float"},
-        "Flags": {"offset": "0xF4", "type": "uint32"}
+        "ActivationTime": {
+          "offset": "0xE4",
+          "type": "float"
+        },
+        "TriggerCount": {
+          "offset": "0xE8",
+          "type": "int32"
+        },
+        "MaxTriggerCount": {
+          "offset": "0xEC",
+          "type": "int32"
+        },
+        "ReTriggerDelay": {
+          "offset": "0xF0",
+          "type": "float"
+        },
+        "Flags": {
+          "offset": "0xF4",
+          "type": "uint32"
+        }
       }
     },
     "UNetDriver": {
       "status": "verified",
       "fields": {
-        "Socket": {"offset": "0x1A8", "type": "pointer"}
+        "Socket": {
+          "offset": "0x1A8",
+          "type": "pointer"
+        }
       }
     }
   },
@@ -230,16 +367,43 @@
     }
   },
   "known_functions": {
-    "UObject::ProcessEvent": {"va": "0x00483440", "status": "verified"},
-    "FName(const TCHAR*)": {"va": "0x004D78D0", "status": "verified"},
-    "GenericScriptNativeThunk": {"va": "0x0048DB10", "status": "repeatedly-observed"},
-    "UWorld::GetWorldInfo": {"va": "0x00D9C1A0", "status": "verified"},
-    "UWorld::SetGameInfo": {"va": "0x00DA2760", "status": "verified"}
+    "UObject::ProcessEvent": {
+      "va": "0x00483440",
+      "status": "verified"
+    },
+    "FName(const TCHAR*)": {
+      "va": "0x004D78D0",
+      "status": "verified"
+    },
+    "GenericScriptNativeThunk": {
+      "va": "0x0048DB10",
+      "status": "repeatedly-observed"
+    },
+    "UWorld::GetWorldInfo": {
+      "va": "0x00D9C1A0",
+      "status": "verified"
+    },
+    "UWorld::SetGameInfo": {
+      "va": "0x00DA2760",
+      "status": "verified"
+    }
   },
   "known_globals": {
-    "GNames": {"va": "0x02041B68", "type": "pointer", "status": "verified"},
-    "GEngine": {"va": "0x02063820", "type": "pointer", "status": "verified"},
-    "GWorld": {"va": "0x02066BF8", "type": "pointer", "status": "verified"}
+    "GNames": {
+      "va": "0x02041B68",
+      "type": "pointer",
+      "status": "verified"
+    },
+    "GEngine": {
+      "va": "0x02063820",
+      "type": "pointer",
+      "status": "verified"
+    },
+    "GWorld": {
+      "va": "0x02066BF8",
+      "type": "pointer",
+      "status": "verified"
+    }
   },
   "conflicts": [
     {
@@ -273,5 +437,23 @@
     "Do not hardcode game-package FName indices across fresh processes; resolve or construct names live.",
     "Prefer structural chains such as GWorld -> PersistentLevel -> Actors -> WorldInfo -> GameInfo -> GRI over global vtable scans.",
     "Treat live addresses of UObject instances as session-specific observations, not permanent symbols."
-  ]
+  ],
+  "provenance": {
+    "primary_sources": [
+      "ASSAULT_FIRE_PVE_ASTRA_HANDOFF_2026-09-20.md",
+      "tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py",
+      "probe_pve_authoritative_gri_v51d.py",
+      "probe_pve_gamestart_event_v55.py",
+      "probe_pve_postload_delta_v4_fast.py",
+      "probe_pve_restartplayer_v6.py"
+    ],
+    "status_meanings": {
+      "verified": "Repeatedly validated against the exact clean PH v1.0.0.24 binary and/or live runtime.",
+      "verified-pve": "Validated in the PH PVE runtime path; do not automatically generalize to every class/mode.",
+      "observed": "Observed in prior project runs but has weaker validation than verified entries.",
+      "recovered-from-exact-build": "Recovered by static analysis from the exact clean PH executable.",
+      "verified-from-package": "Established from decoded PH UnrealScript/package metadata.",
+      "verified-from-old-PH-UnrealScript": "Established from preserved old PH script source/bytecode context."
+    }
+  }
 }
