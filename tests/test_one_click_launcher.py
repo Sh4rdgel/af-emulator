@@ -48,7 +48,7 @@ class OneClickLauncherTests(unittest.TestCase):
 
     def test_launcher_prints_revision_for_stale_zip_diagnosis(self):
         s = self.text(SCRIPT)
-        self.assertIn('2026-09-25-oneclick-v5', s)
+        self.assertIn('2026-09-25-oneclick-v6', s)
         self.assertIn('Launcher revision: $LAUNCHER_REVISION', s)
 
     def test_launcher_does_not_elevate_entire_process(self):
@@ -94,6 +94,19 @@ class OneClickLauncherTests(unittest.TestCase):
             'Remove-Item -LiteralPath $venvDir -Recurse -Force',
             s,
         )
+
+    def test_console_windows_disable_quickedit_blocking(self):
+        s = self.text(SCRIPT)
+        helper = self.text(ROOT / "tools" / "setup" / "af_console_nonblocking.ps1")
+        self.assertIn('af_console_nonblocking.ps1', s)
+        self.assertGreaterEqual(
+            s.count('Disable-AFConsoleBlockingSelection'),
+            3,
+        )
+        self.assertIn('ENABLE_QUICK_EDIT_MODE = 0x0040', helper)
+        self.assertIn('ENABLE_EXTENDED_FLAGS = 0x0080', helper)
+        self.assertIn('mode &= ~ENABLE_QUICK_EDIT_MODE', helper)
+        self.assertIn('SetConsoleMode', helper)
 
     def test_permanent_tcls_patch_is_prompted_and_hash_guarded(self):
         s = self.text(SCRIPT)
