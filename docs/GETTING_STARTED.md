@@ -14,9 +14,9 @@ You will do the basic backend setup, then verify the client launch handoff:
 3. Generate a local RSA key pair
 4. Verify/patch TCLS raw-PEM APClient.dat compatibility
 5. Redirect the old Assault Fire PH hostnames to 127.0.0.1
-6. Start the v143b server
+6. Start the v143b server and require preflight PASS / launch gate UNLOCKED
 7. Launch client.exe / TCLS and log in until START is available
-8. Choose ONE compatibility path:
+8. Choose ONE compatibility path (both are blocked if preflight did not pass):
    - normal launch: patch_tgame_datetime.py
    - suspended launch: patch_tcls_suspended_launch.py
 9. Click START
@@ -296,7 +296,8 @@ Before any listener opens, the startup preflight checks the client, RSA/APClient
 [PREFLIGHT] hosts tversion.levelupgames.ph   : YES
 [PREFLIGHT] hosts tauthproxy.levelupgames.ph : YES
 [PREFLIGHT] hosts tdir.levelupgames.ph       : YES
-[PREFLIGHT] PASS - all required checks succeeded.
+[PREFLIGHT] game launch gate         : UNLOCKED
+[PREFLIGHT] PASS - all required checks succeeded; supported game launch helpers are UNLOCKED.
 [VERSION] Listening on port 9060
 [AUTH] Listening on port 8000
 [DIR] Listening on port 9010
@@ -304,7 +305,33 @@ Before any listener opens, the startup preflight checks the client, RSA/APClient
 [MAIN] All listeners running.
 ```
 
-If any preflight rule fails, v143b exits with code 2 and **does not start VERSION / AUTH / DIR / ROLE / ZONE**. Fix the reported client, RSA, or hosts problem and run it again.
+If any preflight rule fails, v143b exits with code 2 and **does not start VERSION / AUTH / DIR / ROLE / ZONE**. It also records `game launch gate : LOCKED`. The supported launch helpers refuse to arm/patch/resume the game until a later server run passes every required check.
+
+A common blocked state looks like:
+
+```text
+[PREFLIGHT] client root             : None
+[PREFLIGHT] TCLS validated build    : NO
+[PREFLIGHT] APClient exact bytes    : NO
+[PREFLIGHT] same RSA key            : NO
+[PREFLIGHT] game launch gate         : LOCKED
+```
+
+The complete preflight block is appended to:
+
+```text
+server\af_server_live.log
+```
+
+and its machine-readable gate state is stored in:
+
+```text
+runtime\preflight_status.json
+```
+
+The launch helper also requires the server process from that status to still be alive, the core TCP listeners to belong to that process, and the TCLS loaded by `client.exe` to match the TCLS path that passed preflight.
+
+Fix the reported client, RSA, TCLS, or hosts problem, restart the server, and do not click START until the gate says **UNLOCKED**.
 
 If your private key is stored somewhere else, you can point the server to it:
 
@@ -345,6 +372,8 @@ The validated PH client needs the TGame datetime compatibility fix. There are no
 
 ### Path A — normal TCLS launch
 
+This helper first checks the server's persisted preflight gate. If preflight is missing, failed, stale, or the required backend listeners are not active under that server process, it exits with `GAME LAUNCH BLOCKED`.
+
 If your TCLS already launches TGame reliably, start the standalone datetime patcher in a second PowerShell window:
 
 ```powershell
@@ -361,6 +390,8 @@ expected: 83 EC 24 53 8B 5C 24 2C
 and applies the runtime-only datetime fix.
 
 ### Path B — debugger-free suspended TCLS launch
+
+This is the recommended first-launch path. It will not arm TCLS unless server preflight is **UNLOCKED**, the server is still alive with its core listeners active, and the loaded TCLS is the exact copy that passed preflight.
 
 If your setup needs the proven TCLS handoff timing, first launch `client.exe / TCLS`, log in, and stop at the normal **START** screen.
 
