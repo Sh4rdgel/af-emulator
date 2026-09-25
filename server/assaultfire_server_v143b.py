@@ -38,10 +38,13 @@ from assaultfire_room_registry import (
     RoomRegistryError,
 )
 
-from assaultfire_preflight import run_server_preflight
+from assaultfire_preflight import run_server_preflight, update_launch_gate_status
 
 # v24: v20 success framing plus BOTH PublicData bitmap and PrivateData tail probes.
 QUIET_ROLE_HEX = True
+DEBUG_AUTH_HEX = os.environ.get("AF_DEBUG_AUTH_HEX", "").strip().lower() in (
+    "1", "true", "yes", "on"
+)
 
 def _short_hex(b, n=48):
     b = bytes(b or b'')
@@ -307,7 +310,15 @@ def log(label, message):
 # This adds only DS allocation/process lifecycle to the proven v143b backend.
 # It does NOT include the later first-login/new-account/profile branches.
 V143B_DS_CONFIG = SpawnerConfig.from_env()
-V143B_DS_SPAWNER = DedicatedServerSpawner(V143B_DS_CONFIG, log_fn=log)
+V143B_DS_SPAWNER = None
+
+
+def _v143b_init_spawner():
+    """Create mutable DS runtime state only after strict preflight succeeds."""
+    global V143B_DS_SPAWNER
+    if V143B_DS_SPAWNER is None:
+        V143B_DS_SPAWNER = DedicatedServerSpawner(V143B_DS_CONFIG, log_fn=log)
+    return V143B_DS_SPAWNER
 
 
 # ---------------------------------------------------------------------------
