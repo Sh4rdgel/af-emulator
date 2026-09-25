@@ -253,7 +253,12 @@ IV = bytes.fromhex(
 
 PRIME_BYTES = P_PRIME.to_bytes(64, "big")
 
-PRIVATE_KEY_PATH = os.environ.get("AF_PRIVATE_KEY_PATH", str(Path(__file__).resolve().parents[1] / "PRIVATE.PEM"))
+DEFAULT_PRIVATE_KEY_PATH = Path(__file__).resolve().with_name("PRIVATE.PEM")
+PRIVATE_KEY_PATH = (
+    os.environ.get("AF_PRIVATE_KEY")
+    or os.environ.get("AF_PRIVATE_KEY_PATH")
+    or str(DEFAULT_PRIVATE_KEY_PATH)
+)
 
 
 try:
