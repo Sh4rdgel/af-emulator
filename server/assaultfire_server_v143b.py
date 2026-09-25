@@ -3122,6 +3122,10 @@ V127_GRENADE_ITEM_ID = 100010    # M26Grenade / Frag Grenade
 V129_SOFIA_HAND_ITEM_ID = 300121
 V129_SOFIA_UPPER_ITEM_ID = 300122
 V129_SOFIA_HAIR_ITEM_ID = 100602
+# r20: live stock GetAllSkillItemInfos() proof:
+# Strength = ItemID 100049, Rank 1, Owned=False, UnlockWay_1=1.
+# PVE skill ownership is a real PlayerPropInfo, not PlayerInfo.SkillScore.
+R20_STRENGTH_ITEM_ID = 100049
 
 V109_ROLE_GID = ((V109_UIN & 0xffffffff) << 32) | 1
 V109_BAG1_GID = ((V109_UIN & 0xffffffff) << 32) | 2
@@ -3133,6 +3137,7 @@ V127_GRENADE_GID = ((V109_UIN & 0xffffffff) << 32) | 7
 V129_SOFIA_HAND_GID = ((V109_UIN & 0xffffffff) << 32) | 8
 V129_SOFIA_UPPER_GID = ((V109_UIN & 0xffffffff) << 32) | 9
 V129_SOFIA_HAIR_GID = ((V109_UIN & 0xffffffff) << 32) | 10
+R20_STRENGTH_GID = ((V109_UIN & 0xffffffff) << 32) | 11
 
 V109_LOC_PRIMARY = 0x00
 V127_LOC_PISTOL = 0x01
@@ -3286,6 +3291,16 @@ V111_INVENTORY = [
         "durability": 0,
         "durability_max": 0,
     },
+    {
+        # r20: real Rank-1 PVE skill ownership.
+        # GetAllSkillItemInfos() marks Strength owned when this PropInfo exists.
+        "gid": R20_STRENGTH_GID,
+        "item_id": R20_STRENGTH_ITEM_ID,
+        "owner_gid": 0,
+        "location": V109_LOC_BAG,
+        "durability": 0,
+        "durability_max": 0,
+    },
 ]
 
 # ===========================================================================
@@ -3378,6 +3393,7 @@ V140_STARTER_GIDS = (
     V129_SOFIA_HAND_GID,
     V129_SOFIA_UPPER_GID,
     V129_SOFIA_HAIR_GID,
+    R20_STRENGTH_GID,
 )
 
 
