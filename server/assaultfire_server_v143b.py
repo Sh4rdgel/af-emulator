@@ -7398,6 +7398,19 @@ def handle_placeholder(conn, addr, label):
                                                 app["body"]
                                             )
 
+                                            owner_uin = _v150_role_uin(role_state)
+                                            owner_name = _v150_role_nickname(role_state)
+                                            existing_room = V150_ROOM_REGISTRY.room_for_player(
+                                                owner_uin
+                                            )
+                                            if existing_room is not None:
+                                                log(
+                                                    "ROOM",
+                                                    f"A10A create rejected owner={owner_uin}: "
+                                                    f"player-already-in-room:{existing_room['room_id']}",
+                                                )
+                                                continue
+
                                             ds_allocation = None
                                             if V143B_DS_CONFIG.enabled:
                                                 try:
@@ -7454,17 +7467,59 @@ def handle_placeholder(conn, addr, label):
                                                     if ds_allocation is not None else TGAME_AFDEV_PORT
                                                 ),
                                             }
-                                            owner_uin = _v150_role_uin(role_state)
-                                            owner_name = _v150_role_nickname(role_state)
-                                            created_room = V150_ROOM_REGISTRY.create_room(
-                                                created_room,
-                                                owner_uin=owner_uin,
-                                                owner_name=owner_name,
-                                            )
-                                            role_state["v79_created_match_room"] = created_room
-                                            role_state["v143b_ds_room_id"] = int(created_room["room_id"])
-                                            role_state.pop("v138_leave_pending", None)
-                                            _v150_sync_role_states(created_room)
+                                            try:
+                                                created_room = V150_ROOM_REGISTRY.create_room(
+                                                    created_room,
+                                                    owner_uin=owner_uin,
+                                                    owner_name=owner_name,
+                                                )
+                                                role_state["v79_created_match_room"] = created_room
+                                                role_state["v143b_ds_room_id"] = int(created_room["room_id"])
+                                                role_state.pop("v138_leave_pending", None)
+                                                _v150_sync_role_states(created_room)
+                                            except Exception as create_e:
+                                                if ds_allocation is not None:
+                                                    try:
+                                                        V143B_DS_SPAWNER.release_lobby(
+                                                            int(ds_allocation.room_id),
+                                                            reason=(
+                                                                "A10A registry/create rollback: "
+                                                                f"{type(create_e).__name__}: {create_e}"
+                                                            ),
+                                                        )
+                                                    except Exception as release_e:
+                                                        log(
+                                                            "DS-SPAWNER",
+                                                            f"A10A rollback release failed room="
+                                                            f"{int(ds_allocation.room_id)}: {release_e}",
+                                                        )
+                                                role_state.pop("v143b_ds_room_id", None)
+                                                role_state.pop("v79_created_match_room", None)
+                                                # If create_room inserted the owner before a later
+                                                # compatibility sync failed, remove that registry
+                                                # mutation as part of the same transaction.
+                                                try:
+                                                    rollback_leave = V150_ROOM_REGISTRY.leave_room(
+                                                        owner_uin
+                                                    )
+                                                    if rollback_leave:
+                                                        log(
+                                                            "ROOM",
+                                                            f"A10A registry rollback removed owner={owner_uin} "
+                                                            f"room={rollback_leave['room_id']}",
+                                                        )
+                                                except Exception as rollback_e:
+                                                    log(
+                                                        "ROOM",
+                                                        f"A10A registry rollback failed owner={owner_uin}: "
+                                                        f"{rollback_e}",
+                                                    )
+                                                log(
+                                                    "ROOM",
+                                                    f"A10A create rejected owner={owner_uin}: "
+                                                    f"{type(create_e).__name__}: {create_e}",
+                                                )
+                                                continue
 
                                             log(
                                                 label,
