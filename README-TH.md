@@ -51,6 +51,27 @@ TGame.exe is resumed
 
 ถ้า helper แจ้ง **TGame build/signature mismatch** ให้หยุดและอย่าฝืน patch ปัจจุบันรองรับ/ทดสอบเฉพาะ Assault Fire PH **v1.0.0.24**
 
+## Logging level
+
+คุณสามารถลดข้อความใน console ได้โดยไม่สูญเสีย development log
+
+```powershell
+$env:AF_LOG_LEVEL = "DEBUG"
+```
+
+รองรับ `DEBUG`, `INFO` (ค่าเริ่มต้น), `WARNING`, `ERROR`.
+
+- `DEBUG` — แสดงทุกอย่างใน console
+- `INFO` — ซ่อน DEBUG จาก console
+- `WARNING` — แสดงเฉพาะ WARNING และ ERROR
+- `ERROR` — แสดงเฉพาะ ERROR
+
+**แม้ console ไม่ได้เลือก DEBUG ไฟล์ `server\af_server_live.log` ก็ยังบันทึก DEBUG และ level ที่สูงกว่าทั้งหมดเสมอ** เพื่อใช้ในการพัฒนาและ bug report
+
+Raw AUTH plaintext/ciphertext จะไม่ถูกบันทึกอัตโนมัติเพราะอาจมี credential/auth material ใช้เฉพาะ diagnostic local ที่ควบคุมได้: `$env:AF_DEBUG_AUTH_HEX = "1"`.
+
+---
+
 ## Mandatory preflight launch gate
 
 ก่อนที่ launch helper จะยอมให้เกมทำงานต่อ server preflight ต้อง **PASS** ก่อน:
