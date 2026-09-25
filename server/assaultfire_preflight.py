@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Callable, Mapping
 
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 VALIDATED_TCLS_SHA256 = "3ff351e0adb594d7544e28db2e966a6d6eb548e9df70daaf4daf58f2ee438d56"
 ORIGINAL_TCLS_SHA256 = "13ead403452e0f25cf00658369bf4bf5ff34ed1b16027f7833fb27d398386cd1"
@@ -23,7 +24,7 @@ REQUIRED_HOSTS = (
 )
 LOOPBACK_IPV4 = "127.0.0.1"
 
-PREFLIGHT_STATUS_SCHEMA = 1
+PREFLIGHT_STATUS_SCHEMA = 2
 
 
 def default_preflight_status_path() -> Path:
@@ -91,23 +92,26 @@ def derive_public_pem(private_key_path: Path) -> tuple[bytes, int | None]:
     private_key = serialization.load_pem_private_key(
         private_key_path.read_bytes(), password=None
     )
+    if not isinstance(private_key, rsa.RSAPrivateKey):
+        raise ValueError("PRIVATE.PEM does not contain an RSA private key")
     public_key = private_key.public_key()
     return (
         public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
         ),
-        getattr(public_key, "key_size", None),
+        int(public_key.key_size),
     )
 
 
-def public_key_numbers(pem: bytes):
+def public_key_numbers(pem: bytes) -> tuple[int, int]:
     key = serialization.load_pem_public_key(pem)
-    public_numbers = getattr(key, "public_numbers", None)
-    if public_numbers is None:
-        raise ValueError("PEM does not contain a supported public key")
-    nums = public_numbers()
-    return (getattr(nums, "n", None), getattr(nums, "e", None))
+    if not isinstance(key, rsa.RSAPublicKey):
+        raise ValueError("PEM does not contain an RSA public key")
+    nums = key.public_numbers()
+    if not isinstance(nums, rsa.RSAPublicNumbers):
+        raise ValueError("PEM does not contain RSA public numbers")
+    return int(nums.n), int(nums.e)
 
 
 def check_key_pair(private_key_path: Path, apclient_path: Path) -> KeyCheck:
@@ -306,19 +310,34 @@ def preflight_check_flags(report: PreflightReport) -> dict[str, bool]:
     }
 
 
-def preflight_status_payload(report: PreflightReport) -> dict:
+def preflight_status_payload(
+    report: PreflightReport,
+    *,
+    listeners_ready: bool = False,
+    log_written: bool = False,
+    runtime_errors: list[str] | tuple[str, ...] = (),
+    log_path: Path | None = None,
+) -> dict:
     flags = preflight_check_flags(report)
+    passed = bool(report.ok and all(flags.values()) and log_written)
+    launch_ready = bool(passed and listeners_ready)
+    errors = list(report.errors)
+    errors.extend(str(x) for x in runtime_errors if str(x).strip())
     return {
         "schema": PREFLIGHT_STATUS_SCHEMA,
         "checked_at_unix": time.time(),
         "server_pid": os.getpid(),
-        "passed": bool(report.ok and all(flags.values())),
+        "passed": passed,
+        "listeners_ready": bool(listeners_ready),
+        "log_written": bool(log_written),
+        "launch_ready": launch_ready,
         "checks": flags,
         "client_root": str(report.client_root) if report.client_root else None,
         "tcls_path": str(report.tcls_path) if report.tcls_path else None,
         "tcls_sha256": report.tcls_sha256,
         "apclient_path": str(report.apclient_path) if report.apclient_path else None,
         "private_key_path": str(report.private_key_path) if report.private_key_path else None,
+        "server_log_path": str(log_path) if log_path else None,
         "hosts": {
             name: {
                 "file_values": report.host_file_values.get(name, []),
@@ -326,30 +345,94 @@ def preflight_status_payload(report: PreflightReport) -> dict:
             }
             for name in REQUIRED_HOSTS
         },
-        "errors": list(report.errors),
+        "errors": errors,
     }
 
 
-def write_preflight_status(
-    report: PreflightReport,
-    status_path: Path | None = None,
-) -> Path:
-    path = (
+def _status_target(status_path: Path | None = None) -> Path:
+    return (
         Path(status_path).expanduser().resolve()
         if status_path is not None
         else default_preflight_status_path()
     )
+
+
+def _atomic_write_json(path: Path, payload: dict) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(
-        json.dumps(preflight_status_payload(report), indent=2, sort_keys=True) + "\n",
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     os.replace(tmp, path)
     return path
 
 
-def preflight_report_lines(report: PreflightReport) -> list[str]:
+def write_preflight_status(
+    report: PreflightReport,
+    status_path: Path | None = None,
+    *,
+    listeners_ready: bool = False,
+    log_written: bool = False,
+    runtime_errors: list[str] | tuple[str, ...] = (),
+    log_path: Path | None = None,
+) -> Path:
+    path = _status_target(status_path)
+    return _atomic_write_json(
+        path,
+        preflight_status_payload(
+            report,
+            listeners_ready=listeners_ready,
+            log_written=log_written,
+            runtime_errors=runtime_errors,
+            log_path=log_path,
+        ),
+    )
+
+
+def _append_lines_to_log(lines: list[str], path: Path) -> bool:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fp:
+        stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        fp.write(f"\n[{stamp}] --- PREFLIGHT ---\n")
+        for line in lines:
+            fp.write(line + "\n")
+    return True
+
+
+def persist_preflight_log(
+    lines: list[str],
+    *,
+    log_path: Path | None = None,
+) -> Path | None:
+    requested = (
+        Path(log_path).expanduser().resolve()
+        if log_path is not None
+        else default_server_log_path()
+    )
+    fallback = Path(__file__).resolve().with_name("af_server_live.log")
+    candidates = [requested]
+    if fallback != requested:
+        candidates.append(fallback)
+
+    for path in candidates:
+        try:
+            _append_lines_to_log(lines, path)
+            return path
+        except OSError as exc:
+            print(
+                f"[PREFLIGHT] WARNING - could not append server log {path}: {exc}",
+                flush=True,
+            )
+    return None
+
+
+def preflight_report_lines(
+    report: PreflightReport,
+    *,
+    listeners_ready: bool = False,
+    log_written: bool = True,
+) -> list[str]:
     lines = [
         "[PREFLIGHT] Assault Fire PH startup checks",
         f"[PREFLIGHT] client root             : {report.client_root}",
@@ -392,24 +475,34 @@ def preflight_report_lines(report: PreflightReport) -> list[str]:
         )
 
     flags = preflight_check_flags(report)
-    gate_ok = report.ok and all(flags.values())
+    checks_ok = bool(report.ok and all(flags.values()) and log_written)
+    gate_ok = bool(checks_ok and listeners_ready)
     lines.append(
         "[PREFLIGHT] game launch gate         : "
         + ("UNLOCKED" if gate_ok else "LOCKED")
     )
 
-    if gate_ok:
-        lines.append(
-            "[PREFLIGHT] PASS - all required checks succeeded; "
-            "supported game launch helpers are UNLOCKED."
-        )
-    else:
+    if not checks_ok:
         lines.append(
             "[PREFLIGHT] FAILED - server listeners will NOT start; "
             "supported game launch helpers remain LOCKED."
         )
+        if not log_written:
+            lines.append(
+                "[PREFLIGHT]   - preflight report could not be persisted to a server log"
+            )
         for error in report.errors:
             lines.append(f"[PREFLIGHT]   - {error}")
+    elif not listeners_ready:
+        lines.append(
+            "[PREFLIGHT] PASS - client checks succeeded; launch gate remains "
+            "LOCKED until all required server listeners bind successfully."
+        )
+    else:
+        lines.append(
+            "[PREFLIGHT] PASS - all required checks and listeners succeeded; "
+            "supported game launch helpers are UNLOCKED."
+        )
     return lines
 
 
@@ -417,25 +510,73 @@ def print_preflight_report(
     report: PreflightReport,
     *,
     log_path: Path | None = None,
-) -> None:
-    lines = preflight_report_lines(report)
-    for line in lines:
+    listeners_ready: bool = False,
+) -> Path | None:
+    # Print the check result first, then persist the exact same block.
+    preview = preflight_report_lines(
+        report,
+        listeners_ready=listeners_ready,
+        log_written=True,
+    )
+    for line in preview:
         print(line, flush=True)
 
-    path = (
-        Path(log_path).expanduser().resolve()
-        if log_path is not None
-        else default_server_log_path()
-    )
+    persisted = persist_preflight_log(preview, log_path=log_path)
+    if persisted is None:
+        print(
+            "[PREFLIGHT] FAILED - no writable server log; launch gate remains LOCKED.",
+            flush=True,
+        )
+    return persisted
+
+
+def update_launch_gate_status(
+    *,
+    ready: bool,
+    reason: str | None = None,
+    status_path: Path | None = None,
+    log_path: Path | None = None,
+) -> bool:
+    path = _status_target(status_path)
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a", encoding="utf-8") as fp:
-            stamp = time.strftime("%Y-%m-%d %H:%M:%S")
-            fp.write(f"\n[{stamp}] --- PREFLIGHT ---\n")
-            for line in lines:
-                fp.write(line + "\n")
-    except OSError as exc:
-        print(f"[PREFLIGHT] WARNING - could not append server log: {exc}", flush=True)
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"[PREFLIGHT] cannot update launch gate status: {exc}", flush=True)
+        return False
+
+    runtime_errors = [
+        str(x) for x in (payload.get("runtime_errors") or []) if str(x).strip()
+    ]
+    if reason:
+        runtime_errors.append(str(reason))
+
+    launch_ready = bool(
+        ready
+        and payload.get("passed") is True
+        and payload.get("log_written") is True
+    )
+    payload["listeners_ready"] = bool(ready)
+    payload["launch_ready"] = launch_ready
+    payload["updated_at_unix"] = time.time()
+    payload["runtime_errors"] = runtime_errors
+    if reason:
+        payload["errors"] = list(payload.get("errors") or []) + [str(reason)]
+
+    try:
+        _atomic_write_json(path, payload)
+    except Exception as exc:
+        print(f"[PREFLIGHT] cannot persist launch gate update: {exc}", flush=True)
+        return False
+
+    line = (
+        "[PREFLIGHT] game launch gate         : "
+        + ("UNLOCKED" if launch_ready else "LOCKED")
+    )
+    if reason:
+        line += f" ({reason})"
+    print(line, flush=True)
+    persisted = persist_preflight_log([line], log_path=log_path)
+    return bool(persisted is not None and launch_ready == bool(ready))
 
 
 def run_server_preflight(
@@ -446,28 +587,43 @@ def run_server_preflight(
 ) -> bool:
     report = evaluate_preflight(private_key_path=private_key_path)
 
+    persisted_log = print_preflight_report(
+        report,
+        log_path=log_path,
+        listeners_ready=False,
+    )
+    log_written = persisted_log is not None
+    if not log_written:
+        report.errors.append(
+            "preflight report could not be persisted to a server log"
+        )
+
     try:
-        written = write_preflight_status(report, status_path=status_path)
+        written = write_preflight_status(
+            report,
+            status_path=status_path,
+            listeners_ready=False,
+            log_written=log_written,
+            log_path=persisted_log,
+        )
     except Exception as exc:
         report.errors.append(
             f"could not write launch-gate status; refusing startup: {exc}"
         )
         written = None
-        # Best effort: remove a stale PASS status so it cannot be reused.
         try:
-            stale = (
-                Path(status_path).expanduser().resolve()
-                if status_path is not None
-                else default_preflight_status_path()
-            )
-            stale.unlink(missing_ok=True)
+            _status_target(status_path).unlink(missing_ok=True)
         except Exception:
             pass
 
-    print_preflight_report(report, log_path=log_path)
     if written is not None:
         print(f"[PREFLIGHT] launch-gate status       : {written}", flush=True)
 
     flags = preflight_check_flags(report)
-    return bool(report.ok and all(flags.values()) and written is not None)
+    return bool(
+        report.ok
+        and all(flags.values())
+        and log_written
+        and written is not None
+    )
 
