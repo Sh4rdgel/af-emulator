@@ -210,6 +210,22 @@ TCLS에 로그인하고 **START** 화면에서 멈춘 다음:
 
 **같은 launch에서 두 helper를 모두 사용하지 마세요.**
 
+## Mandatory preflight launch gate
+
+Launch helper가 게임 실행을 계속 허용하기 전에 server preflight가 반드시 **PASS**해야 합니다:
+
+```text
+[PREFLIGHT] client root             : <실제 게임 폴더>
+[PREFLIGHT] TCLS validated build    : YES
+[PREFLIGHT] APClient exact bytes    : YES
+[PREFLIGHT] same RSA key            : YES
+[PREFLIGHT] game launch gate         : UNLOCKED
+```
+
+`NO`, `client root : None` 또는 `game launch gate : LOCKED`가 하나라도 있으면 **START를 누르지 마세요**. Server listeners는 열리지 않고 지원되는 launch helper는 `GAME LAUNCH BLOCKED`와 함께 중지합니다.
+
+전체 preflight report는 `server\af_server_live.log`에 기록되고 machine-readable gate state는 `runtime\preflight_status.json`에 저장됩니다. 문제를 수정하고 server를 다시 시작한 뒤 **UNLOCKED**일 때만 계속하세요.
+
 ---
 
 # 자주 발생하는 문제
