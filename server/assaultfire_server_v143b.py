@@ -6404,14 +6404,29 @@ def handle_placeholder(conn, addr, label):
                             f"key={tgame_mode4_key.hex()} source={crypto_src}"
                         )
 
+                    syn_t0 = time.perf_counter()
                     syn, syn_cipher = tgame_build_cmd08_syn_auto(
                         tgame_mode4_key, tgame_crypto_mode
                     )
+                    syn_t1 = time.perf_counter()
                     conn.sendall(syn)
+                    syn_t2 = time.perf_counter()
+                    syn_build_ms = (syn_t1 - syn_t0) * 1000.0
+                    syn_send_ms = (syn_t2 - syn_t1) * 1000.0
                     log(
                         label,
                         f"TX TGAME cmd08 SYN v42 ({len(syn)}B): {syn.hex()}",
                         level="DEBUG",
+                    )
+                    log(
+                        label,
+                        f"TGame SYN timing build_ms={syn_build_ms:.2f} "
+                        f"send_ms={syn_send_ms:.2f}",
+                        level=(
+                            "WARNING"
+                            if max(syn_build_ms, syn_send_ms) >= 1000.0
+                            else "DEBUG"
+                        ),
                     )
                     log(
                         label,
@@ -6485,12 +6500,20 @@ def handle_placeholder(conn, addr, label):
         # Transport crypto state changes immediately after a successful cmd01.
         active_tgame_key = tgame_mode4_key
         active_tgame_mode = locals().get("tgame_crypto_mode")
+        tgame_chgskey_complete = False
 
-        # v71: TCP is a byte stream, not a packet API.  Once CHGSKEY has
-        # completed, preserve partial tails and split coalesced generic TPDUs.
-        post_chgskey_stream_mode = False
-        post_chgskey_tail = b""
-        post_chgskey_frame_queue = []
+        # TCP is a byte stream, not a packet API.  Stream framing must be
+        # active from the FIRST live TGame follow-up, not only after CHGSKEY.
+        #
+        # The PH client can coalesce a normal cmd00 packet and the cmd09
+        # SYNACK into one recv().  Waiting until CHGSKEY to enable splitting
+        # loses the queued SYNACK and the client eventually reports
+        # "Connect time out".
+        tgame_stream_mode = bool(
+            role_state.get("tgame") and tgame_mode4_key is not None
+        )
+        tgame_stream_tail = b""
+        tgame_stream_frame_queue = []
 
         # v69 diagnostic:
         # The client consistently sends FF05 only *after* accepting A001.
@@ -6498,10 +6521,11 @@ def handle_placeholder(conn, addr, label):
         pending_zone_profile = None
 
         while time.time() < deadline:
-            # v71: after CHGSKEY, consume one complete generic TPDU at a time.
-            # Extra TPDUs from the same recv() remain queued for the next loop.
-            if post_chgskey_stream_mode and post_chgskey_frame_queue:
-                extra = post_chgskey_frame_queue.pop(0)
+            # Consume exactly one complete TGame TPDU at a time. Extra frames
+            # from the same recv() stay queued, including a cmd09 SYNACK that
+            # arrives behind a pre-CHGSKEY cmd00 packet.
+            if tgame_stream_mode and tgame_stream_frame_queue:
+                extra = tgame_stream_frame_queue.pop(0)
                 log(
                     label,
                     f"FOLLOW-UP FRAME ({len(extra)}B) from queued TCP data "
@@ -6517,33 +6541,33 @@ def handle_placeholder(conn, addr, label):
                     log(label, "Client closed connection; if this was client.exe after TACC-RSP, that can be normal. Watch for next VERSION/ROLE owner=TGame.exe.")
                     break
 
-                if post_chgskey_stream_mode:
-                    combined = post_chgskey_tail + rx_chunk
+                if tgame_stream_mode:
+                    combined = tgame_stream_tail + rx_chunk
                     try:
-                        frames, post_chgskey_tail = tgame_split_generic_stream(
+                        frames, tgame_stream_tail = tgame_split_generic_stream(
                             combined
                         )
                     except Exception as e:
                         log(
                             label,
-                            f"v71 TCP stream split ERROR: {type(e).__name__}: {e}; "
+                            f"TGame TCP stream split ERROR: {type(e).__name__}: {e}; "
                             f"combined={_short_hex(combined, 160)}"
                         )
-                        # Preserve old behavior as a diagnostic fallback.
+                        # Diagnostic fallback for a malformed/unknown frame.
                         extra = combined
-                        post_chgskey_tail = b""
+                        tgame_stream_tail = b""
                     else:
                         log(
                             label,
                             f"FOLLOW-UP RX CHUNK ({len(rx_chunk)}B) "
                             f"OWNER={owner}: complete_frames={len(frames)} "
-                            f"tail={len(post_chgskey_tail)}B "
+                            f"tail={len(tgame_stream_tail)}B "
                             f"{_short_hex(rx_chunk, 96)}"
                         )
                         if not frames:
                             continue
                         extra = frames.pop(0)
-                        post_chgskey_frame_queue.extend(frames)
+                        tgame_stream_frame_queue.extend(frames)
                         log(
                             label,
                             f"FOLLOW-UP FRAME ({len(extra)}B) "
@@ -6578,9 +6602,12 @@ def handle_placeholder(conn, addr, label):
                                     conn.sendall(chg)
                                     active_tgame_key = new_key
                                     active_tgame_mode = mode_now
-                                    post_chgskey_stream_mode = True
-                                    post_chgskey_tail = b""
-                                    post_chgskey_frame_queue.clear()
+                                    tgame_chgskey_complete = True
+                                    tgame_stream_mode = True
+                                    # Do NOT clear tgame_stream_frame_queue or
+                                    # tgame_stream_tail here.  TCP may already
+                                    # have delivered another complete/partial
+                                    # frame next to the SYNACK.
                                     log(
                                         label,
                                         f"TX TGAME cmd01 CHGSKEY v44 ({len(chg)}B) "
@@ -6605,9 +6632,14 @@ def handle_placeholder(conn, addr, label):
                                 plain_now = tgame_mode3_decrypt(
                                     enc_now, active_tgame_key
                                 )
+                                phase = (
+                                    "post-CHGSKEY"
+                                    if tgame_chgskey_complete
+                                    else "pre-CHGSKEY"
+                                )
                                 log(
                                     label,
-                                    f"TGame post-CHGSKEY cmd=0x{cmd_now:02x} "
+                                    f"TGame {phase} cmd=0x{cmd_now:02x} "
                                     f"head_len={head_now} body_len={body_len_now} "
                                     f"plain_len={len(plain_now)} plain={plain_now.hex()}"
                                 )
