@@ -76,7 +76,7 @@ These are good contribution targets:
 4. **Two-client social verification** — implement and verify friends, presence, friend requests, private chat, and reconnect behavior without depending on the broken first-login work.
 5. **Clan completion** — recover and verify the nested clan detail/member structures used by the stock PH client.
 6. **Existing-account persistence cleanup** — make stable existing-profile persistence easier to configure and test.
-7. **PvE lifecycle follow-up** — keep expanding verified round completion, results/rewards, and additional-map validation now that the DS handoff and room-selected map path are integrated.
+7. **PvE lifecycle follow-up** — keep expanding verified round completion and results/rewards now that the generic stock-selected map and DS handoff path are integrated.
 8. **Dedicated-server scaling and capacity controls** — harden DS pooling, capacity rejection, one-lobby-per-player rules, rate limits, idempotency, and multi-host orchestration.
 9. **Match lifecycle** — room start, loading, gameplay session, match completion, rewards/results, and clean teardown.
 10. **Developer tooling** — packet decoders, protocol inspectors, sanitized logging, automated smoke tests, and reproducible test harnesses.
@@ -97,4 +97,4 @@ If you are researching an incomplete feature, opening an issue with logs, packet
 
 ## Solved PvE handoff and map selection
 
-The v143b server, lazy DS spawner, v48 AFDEV loader and v9 multi-peer latch bridge are integrated. A10A is reserve-only and seeds the selected room map/settings; A11E can replace them before start; A3A0/A113 arm the match path; AFDEV starts on the first valid DS UDP packet; SESSION_READY is gated by the verified runtime state. See [ALTAR_RUNTIME.md](ALTAR_RUNTIME.md).
+The v143b server, lazy DS spawner, v48 AFDEV loader and v9 multi-peer latch bridge are integrated. A10A is reserve-only and seeds the selected room map/settings; A11E can replace them before start; A3A0/A113 arm the match path; AFDEV starts on the first valid DS UDP packet; SESSION_READY is gated by the verified runtime state. See [PVE_RUNTIME.md](PVE_RUNTIME.md).

@@ -1,6 +1,6 @@
 # PvE runtime and stock-selected map flow
 
-The repository carries the integrated local Assault Fire PH PvE runtime used by the stable v143b path. The room-selected installed map is propagated into the lazy v48 AFDEV launch. The Altar / `SV-Maya_3_Main` remains a validated reference case, not a hard-coded requirement.
+The repository carries the integrated local Assault Fire PH PvE runtime used by the stable v143b path. The stock room's selected installed PvE map is propagated into the lazy v48 AFDEV launch, so the dedicated-server lifecycle is not tied to a single map.
 
 ## Lifecycle
 
@@ -19,7 +19,7 @@ A10A seeds the reserved DS allocation from the stock room's `MapString`, ModeId,
 
 `AF_DS_USE_CLIENT_MAP=1` is the default. Set it to `0` only when intentionally forcing `AF_DS_DEFAULT_MAP`. The v48 loader resolves the requested filename under the local `TGame\CookedPC\Maps` tree before launch, so the emulator does not need a hard-coded map-ID-to-filename table.
 
-Validated difficulty submodes on the Altar reference case:
+Known stock PvE difficulty submode values:
 
 - `0x00001001` — Easy
 - `0x00001002` — Normal

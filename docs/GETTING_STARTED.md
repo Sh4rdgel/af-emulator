@@ -438,7 +438,7 @@ tools\server_spawner\AFDevLoader_v48_spawner_multi_instance.py
 tools\bridge\af_ds_udp_bridge_v9_multi_peer_latch.py
 ```
 
-Set your local AFDEV game directory, then start v143b:
+Set `AF_GAME_DIR` to the `Binaries\\Win32` directory of your Assault Fire PH installation (the drive letter/install location can be different), then start v143b:
 
 ```powershell
 $env:AF_GAME_DIR = "D:\AssaultFirePH\Binaries\Win32"
@@ -450,7 +450,7 @@ The lifecycle is lazy: A10A reserves capacity only and seeds the stock room's ma
 
 By default `AF_DS_USE_CLIENT_MAP=1`, so the selected stock-client `MapString` is used. Set it to `0` only if you intentionally want to force `AF_DS_DEFAULT_MAP`.
 
-See **[Stable PvE bridge + server spawner guide](PVE_BRIDGE_AND_SPAWNER.md)** and **[PvE runtime and map selection](ALTAR_RUNTIME.md)**.
+See **[Stable PvE bridge + server spawner guide](PVE_BRIDGE_AND_SPAWNER.md)** and **[PvE runtime and map selection](PVE_RUNTIME.md)**.
 
 The older Issue #1 sample documents the pre-fix state.
 

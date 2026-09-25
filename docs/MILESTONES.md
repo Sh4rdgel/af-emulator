@@ -29,7 +29,7 @@ Completed:
 - [x] TGame datetime runtime compatibility patch
 - [x] MIT license
 - [x] Working / partial / broken status documentation
-- [x] Historical pre-fix Altar sample retained for regression/reference
+- [x] Historical pre-fix PvE sample retained for regression/reference
 
 ## Milestone 1 — Reproducible local setup 🟡
 
@@ -75,7 +75,7 @@ Tasks:
 
 **Status: integrated on `main`**
 
-The stable v143b path now carries the stock room's PvE selection into the lazy dedicated-server lifecycle instead of forcing every room to The Altar.
+The stable v143b path now carries the stock room's PvE selection into the lazy dedicated-server lifecycle instead of forcing a fixed map.
 
 Completed:
 
@@ -87,7 +87,7 @@ Completed:
 - [x] v48 resolves the selected installed `.udk` map and opens it with `PVEGame.TGSVGame`
 - [x] zero-DSKey/runtime verification gates `SESSION_READY`
 - [x] player-scoped shared-DS cleanup/rejoin behavior is retained
-- [x] The Altar remains a validated reference case while stock-selected compatible PvE maps use the same generic path
+- [x] Supported PvE maps use the same generic stock-selected map and lazy dedicated-server path
 
 The broader enemy/objective/round-completion/result/reward lifecycle remains separate follow-up work under the full match lifecycle milestone.
 

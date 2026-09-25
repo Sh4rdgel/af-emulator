@@ -1,4 +1,4 @@
-# Assault Fire Emulator
+# Assault Fire Server Emulator
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue)](https://www.python.org/)
 [![Engine](https://img.shields.io/badge/Engine-Unreal%20Engine%203-lightgrey)](#)
@@ -102,7 +102,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\setup\setup_assaultfire_hosts.p
 .\.venv\Scripts\python.exe .\server\assaultfire_server_v143b.py
 ```
 
-For **The Altar / PvE**, also point the DS spawner at your local AFDEV game directory before starting the server:
+For **PvE**, point `AF_GAME_DIR` at the `Binaries\\Win32` directory inside your own Assault Fire PH installation before starting the server. The drive letter and install location do not matter:
 
 ```powershell
 $env:AF_GAME_DIR = "D:\AssaultFirePH\Binaries\Win32"
@@ -135,9 +135,9 @@ The suspended-launch helper already applies the datetime compatibility patch, so
 
 For the full walkthrough, use **[Getting Started](docs/GETTING_STARTED.md)**.
 
-## The Altar
+## PvE maps
 
-The stable Altar path is integrated on `main`.
+The stable PvE path is integrated on `main` and is map-generic. The stock room selection is carried into the lazy AFDEV startup, so supported PvE maps use the same dedicated-server lifecycle.
 
 ```text
 Create room
@@ -161,11 +161,11 @@ release latched packet through v9 bridge
 UE3 gameplay session
 ```
 
-Room settings sent through A11E are applied before the lazy AFDEV spawn, so the selected Easy / Normal / Hard difficulty reaches the server runtime.
+Room settings sent through A11E are applied before the lazy AFDEV spawn, including the selected map, mode, submode/difficulty, and flags.
 
 A PH-client HUD label can still display the wrong text in some cases; that is tracked separately from the authoritative server/AFDEV difficulty state.
 
-See **[The Altar Runtime](docs/ALTAR_RUNTIME.md)** for implementation details.
+See **[PvE Runtime](docs/PVE_RUNTIME.md)** for implementation details.
 
 ## If something fails
 
@@ -187,7 +187,7 @@ You do not need to read everything before trying the project.
 | --- | --- |
 | [Getting Started](docs/GETTING_STARTED.md) | first setup and local launch |
 | [Project Status](docs/STATUS.md) | what works, what is partial, what is still planned |
-| [The Altar Runtime](docs/ALTAR_RUNTIME.md) | current v143b / v48 / v9 PvE path |
+| [PvE Runtime](docs/PVE_RUNTIME.md) | current v143b / v48 / v9 generic PvE path and map selection |
 | [Launch Requirements](docs/LAUNCH_REQUIREMENTS.md) | TCLS → TGame handoff and compatibility |
 | [Launcher Errors](docs/LAUNCHER_ERRORS.md) | known launcher/AP/TGame messages |
 | [Architecture](docs/ARCHITECTURE.md) | ports, components, and data flow |
@@ -204,7 +204,7 @@ tests/       reproducible regression tests
 .github/     issue and contribution templates
 ```
 
-Legacy files such as the older v94 server, v26 loader, and v5 bridge are kept for rollback/history. They are **not** the recommended Altar path.
+Legacy files such as the older v94 server, v26 loader, and v5 bridge are kept for rollback/history. They are **not** the recommended PvE path.
 
 ## Project scope
 

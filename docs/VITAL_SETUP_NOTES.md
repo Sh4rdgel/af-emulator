@@ -124,7 +124,7 @@ tools/server_spawner/AFDevLoader_v48_spawner_multi_instance.py
 
 The intended flow is reserve-only at A10A, arm the bridge at A3A0/A113, then lazy-start AFDEV on the first valid DS UDP packet. The v5 bridge and v26 loader are retained only as legacy rollback/reference files.
 
-See [ALTAR_RUNTIME.md](ALTAR_RUNTIME.md).
+See [PVE_RUNTIME.md](PVE_RUNTIME.md).
 
 See:
 

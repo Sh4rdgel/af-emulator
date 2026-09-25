@@ -1,6 +1,6 @@
 # Stable PvE Bridge and Server Spawner
 
-The current `main` branch carries the integrated local PvE handoff used by the stable **v143b** server. Compatible installed PvE maps selected in the stock room UI flow through the same lazy DS path; The Altar is retained as a validated reference case.
+The current `main` branch carries the integrated local PvE handoff used by the stable **v143b** server. Supported installed PvE maps selected in the stock room UI flow through the same generic lazy DS path.
 
 ## Current components
 
@@ -64,7 +64,7 @@ The DS spawner tracks room membership separately from active match membership.
 
 ## Configuration
 
-Typical local test environment:
+Point `AF_GAME_DIR` to your own Assault Fire PH `Binaries\\Win32` directory (any drive/install location), then use the normal DS settings:
 
 ```powershell
 $env:AF_GAME_DIR = "D:\AssaultFirePH\Binaries\Win32"
@@ -91,4 +91,4 @@ tools/server_spawner/AFDevLoader_v26_pve_natural_loading_completion.py
 
 They are no longer the default PvE path.
 
-See [PvE runtime and map selection](ALTAR_RUNTIME.md), [Project Status](STATUS.md), and [Architecture](ARCHITECTURE.md).
+See [PvE runtime and map selection](PVE_RUNTIME.md), [Project Status](STATUS.md), and [Architecture](ARCHITECTURE.md).

@@ -192,7 +192,7 @@ Ports 65008 and 7777 are needed only when running PvE dedicated-server sessions;
 
 The current path reserves DS capacity at room creation, carries the stock room's selected `MapString`/settings into the reservation, lets A11E replace them before start, arms the bridge at match start, lazily starts the v48 AFDEV loader on the first valid DS UDP packet, verifies the runtime/zero DS key, and releases the latched UE3 handshake through the v9 multi-peer bridge.
 
-The Altar is a validated reference map rather than a hard-coded requirement. The selected map must exist in the local cooked map tree and be compatible with the PvE game class. Match-history/reward work and the PH-client Hard/Normal HUD text mismatch are separate follow-up areas.
+The current path is map-generic: supported PvE maps selected by the stock room UI use the same v48/v9 dedicated-server lifecycle. The selected map must exist in the local cooked map tree and be compatible with the PvE game class. Match-history/reward work and the PH-client difficulty-label mismatch are separate follow-up areas.
 
 ## Do I need the bridge and AFDEV spawner for normal login testing?
 

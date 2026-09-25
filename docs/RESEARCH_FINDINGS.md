@@ -10,11 +10,11 @@ This page collects reverse-engineering findings that are useful to preservation 
 
 Unless stated otherwise, addresses and runtime details on this page are specific to the validated Assault Fire PH preservation build used by this repository.
 
-## 1. The Altar uses the legacy `PVEGame.TGSVGame` round family
+## 1. Legacy PvE round-family finding: `PVEGame.TGSVGame`
 
 **Status: Verified**
 
-Static package/map analysis used by the current v48 loader found that the Altar scripting package contains:
+Static package/map analysis used by the current v48 loader found that a shipped PvE scripting package contains:
 
 ```text
 PVEGame.TGSVSeqAct_ResetRound
@@ -29,7 +29,7 @@ PVEGame.TGSVGame
 PVEGame.TGSVGameReplicationInfo
 ```
 
-That is why the current validated Altar path launches with `PVEGame.TGSVGame` rather than `TGSVGame.TGSV3Game`.
+This established `PVEGame.TGSVGame` rather than `TGSVGame.TGSV3Game` as the validated game class used by the current generic PvE runtime.
 
 This finding removed the need for the earlier experimental idea of reclassifying the live GRI or changing the spawned game type after map load.
 
