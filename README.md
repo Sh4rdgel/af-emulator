@@ -23,27 +23,82 @@ An unofficial **Assault Fire PH** preservation/server-emulation project.
 
 # 🟢 I just want to play. What do I do?
 
-There are two parts:
+## Easiest way — use the one-click script
+
+Put the **whole `af-emulator` folder inside your Assault Fire PH game folder**.
+
+Example:
 
 ```text
-FIRST TIME ONLY
-    ↓
-prepare the emulator + game files
+AssaultFirePH
+├─ Binaries
+│  └─ Win32
+│     └─ TGame.exe
+├─ TCLS
+│  ├─ client.exe
+│  └─ Tenio
+│     └─ TCLS.dll
+├─ TGame
+└─ af-emulator
+   └─ START_ASSAULT_FIRE.ps1
+```
 
-EVERY TIME YOU PLAY
-    ↓
-start server
-    ↓
-open launcher
-    ↓
-run launch helper
-    ↓
+Then right-click:
+
+```text
+START_ASSAULT_FIRE.ps1
+```
+
+and choose:
+
+```text
+Run with PowerShell
+```
+
+That is now the normal setup/launch path.
+
+The script handles the annoying parts for you:
+
+- asks Windows for Administrator permission;
+- finds the game automatically;
+- checks that the client is the supported **Assault Fire PH v1.0.0.24** build;
+- installs Python 3.12 with Windows Package Manager when it is missing;
+- creates `.venv` and installs the Python requirements;
+- asks whether you want the verified **permanent TCLS.dll compatibility patch**;
+- creates/verifies the local RSA key pair and installs the matching `APClient.dat`;
+- repairs the three Windows hosts entries;
+- creates `TGame_AFDEV.exe` locally from **your own verified `TGame.exe`** so PvE does not require a separately distributed AFDEV executable;
+- starts the emulator server;
+- waits for preflight to reach **UNLOCKED**;
+- starts the runtime launch helper automatically;
+- launches `TCLS\client.exe` automatically.
+
+After that, the only normal player interaction is:
+
+```text
+log in
+↓
+wait for the START button
+↓
 click START
 ```
 
-If you are new to computers, follow the steps **exactly in order**.
+You do **not** need to manually start the server, set `AF_CLIENT_ROOT`, set `AF_GAME_DIR`, run the hosts helper, run the TCLS launch helper, or create `TGame_AFDEV.exe`.
 
-Do not skip a red/error message.
+> [!IMPORTANT]
+> The one-click script does **not** download or redistribute Assault Fire files.
+> It only works with the game files you already have. The local `TGame_AFDEV.exe`
+> copy is created only when your `TGame.exe` matches the exact supported build.
+
+> [!CAUTION]
+> If the script says the `TGame.exe` or `TCLS.dll` hash is unknown, stop.
+> Do not force a patch onto another game version.
+
+---
+
+## Manual setup / troubleshooting path
+
+The steps below are kept for developers, troubleshooting, and machines where the one-click script cannot be used.
 
 ---
 
