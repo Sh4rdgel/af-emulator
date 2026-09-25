@@ -53,20 +53,165 @@ You normally do this part only once.
 
 ## Step 1 — Install the things you need
 
-Install:
+You need:
 
 ```text
 Python 3.12
 Git
+your own Assault Fire PH v1.0.0.24
 ```
 
-You also need your own:
+If you do not know where to download Python or Git, use the official websites below.
+
+---
+
+### 1A — Install Python 3.12
+
+Open this website in your browser:
+
+**Python official website:**
+
+https://www.python.org/downloads/release/python-3123/
+
+Scroll down to the **Files** section.
+
+Under **Windows**, click:
+
+```text
+Windows installer (64-bit)
+```
+
+For most normal Windows 10/11 computers, this is the correct one.
+
+After the file downloads:
+
+1. Double-click the Python installer.
+2. On the first installer screen, look near the bottom.
+3. If you see:
+
+```text
+Add python.exe to PATH
+```
+
+turn that checkbox **ON**.
+4. Click:
+
+```text
+Install Now
+```
+
+5. Wait for it to finish.
+6. Close the installer.
+
+> [!IMPORTANT]
+> Install **Python 3.12**.
+>
+> Do not assume Python 3.13 or 3.14 will behave exactly the same with this project.
+
+### Check that Python installed correctly
+
+Open a **new** PowerShell window and run:
+
+```powershell
+py -3.12 --version
+```
+
+GOOD:
+
+```text
+Python 3.12.x
+```
+
+BAD:
+
+```text
+py is not recognized
+```
+
+If you get the BAD message:
+
+1. close PowerShell,
+2. reopen PowerShell,
+3. try again.
+
+If it still does not work, reinstall Python and make sure the Python launcher/PATH option is enabled.
+
+---
+
+### 1B — Install Git
+
+Open this website:
+
+**Git official website:**
+
+https://git-scm.com/install/windows
+
+Click the big Windows download link for:
+
+```text
+64-bit Git for Windows
+```
+
+After it downloads:
+
+1. Double-click the installer.
+2. Keep the default options.
+3. Keep clicking **Next**.
+4. Click **Install**.
+5. When it finishes, click **Finish**.
+
+You do not need to understand the Git installer options for this project. The normal/default choices are fine.
+
+### Check that Git installed correctly
+
+Open a **new** PowerShell window and run:
+
+```powershell
+git --version
+```
+
+GOOD:
+
+```text
+git version ...
+```
+
+BAD:
+
+```text
+git is not recognized
+```
+
+If you get the BAD message, close PowerShell, reopen it, and try again.
+
+---
+
+### 1C — You still need the game itself
+
+This repository does **not** download Assault Fire for you.
+
+You must already have your own:
 
 ```text
 Assault Fire PH v1.0.0.24
 ```
 
-If you already have those, continue.
+The emulator repository does not include the original game client or proprietary game files.
+
+---
+
+# ✅ Step 1 checkpoint
+
+Before continuing, these two commands should work:
+
+```powershell
+py -3.12 --version
+git --version
+```
+
+If both commands print a version number, continue to Step 2.
+
+If either command says **not recognized**, fix that first.
 
 ---
 
