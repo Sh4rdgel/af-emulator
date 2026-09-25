@@ -542,14 +542,25 @@ def _v143b_quit_match_player(role_state, room, reason):
     return V143B_DS_SPAWNER.quit_match_player(room_id, uin, reason=reason)
 
 
-def _v143b_remove_room_player(role_state, room, reason):
+def _v143b_remove_room_player(
+    role_state,
+    room,
+    reason,
+    *,
+    authoritative_new_owner=None,
+):
     if not V143B_DS_CONFIG.enabled:
         return None
     room_id = _v143b_room_id(role_state, room)
     if room_id is None:
         return None
     uin = int(role_state.get("uin") or 10001)
-    return V143B_DS_SPAWNER.remove_room_player(room_id, uin, reason=reason)
+    return V143B_DS_SPAWNER.remove_room_player(
+        room_id,
+        uin,
+        reason=reason,
+        authoritative_new_owner=authoritative_new_owner,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -7536,6 +7547,8 @@ def handle_placeholder(conn, addr, label):
                                             er = _v150_parse_enter_match_room(app["body"])
                                             uin_now = _v150_role_uin(role_state)
                                             nickname_now = _v150_role_nickname(role_state)
+                                            prior_room = V150_ROOM_REGISTRY.room_for_player(uin_now)
+                                            joined_new_member = prior_room is None
                                             try:
                                                 joined_room, member, existing_uins = V150_ROOM_REGISTRY.join_room(
                                                     uin=uin_now,
@@ -7550,6 +7563,23 @@ def handle_placeholder(conn, addr, label):
                                                         uin_now,
                                                     )
                                             except (RoomRegistryError, SpawnerError) as room_e:
+                                                if joined_new_member:
+                                                    try:
+                                                        rolled_back = V150_ROOM_REGISTRY.rollback_join(
+                                                            uin_now, er["room_id"]
+                                                        )
+                                                        if rolled_back:
+                                                            log(
+                                                                "ROOM",
+                                                                f"r11 A104 rolled back registry join "
+                                                                f"uin={uin_now} room={er['room_id']} after downstream failure",
+                                                            )
+                                                    except RoomRegistryError as rollback_e:
+                                                        log(
+                                                            "ROOM",
+                                                            f"r11 A104 rollback failed uin={uin_now} "
+                                                            f"room={er['room_id']}: {rollback_e}",
+                                                        )
                                                 log(
                                                     "ROOM",
                                                     f"r11 A104 join rejected uin={uin_now} "
@@ -7643,6 +7673,10 @@ def handle_placeholder(conn, addr, label):
                                                 role_state,
                                                 room,
                                                 reason=f"A107 LeaveRoom reason=0x{leave_reason:04x}",
+                                                authoritative_new_owner=(
+                                                    shared_leave.get("new_owner_uin")
+                                                    if shared_leave else None
+                                                ),
                                             )
                                             if shared_leave and shared_leave.get("room"):
                                                 _v150_sync_role_states(shared_leave["room"])
@@ -7949,6 +7983,9 @@ def handle_placeholder(conn, addr, label):
 
                                                 room_id = int(room["room_id"])
                                                 requester_uin = _v150_role_uin(role_state)
+                                                V150_ROOM_REGISTRY.require_owner(
+                                                    room_id, requester_uin
+                                                )
 
                                                 if V143B_DS_CONFIG.enabled:
                                                     V143B_DS_SPAWNER.prepare_lobby_settings_update(
@@ -8019,6 +8056,23 @@ def handle_placeholder(conn, addr, label):
                                                 )
 
                                         elif app["cmd"] == TGAME_ZN_REQ_STARTMATCH:
+                                            requester_uin = _v150_role_uin(role_state)
+                                            authoritative_room = V150_ROOM_REGISTRY.room_for_player(
+                                                requester_uin
+                                            )
+                                            if authoritative_room is not None:
+                                                try:
+                                                    V150_ROOM_REGISTRY.require_owner(
+                                                        int(authoritative_room["room_id"]),
+                                                        requester_uin,
+                                                    )
+                                                except RoomRegistryError as owner_e:
+                                                    log(
+                                                        "ROOM",
+                                                        f"A113 StartMatch rejected requester={requester_uin}: {owner_e}",
+                                                    )
+                                                    continue
+
                                             start_type = (
                                                 app["body"][0]
                                                 if len(app["body"]) >= 1
@@ -8048,7 +8102,11 @@ def handle_placeholder(conn, addr, label):
 
                                             # r11: hide this room from fresh A100 browsing once
                                             # startup begins, while preserving current members.
-                                            room_for_start = role_state.get("v79_created_match_room") or {}
+                                            room_for_start = (
+                                                authoritative_room
+                                                or role_state.get("v79_created_match_room")
+                                                or {}
+                                            )
                                             if room_for_start.get("room_id") is not None:
                                                 V150_ROOM_REGISTRY.set_started(
                                                     int(room_for_start["room_id"]), True
@@ -8307,6 +8365,23 @@ def handle_placeholder(conn, addr, label):
                                             # unanswered in this recovery build, matching v124.
 
                                         elif app["cmd"] == TGAME_ZN_REQ_STARTROOMALLOC:
+                                            requester_uin = _v150_role_uin(role_state)
+                                            allocation_room = V150_ROOM_REGISTRY.room_for_player(
+                                                requester_uin
+                                            )
+                                            if allocation_room is not None:
+                                                try:
+                                                    V150_ROOM_REGISTRY.require_owner(
+                                                        int(allocation_room["room_id"]),
+                                                        requester_uin,
+                                                    )
+                                                except RoomRegistryError as owner_e:
+                                                    log(
+                                                        "ROOM",
+                                                        f"A3A0 StartRoomAlloc rejected requester={requester_uin}: {owner_e}",
+                                                    )
+                                                    continue
+
                                             ra = _v72_parse_start_room_alloc(app["body"])
                                             log(
                                                 label,
@@ -8437,6 +8512,10 @@ def handle_placeholder(conn, addr, label):
                             rs,
                             room,
                             reason="ZONE TCP disconnected/handler exited",
+                            authoritative_new_owner=(
+                                shared_disconnect.get("new_owner_uin")
+                                if shared_disconnect else None
+                            ),
                         )
                         rs.pop("v143b_ds_endpoint", None)
                         rs.pop("v132_pve_afdev_handoff_sent", None)
