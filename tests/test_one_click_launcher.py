@@ -48,7 +48,7 @@ class OneClickLauncherTests(unittest.TestCase):
 
     def test_launcher_prints_revision_for_stale_zip_diagnosis(self):
         s = self.text(SCRIPT)
-        self.assertIn('2026-09-25-python-detect-v3', s)
+        self.assertIn('2026-09-25-python-detect-v4', s)
         self.assertIn('Launcher revision: $LAUNCHER_REVISION', s)
 
     def test_launcher_does_not_elevate_entire_process(self):
@@ -65,6 +65,12 @@ class OneClickLauncherTests(unittest.TestCase):
             'Administrator access is required for the Windows hosts file and runtime launch patches.',
             s,
         )
+
+    def test_plain_py_default_312_is_accepted(self):
+        s = self.text(SCRIPT)
+        self.assertIn('Python Launcher default is 3.12', s)
+        self.assertIn('return $pyLauncher.Source', s)
+        self.assertIn('py -m venv', s)
 
     def test_permanent_tcls_patch_is_prompted_and_hash_guarded(self):
         s = self.text(SCRIPT)
