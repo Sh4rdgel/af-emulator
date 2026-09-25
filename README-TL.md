@@ -19,6 +19,47 @@ Layunin nitong gawing magagamit muli ang retired PH client sa local/isolated env
 
 ---
 
+# ⚠️ IMPORTANTE — bago pindutin ang START
+
+Para sa pinaka-reliable na first launch, gamitin muna ang **suspended TCLS launch patcher**.
+
+**Huwag muna pindutin ang START** sa Assault Fire launcher.
+
+Pagkatapos mong matapos ang setup sa ibaba, mapaandar ang emulator, makapag-login sa `client.exe` / TCLS, at makarating sa normal na **START** screen, pumunta sa repository root at patakbuhin:
+
+```powershell
+.\.venv\Scripts\python.exe .\tools\patches\patch_tcls_suspended_launch.py
+```
+
+Hintayin munang lumabas:
+
+```text
+TCLS ARMED
+Click START in the Assault Fire launcher now.
+```
+
+**Saka lamang pindutin ang START.**
+
+Awtomatikong ginagawa ng helper ang tamang launch sequence:
+
+```text
+TCLS creates TGame.exe suspended
+        ↓
+TCLS finishes the shared-memory handoff
+        ↓
+required TGame datetime compatibility patch is applied
+        ↓
+TGame.exe is resumed
+```
+
+Nakakaiwas ito sa kilalang legacy TGame startup crash kapag tumakbo ang game bago maging active ang compatibility patch.
+
+> Kapag gumagamit ng `patch_tcls_suspended_launch.py`, **huwag ding patakbuhin ang `patch_tgame_datetime.py` sa parehong launch**. Kasama na iyon sa suspended-launch helper.
+
+Kapag nag-report ang helper ng **TGame build/signature mismatch**, huminto at huwag pilitin ang patch. Assault Fire PH **v1.0.0.24 lamang** ang kasalukuyang supported/tested.
+
+---
+
 # Magsimula dito
 
 Kung first time mong gamitin ang project, sundin ang mga step sa ibaba **sunod-sunod**.
