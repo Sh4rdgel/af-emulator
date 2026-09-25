@@ -29,6 +29,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
+$LAUNCHER_REVISION = "2026-09-25-python-detect-v2"
 $EXPECTED_TGAME_SHA256 = "B4273F2658CA94EEBC559A997FDFCD02D51E77CE75B892250C1DB7FB80C70B51"
 $TCLS_ORIGINAL_SHA256 = "13EAD403452E0F25CF00658369BF4BF5FF34ED1B16027F7833FB27D398386CD1"
 $TCLS_PATCHED_SHA256  = "3FF351E0ADB594D7544E28DB2E966A6D6EB548E9DF70DAAF4DAF58F2EE438D56"
@@ -181,7 +182,17 @@ function Resolve-Python312([string]$RepoRoot = "") {
     }
 
     # Python Launcher can locate 3.12 even when python.exe itself is not on PATH.
-    $pyLauncher = Get-Command py.exe -ErrorAction SilentlyContinue
+    # Check both py.exe and py because some installations expose only one command
+    # name to PowerShell/App Execution Aliases.
+    $pyLauncher = $null
+    foreach ($pyName in @("py.exe", "py")) {
+        $candidateCommand = Get-Command $pyName -ErrorAction SilentlyContinue
+        if ($candidateCommand) {
+            $pyLauncher = $candidateCommand
+            break
+        }
+    }
+
     if ($pyLauncher) {
         try {
             $resolved = (& $pyLauncher.Source -3.12 -c "import sys; print(sys.executable)" 2>$null |
@@ -190,6 +201,21 @@ function Resolve-Python312([string]$RepoRoot = "") {
                 $found = Test-Python312Path $resolved.Trim()
                 if ($found) {
                     return $found
+                }
+            }
+        } catch {}
+
+        # Fallback: if plain "py" already launches Python 3.12, accept that too.
+        try {
+            $probe = (& $pyLauncher.Source -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}|{sys.executable}')" 2>$null |
+                Select-Object -First 1)
+            if ($LASTEXITCODE -eq 0 -and $probe) {
+                $parts = $probe.Trim() -split "\|", 2
+                if ($parts.Count -eq 2 -and $parts[0] -eq "3.12") {
+                    $found = Test-Python312Path $parts[1].Trim()
+                    if ($found) {
+                        return $found
+                    }
                 }
             }
         } catch {}
@@ -635,6 +661,7 @@ function Wait-ForLaunchGate([string]$StatusPath, [int]$TimeoutSeconds = 45) {
 }
 
 Write-Title "Assault Fire PH - ONE CLICK SETUP + PLAY"
+Write-Host "[AF-ONECLICK] Launcher revision: $LAUNCHER_REVISION"
 
 $self = $MyInvocation.MyCommand.Path
 if (-not $self) {
