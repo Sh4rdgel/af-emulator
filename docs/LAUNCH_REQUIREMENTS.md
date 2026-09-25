@@ -23,6 +23,8 @@ Required state includes:
 [PREFLIGHT] game launch gate         : UNLOCKED
 ```
 
+When the client/RSA/hosts checks pass, the first preflight block intentionally keeps the game launch gate **LOCKED** while the server pre-binds all required listener sockets. A healthy run then prints `game launch gate : UNLOCKED`. Do not start a launch helper before that later UNLOCKED line.
+
 If any required check fails, the server exits before opening game-service listeners and writes:
 
 ```text
@@ -219,7 +221,7 @@ apply patch_tgame_datetime.py
 resume TGame primary thread
 ```
 
-It snapshots existing TGame PIDs before arming TCLS, so an older TGame process is not mistaken for the newly created child. It also prefers a new `TGame.exe` whose parent PID is the active `client.exe`.
+It snapshots existing TGame PIDs before arming TCLS, so an older TGame process is not mistaken for the newly created child. It now requires the new `TGame.exe` to be a direct child of the active `client.exe`; there is no fallback to an unrelated TGame process. It also verifies that the mapped TGame image belongs to the same client root that passed preflight.
 
 The TCLS restore runs from a `finally` path. On timeout, Ctrl+C, or an ordinary Python error, the helper attempts to put the four original TCLS bytes back before exiting.
 
